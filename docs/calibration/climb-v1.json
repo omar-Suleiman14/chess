@@ -1,0 +1,403 @@
+{
+  "pool": "climb-v1",
+  "engine": "stockfish-19.0.1-lite-single (node)",
+  "date": "2026-10-16T20:35:09.572Z",
+  "machine": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.23.2"
+  },
+  "maxPlies": 240,
+  "openings": [
+    "e4 e5",
+    "d4 d5",
+    "e4 c5",
+    "d4 Nf6",
+    "c4 e5",
+    "e4 e6",
+    "Nf3 d5",
+    "e4 c6",
+    "d4 Nf6 c4 e6",
+    "e4 e5 Nf3 Nc6"
+  ],
+  "note": "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
+  "pairs": [
+    {
+      "upper": "climb-02",
+      "lower": "climb-01",
+      "games": 40,
+      "wins": 32,
+      "draws": 8,
+      "losses": 0,
+      "upperScore": 0.9,
+      "score95": [
+        0.769,
+        0.96
+      ],
+      "impliedGap": 382,
+      "impliedGap95": [
+        209,
+        554
+      ],
+      "nominalGap": 200,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-03",
+      "lower": "climb-02",
+      "games": 40,
+      "wins": 28,
+      "draws": 11,
+      "losses": 1,
+      "upperScore": 0.838,
+      "score95": [
+        0.695,
+        0.921
+      ],
+      "impliedGap": 285,
+      "impliedGap95": [
+        143,
+        427
+      ],
+      "nominalGap": 200,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-04",
+      "lower": "climb-03",
+      "games": 40,
+      "wins": 21,
+      "draws": 7,
+      "losses": 12,
+      "upperScore": 0.613,
+      "score95": [
+        0.458,
+        0.747
+      ],
+      "impliedGap": 80,
+      "impliedGap95": [
+        -29,
+        188
+      ],
+      "nominalGap": 200,
+      "monotonic": false
+    },
+    {
+      "upper": "climb-05",
+      "lower": "climb-04",
+      "games": 40,
+      "wins": 38,
+      "draws": 2,
+      "losses": 0,
+      "upperScore": 0.975,
+      "score95": [
+        0.871,
+        0.996
+      ],
+      "impliedGap": 636,
+      "impliedGap95": [
+        332,
+        798
+      ],
+      "nominalGap": 200,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-06",
+      "lower": "climb-05",
+      "games": 40,
+      "wins": 35,
+      "draws": 1,
+      "losses": 4,
+      "upperScore": 0.887,
+      "score95": [
+        0.754,
+        0.953
+      ],
+      "impliedGap": 359,
+      "impliedGap95": [
+        195,
+        523
+      ],
+      "nominalGap": 200,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-07",
+      "lower": "climb-06",
+      "games": 40,
+      "wins": 9,
+      "draws": 2,
+      "losses": 29,
+      "upperScore": 0.25,
+      "score95": [
+        0.142,
+        0.402
+      ],
+      "impliedGap": -191,
+      "impliedGap95": [
+        -313,
+        -69
+      ],
+      "nominalGap": 200,
+      "monotonic": false
+    },
+    {
+      "upper": "climb-08",
+      "lower": "climb-07",
+      "games": 40,
+      "wins": 30,
+      "draws": 1,
+      "losses": 9,
+      "upperScore": 0.762,
+      "score95": [
+        0.611,
+        0.868
+      ],
+      "impliedGap": 203,
+      "impliedGap95": [
+        79,
+        326
+      ],
+      "nominalGap": 300,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-09",
+      "lower": "climb-08",
+      "games": 40,
+      "wins": 24,
+      "draws": 2,
+      "losses": 14,
+      "upperScore": 0.625,
+      "score95": [
+        0.47,
+        0.758
+      ],
+      "impliedGap": 89,
+      "impliedGap95": [
+        -21,
+        198
+      ],
+      "nominalGap": 300,
+      "monotonic": false
+    },
+    {
+      "upper": "climb-10",
+      "lower": "climb-09",
+      "games": 40,
+      "wins": 30,
+      "draws": 2,
+      "losses": 8,
+      "upperScore": 0.775,
+      "score95": [
+        0.625,
+        0.877
+      ],
+      "impliedGap": 215,
+      "impliedGap95": [
+        89,
+        341
+      ],
+      "nominalGap": 350,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-11",
+      "lower": "climb-10",
+      "games": 40,
+      "wins": 40,
+      "draws": 0,
+      "losses": 0,
+      "upperScore": 1,
+      "score95": [
+        0.912,
+        1
+      ],
+      "impliedGap": 798,
+      "impliedGap95": [
+        407,
+        798
+      ],
+      "nominalGap": 600,
+      "monotonic": true
+    }
+  ],
+  "gameRange": {
+    "from": 0,
+    "toExclusive": 40
+  },
+  "sourceCommit": "5fbf485b324cdfa21c941f12ef746b3facbe0622",
+  "harnessSha256Lf": "2b87469f234d3806b6bfe01b4ce823ed3976523964e9949be4976c18c2fcebfb",
+  "opponents": [
+    {
+      "id": "climb-01",
+      "version": 1,
+      "name": "Wobbly Pawn",
+      "rating": 250,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "beginner",
+        "policy": "random",
+        "blunderRate": 1
+      }
+    },
+    {
+      "id": "climb-02",
+      "version": 1,
+      "name": "Snack Grabber",
+      "rating": 450,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "beginner",
+        "policy": "greedy",
+        "blunderRate": 0.35
+      }
+    },
+    {
+      "id": "climb-03",
+      "version": 1,
+      "name": "Nervous Knight",
+      "rating": 650,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "beginner",
+        "policy": "careful",
+        "blunderRate": 0.25
+      }
+    },
+    {
+      "id": "climb-04",
+      "version": 1,
+      "name": "Tidy Bishop",
+      "rating": 850,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "beginner",
+        "policy": "careful",
+        "blunderRate": 0.08
+      }
+    },
+    {
+      "id": "climb-05",
+      "version": 1,
+      "name": "Sherine (sleepy)",
+      "rating": 1050,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "stockfish",
+        "options": {
+          "Skill Level": 0
+        },
+        "movetimeMs": 60,
+        "depth": 2
+      }
+    },
+    {
+      "id": "climb-06",
+      "version": 1,
+      "name": "Sherine (distracted)",
+      "rating": 1250,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "stockfish",
+        "options": {
+          "Skill Level": 3
+        },
+        "movetimeMs": 120,
+        "depth": 4
+      }
+    },
+    {
+      "id": "climb-07",
+      "version": 1,
+      "name": "Sherine (warming up)",
+      "rating": 1450,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "stockfish",
+        "options": {
+          "UCI_LimitStrength": true,
+          "UCI_Elo": 1450
+        },
+        "movetimeMs": 400
+      }
+    },
+    {
+      "id": "climb-08",
+      "version": 1,
+      "name": "Sherine (focused)",
+      "rating": 1750,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "stockfish",
+        "options": {
+          "UCI_LimitStrength": true,
+          "UCI_Elo": 1750
+        },
+        "movetimeMs": 600
+      }
+    },
+    {
+      "id": "climb-09",
+      "version": 1,
+      "name": "Sherine (serious)",
+      "rating": 2050,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "stockfish",
+        "options": {
+          "UCI_LimitStrength": true,
+          "UCI_Elo": 2050
+        },
+        "movetimeMs": 800
+      }
+    },
+    {
+      "id": "climb-10",
+      "version": 1,
+      "name": "Sherine (ruthless)",
+      "rating": 2400,
+      "ratingDeviation": 300,
+      "calibrated": false,
+      "policy": {
+        "kind": "stockfish",
+        "options": {
+          "UCI_LimitStrength": true,
+          "UCI_Elo": 2400
+        },
+        "movetimeMs": 1000
+      }
+    },
+    {
+      "id": "climb-11",
+      "version": 1,
+      "name": "Sherine · Full Power",
+      "rating": 3000,
+      "ratingDeviation": 350,
+      "calibrated": false,
+      "policy": {
+        "kind": "stockfish",
+        "options": {},
+        "movetimeMs": 1200
+      }
+    }
+  ],
+  "execution": {
+    "command": "pnpm calibrate -- --games 40 --pairs 0-10",
+    "parts": [
+      "First seven pairs completed serially; their printed JSON rows were retained verbatim",
+      "Last three pairs ran in independent single-threaded workers with identical harness, openings, game IDs, search settings and sample sizes"
+    ],
+    "note": "Workers overlapped on the same 28-logical-processor host. The serial worker was stopped after pair seven to avoid duplicating pair eight; its incomplete duplicate games are excluded. Movetime searches can vary across runs and host load."
+  }
+}

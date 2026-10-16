@@ -4,7 +4,7 @@
 
 [Roadmap](docs/ROADMAP.md) · [Specification](docs/SPECIFICATION.md) · [Architecture](docs/ARCHITECTURE.md) · [UI/UX](docs/UI_UX.md) · [MCP design](docs/MCP.md) · [Benchmarks](docs/BENCHMARKS.md) · [Issues](https://github.com/omar-Suleiman14/chess/issues)
 
-> **Status: playable, pre-release.** Every roadmap package has code and automated tests. Real-device iPhone measurements, rating calibration at scale, live ChatGPT/Claude OAuth runs and the production deployment are still open. See [what's verified](#whats-verified-and-whats-not). Target home: `https://chess.chaos.fail` (not yet deployed).
+> **Status: playable, pre-release.** Every roadmap package has code and automated tests, and production is deployed. Real-device iPhone measurements, human rating validation and live ChatGPT/Claude OAuth runs remain open. See [what's verified](#whats-verified-and-whats-not). Home: `https://chess.chaos.fail`.
 
 ## The idea
 
@@ -76,12 +76,12 @@ Tools: `get_chess_profile`, `list_games`, `get_game`, `get_game_analysis`, `get_
 
 ## What's verified and what's not
 
-Verified in this repo: 57 automated tests (rules, PGN round-trips with variations, undo/branch invariants, idempotent writes, single rating application, unrated-after-undo, timeout checks, MCP scope denial, cross-user denial, stale revisions, pack/lesson validation). Also checked by hand in a desktop browser: playing against the real engine, the eval bar, the menu sheet, a keyboard-only lesson, the 375 px layout, and MCP OAuth discovery (401 with resource metadata, protected-resource and authorization-server metadata).
+Verified in this repo: 172 automated tests, including rules, PGN variations, undo/branch invariants, premoves, session replacement, opponent-version preservation, idempotent writes, single rating application, timeout checks, MCP scopes, cross-user denial and stale revisions. Lint, typecheck and the production build pass. Browser checks cover the real engine, premove execution/cancellation, result-audio decoding, aligned desktop panels and unclipped 320 px/390 px mobile layouts, plus the earlier lesson and OAuth-discovery checks.
 
 Not yet verified:
 - iPhone Safari performance (BLK-01). Run `/bench` on a device; see [BENCHMARKS](docs/BENCHMARKS.md).
-- Climb opponent strengths are **uncalibrated estimates**. A 6-games-per-pair sample is in `docs/calibration/`. A large run is needed before calling ratings calibrated.
-- End-to-end OAuth with ChatGPT and with Claude: needs a public HTTPS deployment and Dynamic Client Registration enabled.
+- Climb human ratings remain **uncalibrated estimates**. A [400-game baseline and 200-game retune](docs/calibration/README.md) fixed the inverted middle step and improved Tidy Bishop's separation. Nine adjacent steps have supporting relative evidence; Serious versus Focused remains inconclusive. These are exploratory bot results on one host, not human Elo measurements.
+- End-to-end OAuth with ChatGPT and with Claude: needs live connector runs with Dynamic Client Registration enabled.
 - Screen-reader passes with VoiceOver and TalkBack, and Playwright E2E/visual suites.
 
 ## Open source and licences

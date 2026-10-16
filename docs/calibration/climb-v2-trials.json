@@ -1,0 +1,296 @@
+{
+  "note": "Completed exploratory alternatives. Not pooled with the selected v2 evidence. An initial swap-only candidate was stopped before completing its two lower matchups; partial games are excluded.",
+  "trials": [
+    {
+      "candidate": "Depth 3 / Skill 0 Distracted, depth 4 / Skill 3 Warming Up",
+      "reports": [
+        {
+          "pool": "climb-v2-candidate-b",
+          "engine": "stockfish-19.0.1-lite-single (node)",
+          "date": "2026-10-16T20:09:52.393Z",
+          "machine": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v22.23.2"
+          },
+          "maxPlies": 240,
+          "openings": [
+            "e4 e5",
+            "d4 d5",
+            "e4 c5",
+            "d4 Nf6",
+            "c4 e5",
+            "e4 e6",
+            "Nf3 d5",
+            "e4 c6",
+            "d4 Nf6 c4 e6",
+            "e4 e5 Nf3 Nc6"
+          ],
+          "note": "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
+          "pairs": [
+            {
+              "upper": "climb-06",
+              "lower": "climb-05",
+              "games": 40,
+              "wins": 23,
+              "draws": 2,
+              "losses": 15,
+              "upperScore": 0.6,
+              "score95": [
+                0.446,
+                0.737
+              ],
+              "impliedGap": 70,
+              "impliedGap95": [
+                -38,
+                179
+              ],
+              "nominalGap": 200,
+              "monotonic": false
+            }
+          ]
+        },
+        {
+          "pool": "climb-v2-candidate-b",
+          "engine": "stockfish-19.0.1-lite-single (node)",
+          "date": "2026-10-16T20:09:55.798Z",
+          "machine": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v22.23.2"
+          },
+          "maxPlies": 240,
+          "openings": [
+            "e4 e5",
+            "d4 d5",
+            "e4 c5",
+            "d4 Nf6",
+            "c4 e5",
+            "e4 e6",
+            "Nf3 d5",
+            "e4 c6",
+            "d4 Nf6 c4 e6",
+            "e4 e5 Nf3 Nc6"
+          ],
+          "note": "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
+          "pairs": [
+            {
+              "upper": "climb-07",
+              "lower": "climb-06",
+              "games": 40,
+              "wins": 37,
+              "draws": 3,
+              "losses": 0,
+              "upperScore": 0.963,
+              "score95": [
+                0.853,
+                0.991
+              ],
+              "impliedGap": 564,
+              "impliedGap95": [
+                305,
+                798
+              ],
+              "nominalGap": 200,
+              "monotonic": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "candidate": "Depth 3 / Skill 1 Distracted, depth 4 / Skill 3 Warming Up",
+      "reports": [
+        {
+          "pool": "climb-v2-candidate-c",
+          "engine": "stockfish-19.0.1-lite-single (node)",
+          "date": "2026-10-16T20:10:18.915Z",
+          "machine": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v22.23.2"
+          },
+          "maxPlies": 240,
+          "openings": [
+            "e4 e5",
+            "d4 d5",
+            "e4 c5",
+            "d4 Nf6",
+            "c4 e5",
+            "e4 e6",
+            "Nf3 d5",
+            "e4 c6",
+            "d4 Nf6 c4 e6",
+            "e4 e5 Nf3 Nc6"
+          ],
+          "note": "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
+          "pairs": [
+            {
+              "upper": "climb-07",
+              "lower": "climb-06",
+              "games": 40,
+              "wins": 36,
+              "draws": 1,
+              "losses": 3,
+              "upperScore": 0.912,
+              "score95": [
+                0.785,
+                0.967
+              ],
+              "impliedGap": 407,
+              "impliedGap95": [
+                225,
+                589
+              ],
+              "nominalGap": 200,
+              "monotonic": true
+            }
+          ]
+        },
+        {
+          "pool": "climb-v2-candidate",
+          "engine": "stockfish-19.0.1-lite-single (node)",
+          "date": "2026-10-16T20:27:29.476Z",
+          "machine": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v22.23.2"
+          },
+          "maxPlies": 240,
+          "openings": [
+            "e4 e5",
+            "d4 d5",
+            "e4 c5",
+            "d4 Nf6",
+            "c4 e5",
+            "e4 e6",
+            "Nf3 d5",
+            "e4 c6",
+            "d4 Nf6 c4 e6",
+            "e4 e5 Nf3 Nc6"
+          ],
+          "note": "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
+          "pairs": [
+            {
+              "upper": "climb-08",
+              "lower": "climb-07",
+              "games": 40,
+              "wins": 18,
+              "draws": 2,
+              "losses": 20,
+              "upperScore": 0.475,
+              "score95": [
+                0.329,
+                0.625
+              ],
+              "impliedGap": -17,
+              "impliedGap95": [
+                -124,
+                89
+              ],
+              "nominalGap": 300,
+              "monotonic": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "candidate": "Depth 3 / Skill 1 Distracted, depth 3 / Skill 2 Warming Up",
+      "reports": [
+        {
+          "pool": "climb-v2-candidate-d",
+          "engine": "stockfish-19.0.1-lite-single (node)",
+          "date": "2026-10-16T20:11:14.910Z",
+          "machine": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v22.23.2"
+          },
+          "maxPlies": 240,
+          "openings": [
+            "e4 e5",
+            "d4 d5",
+            "e4 c5",
+            "d4 Nf6",
+            "c4 e5",
+            "e4 e6",
+            "Nf3 d5",
+            "e4 c6",
+            "d4 Nf6 c4 e6",
+            "e4 e5 Nf3 Nc6"
+          ],
+          "note": "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
+          "pairs": [
+            {
+              "upper": "climb-07",
+              "lower": "climb-06",
+              "games": 40,
+              "wins": 31,
+              "draws": 3,
+              "losses": 6,
+              "upperScore": 0.813,
+              "score95": [
+                0.666,
+                0.904
+              ],
+              "impliedGap": 255,
+              "impliedGap95": [
+                120,
+                389
+              ],
+              "nominalGap": 200,
+              "monotonic": true
+            }
+          ]
+        },
+        {
+          "pool": "climb-v2-candidate-d",
+          "engine": "stockfish-19.0.1-lite-single (node)",
+          "date": "2026-10-16T20:30:35.486Z",
+          "machine": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v22.23.2"
+          },
+          "maxPlies": 240,
+          "openings": [
+            "e4 e5",
+            "d4 d5",
+            "e4 c5",
+            "d4 Nf6",
+            "c4 e5",
+            "e4 e6",
+            "Nf3 d5",
+            "e4 c6",
+            "d4 Nf6 c4 e6",
+            "e4 e5 Nf3 Nc6"
+          ],
+          "note": "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
+          "pairs": [
+            {
+              "upper": "climb-08",
+              "lower": "climb-07",
+              "games": 40,
+              "wins": 22,
+              "draws": 4,
+              "losses": 14,
+              "upperScore": 0.6,
+              "score95": [
+                0.446,
+                0.737
+              ],
+              "impliedGap": 70,
+              "impliedGap95": [
+                -38,
+                179
+              ],
+              "nominalGap": 300,
+              "monotonic": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

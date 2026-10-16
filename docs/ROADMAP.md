@@ -2,7 +2,7 @@
 
 **Read first:** [SPECIFICATION](SPECIFICATION.md), [ARCHITECTURE](ARCHITECTURE.md), [UI/UX](UI_UX.md), [MCP](MCP.md). Tracker: [issues](https://github.com/omar-Suleiman14/chess/issues).
 
-**Implementation status (2026-10-16):** every work package below has code and tests on `main`. Items marked *open* still need evidence that can't come from code alone: real devices, live OAuth clients, large calibration runs, or deployment. Issues stay the source of truth for sign-off.
+**Implementation status (2026-10-16):** every work package below has code and tests on `main`, and production is deployed. Items marked *open* still need evidence from real devices, live OAuth clients or broader rating validation. Issues stay the source of truth for sign-off.
 
 ## Delivery gates
 
@@ -20,7 +20,7 @@
 
 | Order | Work package | Dependencies | Risk/owner gate | Status |
 | --- | --- | --- | --- | --- |
-| [P00](https://github.com/omar-Suleiman14/chess/issues/1) | Dev setup (Next, TS, Convex, Clerk, lint/CI/testing) | none | blocker for everything | done (Vercel domain: open) |
+| [P00](https://github.com/omar-Suleiman14/chess/issues/1) | Dev setup (Next, TS, Convex, Clerk, lint/CI/testing) | none | blocker for everything | done |
 | [P01](https://github.com/omar-Suleiman14/chess/issues/2) | License/third-party assets audit | none | blocker for code reuse/public bundles | done; Sherine art rights: owner to confirm |
 | [P02](https://github.com/omar-Suleiman14/chess/issues/3) | iPhone Stockfish Lite benchmark spike | none | blocker for engine UX assumptions | /bench tool + desktop numbers; iPhone run: open |
 | [P03](https://github.com/omar-Suleiman14/chess/issues/4) | Chess schema, immutable nodes and branch rules | P00 | blocker for saving/Undo/Time Machine | done |
@@ -33,7 +33,7 @@
 | [P10](https://github.com/omar-Suleiman14/chess/issues/11) | Board themes, sounds, haptics, accessibility | P04,P09 | must not delay responsiveness | done (haptics Android-only) |
 | [P11](https://github.com/omar-Suleiman14/chess/issues/12) | Sherine sprite/dialogue baseline + disable flow | P01,P06 | character opt-in/out | done |
 | [P12](https://github.com/omar-Suleiman14/chess/issues/13) | Chess-specific Chaos Card/Blobatar adaptation | P01,P00 | isolated Chess identity | done (independent card, no Chaos code) |
-| [P13](https://github.com/omar-Suleiman14/chess/issues/14) | Opponent calibration, Elo policy, anti-assistance | P05,P07 | blocker for rated Climb | Glicko-2 + policy done; large calibration run: open |
+| [P13](https://github.com/omar-Suleiman14/chess/issues/14) | Opponent calibration, Elo policy, anti-assistance | P05,P07 | blocker for rated Climb | 400-game baseline + 200-game retune done; Serious–Focused ordering and human anchors: open |
 | [P14](https://github.com/omar-Suleiman14/chess/issues/15) | Climb ladder and separate timed mode | P13,P06 | game modes | done |
 | [P15](https://github.com/omar-Suleiman14/chess/issues/16) | Time Machine replay and nested saved branches | P03,P07,P08 | deep history | done |
 | [P16](https://github.com/omar-Suleiman14/chess/issues/17) | Fixed interactive micro-curriculum | P04,P07 | core learning | done |
@@ -42,7 +42,7 @@
 | [P19](https://github.com/omar-Suleiman14/chess/issues/20) | MCP branch/lesson write operations | P15,P17,P18 | domain validation/audit | done |
 | [P20](https://github.com/omar-Suleiman14/chess/issues/21) | Natural Sherine progression + scripted upgrades | P11,P07 | persistence, pack schemas | done |
 | [P21](https://github.com/omar-Suleiman14/chess/issues/22) | MCP-proposed/approved Sherine upgrades | P18,P20 | explicit scopes | done |
-| [P22](https://github.com/omar-Suleiman14/chess/issues/23) | End-to-end hardening, offline, performance, release | all relevant | final gate | CSP/HSTS, export/delete, notices done; device matrix + deployment: open |
+| [P22](https://github.com/omar-Suleiman14/chess/issues/23) | End-to-end hardening, offline, performance, release | all relevant | final gate | CSP/HSTS, export/delete, notices and deployment done; device matrix: open |
 
 These IDs are specification work-package identifiers. GitHub issues give them exact titles/numbers and acceptance checklists; use [Issues](https://github.com/omar-Suleiman14/chess/issues) as execution source of truth. Work packages can be split into smaller PRs, but preserve dependency order. Browse [all implementation issues](https://github.com/omar-Suleiman14/chess/issues?q=is%3Aissue+is%3Aopen) and filter by **phase:G0–G6**, **priority:P0–P2**, or **area:** labels.
 
@@ -56,6 +56,8 @@ Repo is GPL-3.0. Stockfish.js GPL exact build/source and notices must be supplie
 
 ### BLK-03: Rating calibration
 Engine `UCI_Elo` is not a universally comparable human rating; browser Lite run under different think times/devices isn't a stable Elo benchmark. Personal Climb ratings need calibrated opponent pools, provisional/uncertainty display, unassisted result policy. A nominal 3000 maximum is only a *label*.
+
+The [calibration reports](calibration/README.md) retain the 400-game original baseline and 200 fresh games covering the revised presets. The supported reversal is fixed; all five changed matchups clear the harness's approximate 50% interval threshold. Serious–Focused remains inconclusive, and human rating anchors/device validation remain open.
 
 ### BLK-04: Data history architecture
 Undo and branchable records require immutable node + parent relationships and concurrency conflict protocol at the first persistence PR. Do not first save only a flat PGN and bolt branching on later.
