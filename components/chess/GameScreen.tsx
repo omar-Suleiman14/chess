@@ -13,7 +13,7 @@ import { headNode, moveLabel, pathTo } from "@/lib/chess/history/tree";
 import { describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useEngineState, usePrewarmEngine } from "@/lib/client/engine";
 import { useSettings } from "@/lib/client/settings";
-import { haptic, playSound, unlockAudio } from "@/lib/client/sound";
+import { haptic, installAudioUnlock, playSound, unlockAudio } from "@/lib/client/sound";
 import { useSync } from "@/lib/client/sync";
 import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from "@/lib/client/useChessGame";
 import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
@@ -21,6 +21,7 @@ import { useFatma } from "@/lib/client/useFatma";
 import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
 import { GameResult } from "./GameResult";
+import { MoveStrip } from "./MoveStrip";
 import { PlayerIdentity } from "./PlayerIdentity";
 
 type Props = {
@@ -67,6 +68,9 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     },
     [settings.sound, settings.volume, settings.haptics],
   );
+
+  // Warm up audio on the first touch so the opening move is never silent.
+  useEffect(() => installAudioUnlock(), []);
 
   const chess = useChessGame({ think: settings.think, onMove, onFatma: fatma.say });
   const { game, loaded } = chess;
@@ -118,6 +122,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       if (next === at) return;
       navigationFeedback();
       setViewPly(next >= line.length ? null : next);
+    },
+    [line.length, viewPly, navigationFeedback],
+  );
+  const jumpTo = useCallback(
+    (ply: number) => {
+      if (ply === (viewPly ?? line.length)) return;
+      navigationFeedback();
+      setViewPly(ply >= line.length ? null : ply);
     },
     [line.length, viewPly, navigationFeedback],
   );
@@ -249,7 +261,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     <main className="flex min-h-dvh w-full flex-col items-center px-3 sm:px-6">
       <LoadingScreen />
       {/* One column, exactly as wide as the board: everything groups around it. */}
-      <div className="flex min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-210px),790px)] flex-col">
+      <div className="flex min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-260px),790px)] flex-col">
       <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
@@ -274,6 +286,28 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            transition={IOS_SPRING}
+            onClick={() => {
+              unlockAudio();
+              update({ sound: !settings.sound });
+              if (!settings.sound) playSound("move", settings.volume);
+            }}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
+            aria-label={settings.sound ? "Mute sounds" : "Turn sounds on"}
+            aria-pressed={settings.sound}
+            title={settings.sound ? "Sound on" : "Sound off"}
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinejoin="round" />
+              {settings.sound ? (
+                <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              ) : (
+                <path d="M16 9.5l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              )}
+            </svg>
+          </motion.button>
             <button disabled={!active} onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-ink shadow-[var(--shadow)] disabled:opacity-40" aria-label="Resign" title="Resign">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
@@ -282,11 +316,12 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </header>
 
       <section className="flex flex-1 flex-col items-center justify-center">
+        <MoveStrip line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
         <div className="mb-2 flex w-full items-center gap-2">
           <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName captures={captures.captured[fatmaColor]} capturedColor={human} advantage={captures.advantage[fatmaColor]} />
           {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
         </div>
-        <div className="flex w-full items-stretch gap-2">
+        <div className="relative flex w-full items-stretch gap-2">
           {settings.evalBar && (evalAllowed ? (
             <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} />
           ) : (
@@ -315,30 +350,25 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : "Fatma to move.") : "Game over."}`}
               onSelect={() => settings.sound && playSound("select", settings.volume)}
             />
-            {resultText && game && !reviewing && (
-              <GameResult
-                key={`${game.meta.gameKey}:${head?.key}:${game.meta.result ?? "aborted"}`}
-                result={game.meta.result}
-                reason={game.meta.resultReason}
-                human={human}
-                description={resultText}
-                reducedMotion={reducedMotion}
-                onRematch={() => void chess.newGame({ ...defaults, opponentId: game.meta.opponentId })}
-                reviewUrl={`/time-machine/${game.meta.gameKey}`}
-              />
-            )}
           </div>
+          {resultText && game && !reviewing && (
+            <GameResult
+              key={`${game.meta.gameKey}:${head?.key}:${game.meta.result ?? "aborted"}`}
+              result={game.meta.result}
+              reason={game.meta.resultReason}
+              human={human}
+              description={resultText}
+              reducedMotion={reducedMotion}
+              onRematch={() => void chess.newGame({ ...defaults, opponentId: game.meta.opponentId })}
+              reviewUrl={`/time-machine/${game.meta.gameKey}`}
+            />
+          )}
         </div>
 
         <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}</div>
 
         {/* Fixed-height status line, then Fatma's fixed-size corner: nothing here can resize the layout. */}
         <div className="mt-1.5 flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted" aria-live="polite">
-          {reviewing && viewNode && (
-            <button onClick={() => setViewPly(null)} className="rounded-full bg-surface px-3 py-1 font-medium text-ink shadow-[var(--shadow)]">
-              Viewing {viewNode.ply === 0 ? "start" : moveLabel(viewNode)} · Back to game
-            </button>
-          )}
           {engineWaking && <span>Fatma is waking up…</span>}
           {chess.thinking && !engineWaking && <span>Fatma is thinking…</span>}
           {chess.engineError && (

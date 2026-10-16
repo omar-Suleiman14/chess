@@ -4,6 +4,8 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { useState } from "react";
 import type { Color } from "@/lib/chess/rules";
+import { useSettings } from "@/lib/client/settings";
+import { Piece } from "./Pieces";
 
 type Props = {
   result?: string;
@@ -18,6 +20,7 @@ type Props = {
 /** A finite end-of-game celebration; dismiss it to inspect the final board. */
 export function GameResult({ result, reason, human, description, reducedMotion, onRematch, reviewUrl }: Props) {
   const [dismissed, setDismissed] = useState(false);
+  const { settings } = useSettings();
   if (dismissed) return null;
   const draw = result === "1/2-1/2";
   const won = !!result && !draw && (result === "1-0") === (human === "w");
@@ -33,21 +36,24 @@ export function GameResult({ result, reason, human, description, reducedMotion, 
         className="pointer-events-auto relative mx-4 max-h-full w-[min(290px,calc(100%-2rem))] overflow-y-auto rounded-3xl border border-line bg-surface/95 px-5 pb-5 pt-6 text-center shadow-[0_18px_65px_rgba(0,0,0,0.45)] backdrop-blur-md"
         initial={reducedMotion ? false : { opacity: 0, y: 22, scale: 0.88 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 22, delay: 1.5 }}
+        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 30, delay: resigned ? 0.15 : 0.45 }}
       >
         <button onClick={() => setDismissed(true)} aria-label="Dismiss result" className="absolute right-1 top-1 grid h-11 w-11 place-items-center rounded-full text-muted">
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
         </button>
         <div className="relative mx-auto mb-3 grid h-20 w-20 place-items-center rounded-full" style={{ color: accent, backgroundColor: `${accent}20` }} aria-hidden="true">
+          {/* Rotates about its own centre so the icon stays centred in the disc. */}
           <motion.div
-            className="origin-bottom text-6xl leading-none"
-            initial={reducedMotion ? false : { rotate: won || draw ? -12 : 0, scale: 0.6, opacity: 0 }}
-            animate={reducedMotion ? { rotate: resigned ? -22 : 0, scale: 1, opacity: 1 } : { rotate: resigned ? [0, 8, -28, -22] : won ? [-12, 10, -6, 0] : draw ? [-10, 10, -5, 0] : [0, 12, 65, 60], scale: [0.6, 1.12, 1], opacity: 1 }}
-            transition={{ duration: reducedMotion ? 0 : 0.85, delay: reducedMotion ? 0 : 0.15 }}
+            className="grid h-12 w-12 origin-center place-items-center text-5xl font-semibold leading-none"
+            initial={reducedMotion ? false : { scale: 0.6, opacity: 0 }}
+            animate={{ rotate: resigned || (!won && !draw) ? -20 : 0, scale: 1, opacity: 1 }}
+            transition={{ duration: reducedMotion ? 0 : 0.35, delay: reducedMotion ? 0 : resigned ? 0.2 : 0.5 }}
           >
             {resigned ? (
-              <svg viewBox="0 0 64 64" className="h-14 w-14"><path d="M16 55V10m0 0h34l-8 12 8 12H16" stroke="currentColor" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            ) : draw ? "½" : won ? "♛" : "♚"}
+              <svg viewBox="0 0 64 64" className="h-12 w-12"><path d="M20 56V8m0 0h30l-7 11 7 11H20" stroke="currentColor" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            ) : draw ? "½" : (
+              <Piece type="k" color={won ? human : human === "w" ? "b" : "w"} set={settings.pieceSet} className="h-12 w-12" />
+            )}
           </motion.div>
         </div>
         <h2 className="text-2xl font-bold tracking-tight">{title}</h2>

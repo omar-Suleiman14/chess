@@ -15,9 +15,9 @@ export function pieceUrl(set: PieceSet, color: Color, type: string): string {
   return `/pieces/${set}/${color}${type.toUpperCase()}.svg`;
 }
 
-export function Piece({ type, color, set = "cburnett", className }: { type: string; color: Color; set?: PieceSet; className?: string }) {
+export function Piece({ type, color, set = "cburnett", className, style }: { type: string; color: Color; set?: PieceSet; className?: string; style?: React.CSSProperties }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- tiny static SVGs; next/image adds nothing here
-    <img src={pieceUrl(set, color, type)} alt="" aria-hidden="true" draggable={false} className={className} decoding="async" />
+    <img src={pieceUrl(set, color, type)} alt="" aria-hidden="true" draggable={false} className={className} style={style} decoding="async" />
   );
 }

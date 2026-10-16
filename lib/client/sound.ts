@@ -66,19 +66,53 @@ function load(): Promise<void> {
 export function unlockAudio(): void {
   const c = audio();
   if (!c) return;
-  if (c.state === "suspended") void c.resume();
+  if (c.state !== "running") {
+    void c.resume().catch(() => {});
+    // iOS only truly unlocks once something plays inside the gesture itself.
+    try {
+      const source = c.createBufferSource();
+      source.buffer = c.createBuffer(1, 1, 22050);
+      source.connect(c.destination);
+      source.start(0);
+    } catch {
+      // ignore
+    }
+  }
   void load();
 }
+
+let unlockInstalled = false;
+
+/**
+ * Unlock audio on the very first touch/click/key anywhere on the page, so the
+ * opening move sounds even when it is made by dragging (pointerup alone does
+ * not count as a gesture on iOS) or when Fatma moves first.
+ */
+export function installAudioUnlock(): void {
+  if (unlockInstalled || typeof document === "undefined") return;
+  unlockInstalled = true;
+  const events = ["pointerdown", "touchend", "click", "keydown"] as const;
+  const onGesture = () => {
+    unlockAudio();
+    if (ctx?.state === "running") events.forEach((e) => document.removeEventListener(e, onGesture, true));
+  };
+  events.forEach((e) => document.addEventListener(e, onGesture, { capture: true, passive: true }));
+}
+
+// A sound that only becomes playable later (cold buffers, context still
+// resuming) is dropped once it is this late: a stale click is worse than none.
+const MAX_LATENCY_MS = 600;
 
 export function playSound(name: SoundName, volume = 0.7): void {
   const entry = MAP[name];
   const c = audio();
   if (!entry || !c || volume <= 0) return;
-  if (c.state !== "running") void c.resume();
+  const requested = Date.now();
+  const resumed = c.state === "running" ? Promise.resolve() : c.resume().catch(() => {});
   const [file, level] = entry;
   const start = () => {
     const buffer = buffers.get(file);
-    if (!buffer || c.state !== "running") return;
+    if (!buffer || c.state !== "running" || Date.now() - requested > MAX_LATENCY_MS) return;
     const source = c.createBufferSource();
     source.buffer = buffer;
     const gain = c.createGain();
@@ -86,8 +120,8 @@ export function playSound(name: SoundName, volume = 0.7): void {
     source.connect(gain).connect(c.destination);
     source.start();
   };
-  if (buffers.has(file)) start();
-  else void load().then(start);
+  if (buffers.has(file) && c.state === "running") start();
+  else void Promise.all([resumed, load()]).then(start);
 }
 
 export function haptic(pattern: number | number[]): void {

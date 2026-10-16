@@ -265,7 +265,7 @@ export function Board({
                   : winner && piece.color !== winner
                     ? { rotate: reducedMotion ? 65 : [0, -8, 72, 65], scale: 0.78, y: 0 }
                     : { rotate: 0, scale: reducedMotion ? 1 : [1, 1.18, 1], y: 0 }}
-                transition={{ duration: reducedMotion ? 0 : 1.1, delay: reducedMotion ? 0 : 0.15 }}
+                transition={{ duration: reducedMotion ? 0 : 0.45 }}
               >
                 <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="h-full w-full" />
               </motion.div>
@@ -274,10 +274,10 @@ export function Board({
           {piece?.type === "k" && result && (winner || drawn) && (
             <>
               <motion.div className="pointer-events-none absolute inset-[5%] z-[5] rounded-full border-[3px]" style={{ borderColor: drawn ? "#d5c5a1" : piece.color === winner ? "#81b64c" : "#e87865" }}
-                initial={reducedMotion ? false : { opacity: 0, scale: 0.6 }} animate={{ opacity: 0.8, scale: 1 }} transition={{ duration: reducedMotion ? 0 : 0.6 }} />
+                initial={reducedMotion ? false : { opacity: 0, scale: 0.6 }} animate={{ opacity: 0.8, scale: 1 }} transition={{ duration: reducedMotion ? 0 : 0.25 }} />
               <motion.span className="pointer-events-none absolute right-0 top-0 z-30 grid h-[40%] w-[40%] place-items-center rounded-full text-[clamp(10px,3vw,22px)] font-bold text-white shadow-md" style={{ backgroundColor: drawn ? "#99876a" : piece.color === winner ? "#81b64c" : "#c45140" }}
                 role="img" aria-label={`${piece.color === "w" ? "White" : "Black"}: ${drawn ? "draw" : piece.color === winner ? "winner" : result.reason === "resign" ? "resigned" : "lost"}`}
-                initial={reducedMotion ? false : { scale: 0 }} animate={{ scale: 1 }} transition={{ duration: reducedMotion ? 0 : 0.4, delay: reducedMotion ? 0 : 0.75 }}>
+                initial={reducedMotion ? false : { scale: 0 }} animate={{ scale: 1 }} transition={{ duration: reducedMotion ? 0 : 0.2, delay: reducedMotion ? 0 : 0.3 }}>
                 {drawn ? "½" : piece.color === winner ? "♛" : result.reason === "resign" ? "⚑" : "×"}
               </motion.span>
             </>
