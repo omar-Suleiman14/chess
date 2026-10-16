@@ -25,7 +25,7 @@ export function MoveStrip({ line, cursor, onSelect }: { line: Pick<TreeNode, "ke
   }, [cursor, line.length]);
 
   return (
-    <nav aria-label="Moves" className="mb-2 h-10 w-full overflow-hidden rounded-xl bg-surface shadow-[var(--shadow)]">
+    <nav aria-label="Moves" dir="ltr" className="mb-2 h-10 w-full overflow-hidden rounded-xl bg-surface shadow-[var(--shadow)]">
       {line.length === 0 ? (
         <p className="flex h-full items-center px-3 text-sm text-muted">Moves will appear here</p>
       ) : (
@@ -86,7 +86,7 @@ export function MoveList({ line, cursor, onSelect, className = "" }: { line: Pic
     );
 
   return (
-    <nav aria-label="Moves" className={`min-h-0 flex-col overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)] ${className}`}>
+    <nav aria-label="Moves" dir="ltr" className={`min-h-0 flex-col overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)] ${className}`}>
       {line.length === 0 ? (
         <p className="p-4 text-sm text-muted">Moves will appear here</p>
       ) : (

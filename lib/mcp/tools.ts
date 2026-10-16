@@ -79,7 +79,7 @@ export function registerTools(server: McpServer, { origin }: ToolContext): void 
 
   server.registerTool(
     "get_chess_profile",
-    { title: "Chess profile", description: "The player's chess identity, per-pool ratings with uncertainty, and Fatma status. Fatma's '3000' is a nominal label, not a measured Elo.", inputSchema: z.object({}), annotations: READ },
+    { title: "Chess profile", description: "The player's chess identity, per-pool ratings with uncertainty, and Sherine status. Sherine's '3000' is a nominal label, not a measured Elo.", inputSchema: z.object({}), annotations: READ },
     async (_args, extra) => run(api.mcp.getChessProfile, extra, {}),
   );
 
@@ -146,7 +146,7 @@ export function registerTools(server: McpServer, { origin }: ToolContext): void 
 
   server.registerTool(
     "get_fatma_profile",
-    { title: "Fatma profile", description: "Fatma's on/off state, mood, memory counters, achievements and installed/pending upgrades.", inputSchema: z.object({}), annotations: READ },
+    { title: "Sherine profile", description: "Sherine's on/off state, mood, memory counters, achievements and installed/pending upgrades.", inputSchema: z.object({}), annotations: READ },
     async (_args, extra) => run(api.mcp.getFatmaProfile, extra, {}),
   );
 
@@ -159,7 +159,7 @@ export function registerTools(server: McpServer, { origin }: ToolContext): void 
       inputSchema: z.object({
         sourceGameKey: key,
         sourceNodeKey: z.string().min(1).max(64).describe("nodeKey from get_game; the new game starts from the position AFTER this move ('root' = initial position)."),
-        enginePreset: z.enum(["fast", "standard", "deep"]).default("standard").describe("Fatma's thinking time at full strength."),
+        enginePreset: z.enum(["fast", "standard", "deep"]).default("standard").describe("Sherine's thinking time at full strength."),
         label: z.string().max(60).default(""),
         expectedRevision: z.number().int().optional().describe("Game revision from get_game; rejects if the game changed since."),
         clientOperationId: opId,
@@ -218,8 +218,8 @@ export function registerTools(server: McpServer, { origin }: ToolContext): void 
   server.registerTool(
     "propose_fatma_upgrade",
     {
-      title: "Propose Fatma upgrade",
-      description: "Draft a data-only dialogue pack for Fatma (no code, links or assets). It is validated and stored as a draft; nothing changes until installed.",
+      title: "Propose Sherine upgrade",
+      description: "Draft a data-only dialogue pack for Sherine (no code, links or assets). It is validated and stored as a draft; nothing changes until installed.",
       inputSchema: z.object({
         pack: z.object({
           schemaVersion: z.literal(1),
@@ -239,7 +239,7 @@ export function registerTools(server: McpServer, { origin }: ToolContext): void 
   server.registerTool(
     "install_fatma_upgrade",
     {
-      title: "Install Fatma upgrade",
+      title: "Install Sherine upgrade",
       description:
         "Install a proposed pack (exact packId + version). Unless the player allowed auto-install, this only requests approval and returns status 'pending_approval' with a link where they decide. Reversible.",
       inputSchema: z.object({ packId: z.string().regex(/^[a-z0-9-]{3,40}$/), version: z.number().int().min(1), clientOperationId: opId }),

@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: { default: "Chess by Chaos", template: "%s · Chess by Chaos" },
-  description: "Play Fatma, a local Stockfish 19 Lite rival. Undo, replay, learn.",
+  description: "Play Sherine, a local Stockfish 19 Lite rival. Undo, replay, learn.",
   applicationName: "Chess by Chaos",
   icons: { icon: "/icon.svg" },
   appleWebApp: { capable: true, title: "Chess", statusBarStyle: "default" },

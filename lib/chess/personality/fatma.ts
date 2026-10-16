@@ -1,4 +1,4 @@
-// Fatma: a deterministic, rate-limited event -> dialogue state machine.
+// Sherine: a deterministic, rate-limited event -> dialogue state machine.
 // She is presentation only and never chooses chess moves.
 import { linesFor } from "./lines";
 

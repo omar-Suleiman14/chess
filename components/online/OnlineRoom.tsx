@@ -113,7 +113,7 @@ function Waiting({ room }: { room: RoomView }) {
         <div className="mx-auto w-44 rounded-2xl bg-white p-3 sm:w-40">
           {svg ? <span className="block [&>svg]:h-auto [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} role="img" aria-label="QR code for the invite link" /> : <div className="aspect-square" />}
         </div>
-        <div className="grid gap-3 text-center sm:text-left">
+        <div className="grid gap-3 text-center sm:text-start">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted">Game PIN</p>
             <p className="font-mono text-4xl font-bold tabular-nums tracking-[0.18em]" aria-label={`PIN ${room.code.split("").join(" ")}`}>

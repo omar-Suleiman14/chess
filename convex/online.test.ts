@@ -18,7 +18,7 @@ function setup() {
 
 async function startGame(t: ReturnType<typeof setup>, extra: { initialMs?: number; incrementMs?: number } = {}) {
   const { roomId, code } = await t.mutation(api.online.create, { token: HOST, name: "Omar", color: "w", ...extra });
-  const joined = await t.mutation(api.online.join, { code, token: GUEST, name: "Fatma's cousin" });
+  const joined = await t.mutation(api.online.join, { code, token: GUEST, name: "Sherine's cousin" });
   return { roomId, code, joined };
 }
 
@@ -31,7 +31,7 @@ describe("online rooms", () => {
     expect(code).toMatch(/^\d{6}$/);
     expect(joined.color).toBe("b");
     const room = await view(t, code, HOST);
-    expect(room).toMatchObject({ status: "active", you: "w", white: "Omar", black: "Fatma's cousin" });
+    expect(room).toMatchObject({ status: "active", you: "w", white: "Omar", black: "Sherine's cousin" });
     // Secrets never leave the server.
     expect(JSON.stringify(room)).not.toContain(HOST);
     expect(JSON.stringify(room)).not.toContain(GUEST);

@@ -22,6 +22,6 @@ Search overshoot past the requested `movetime` was 5–9 ms (median) on desktop.
 ## Protocol for the device run
 
 1. Open `https://<deployment>/bench` on the device. Run it once after a fresh install or cache clear (cold), then run it again (warm).
-2. Background the tab for over 60 s, return, and play a move on `/`. Fatma must still reply. The worker restarts automatically.
+2. Background the tab for over 60 s, return, and play a move on `/`. Sherine must still reply. The worker restarts automatically.
 3. Repeat in Low Power Mode, and on cellular.
 4. Paste both JSON blobs and notes into issue #3.

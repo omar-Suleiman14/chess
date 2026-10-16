@@ -151,7 +151,7 @@ export const getChessProfile = mutation({
         visibility: profile?.visibility ?? "private",
         ratings: pools.map((p) => ({ pool: p.pool, rating: Math.round(p.rating), rd: Math.round(p.rd), provisional: isProvisional(p), games: p.games, algorithm: p.algorithmVersion })),
         fatma: fatma ? { enabled: fatma.enabled, stats: fatma.stats } : null,
-        note: "Ratings are per pool (Climb / Timed). Fatma's Full Power '3000' is a nominal label, not a measured Elo.",
+        note: "Ratings are per pool (Climb / Timed). Sherine's Full Power '3000' is a nominal label, not a measured Elo.",
       };
     }),
 });
@@ -203,7 +203,7 @@ export const getGame = mutation({
       const activeHead = snap.branches.find((b) => b.branchKey === snap.game.activeBranchKey)?.headKey;
       let pgn: string | null = null;
       try {
-        pgn = activeHead && tree.nodes[activeHead] ? exportPgn(tree, { Result: snap.game.result ?? "*", White: snap.game.humanColor === "w" ? "You" : "Fatma", Black: snap.game.humanColor === "b" ? "You" : "Fatma" }, activeHead) : null;
+        pgn = activeHead && tree.nodes[activeHead] ? exportPgn(tree, { Result: snap.game.result ?? "*", White: snap.game.humanColor === "w" ? "You" : "Sherine", Black: snap.game.humanColor === "b" ? "You" : "Sherine" }, activeHead) : null;
       } catch {
         pgn = null;
       }
@@ -501,7 +501,7 @@ export const installFatmaUpgrade = mutation({
           return { status: "pending_approval" as const };
         }
         const installed = await ctx.db.query("fatmaPacks").withIndex("by_owner_and_status", (q) => q.eq("owner", owner).eq("status", "installed")).take(50);
-        if (installed.filter((p) => p.packId !== packId).length >= 10) fail("quota", "Fatma already has 10 upgrades installed.");
+        if (installed.filter((p) => p.packId !== packId).length >= 10) fail("quota", "Sherine already has 10 upgrades installed.");
         for (const other of installed) {
           if (other.packId === packId) await ctx.db.patch("fatmaPacks", other._id, { status: "uninstalled", updatedAt: now });
         }

@@ -30,7 +30,7 @@ function loadLocal(): FatmaMemory {
 }
 
 /**
- * Fatma's runtime: picks lines locally (no network per move), persists
+ * Sherine's runtime: picks lines locally (no network per move), persists
  * memory in Convex when signed in, localStorage for guests.
  */
 export function useFatma() {

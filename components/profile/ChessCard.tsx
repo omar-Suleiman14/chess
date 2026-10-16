@@ -35,12 +35,12 @@ export type CardData = {
   title: string;
   climb: { rating: number; rd: number; games: number; beaten: number } | null;
   rivalry: { wins: number; losses: number; draws: number } | null;
-  /** Fatma's own card in the player deck. */
+  /** Sherine's own card in the player deck. */
   fatma?: boolean;
 };
 
 export const FATMA_CARD: CardData = {
-  alias: "fatma",
+  alias: "sherine",
   avatarSeed: "fatma",
   hue: 330,
   cardTheme: "rose",
@@ -93,22 +93,22 @@ function CardFront({ face, data }: { face: CardFace; data: CardData }) {
   const headline =
     face === "identity"
       ? data.fatma
-        ? { name: "Fatma", line: data.title, mono: "stockfish 19 lite · on your device" }
+        ? { name: "Sherine", line: data.title, mono: "stockfish 19 lite · on your device" }
         : { name: `@${data.alias}`, line: data.title, mono: "chess by chaos" }
       : face === "climb"
         ? { name: "The Climb", line: data.climb ? `${data.climb.beaten} of 11 levels beaten` : "Stats hidden", mono: data.climb ? `${data.climb.games} rated games` : `@${data.alias}` }
-        : { name: "vs Fatma", line: data.rivalry ? `${data.rivalry.wins}W · ${data.rivalry.draws}D · ${data.rivalry.losses}L` : "Stats hidden", mono: "nominal 3000 · full power" };
+        : { name: "vs Sherine", line: data.rivalry ? `${data.rivalry.wins}W · ${data.rivalry.draws}D · ${data.rivalry.losses}L` : "Stats hidden", mono: "nominal 3000 · full power" };
   return (
-    <div className="absolute inset-0 grid grid-cols-[44%_1fr] gap-2 rounded-[22px] p-2.5 @min-[400px]:gap-4 @min-[400px]:p-3.5 [backface-visibility:hidden]" style={{ background: theme.bg }}>
+    <div className="absolute inset-0 grid grid-cols-[38%_1fr] gap-2.5 rounded-[22px] p-2.5 @min-[400px]:grid-cols-[44%_1fr] @min-[400px]:gap-4 @min-[400px]:p-3.5 [backface-visibility:hidden]" style={{ background: theme.bg }}>
       <ArtPanel face={face} data={data} theme={theme} />
       <div className="flex min-w-0 flex-col py-1 pr-1">
         <p className="truncate text-[clamp(16px,6cqw,30px)] font-extrabold leading-[1.05] tracking-tight" style={{ color: theme.accent }}>
           {headline.name}
         </p>
-        <p className="mt-1.5 truncate font-mono text-[clamp(9px,3cqw,14px)]" style={{ color: theme.sub }}>
+        <p className="mt-1 line-clamp-2 font-mono text-[clamp(10px,3.4cqw,14px)] leading-snug" style={{ color: theme.sub }}>
           {headline.line}
         </p>
-        <p className="mt-1 truncate font-mono text-[11px]" style={{ color: theme.text }}>
+        <p className="mt-1 hidden truncate font-mono text-[11px] @min-[360px]:block" style={{ color: theme.text }}>
           {headline.mono}
         </p>
         <div className="mt-auto flex flex-col items-start justify-between gap-1 @min-[400px]:flex-row @min-[400px]:items-end @min-[400px]:gap-2">
@@ -134,7 +134,7 @@ function CardBack({ data, url }: { data: CardData; url: string }) {
     void QRCode.toString(url, { type: "svg", margin: 0, errorCorrectionLevel: "H", color: { dark: "#14161fff", light: "#00000000" } }).then(setSvg);
   }, [url]);
   return (
-    <div className="absolute inset-0 grid grid-cols-[44%_1fr] gap-2 rounded-[22px] p-2.5 @min-[400px]:gap-4 @min-[400px]:p-3.5 [backface-visibility:hidden] [transform:rotateY(180deg)]" style={{ background: theme.bg }}>
+    <div data-card-back="true" className="absolute inset-0 grid grid-cols-[44%_1fr] gap-2 rounded-[22px] p-2.5 @min-[400px]:gap-4 @min-[400px]:p-3.5 [backface-visibility:hidden] [transform:rotateY(180deg)]" style={{ background: theme.bg }}>
       <div className="relative grid place-items-center rounded-[16px]" style={{ background: theme.art }}>
         <div className="relative w-[72%]">
           <span className="block [&>svg]:h-auto [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} aria-hidden="true" />
@@ -164,7 +164,7 @@ export function ChessCard({ face, data, url, flipped, onFlip, interactive = true
     <motion.div
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : -1}
-      aria-label={interactive ? `${face === "identity" ? (data.fatma ? "Fatma's card" : `Chess card for @${data.alias}`) : face === "climb" ? "Climb card" : "Fatma rivalry card"}. ${flipped ? "Showing QR code" : "Activate to show QR code"}.` : undefined}
+      aria-label={interactive ? `${face === "identity" ? (data.fatma ? "Sherine's card" : `Chess card for @${data.alias}`) : face === "climb" ? "Climb card" : "Sherine rivalry card"}. ${flipped ? "Showing QR code" : "Activate to show QR code"}.` : undefined}
       onClick={interactive ? onFlip : undefined}
       onKeyDown={(e) => interactive && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onFlip?.())}
       className="@container relative aspect-[1.586] w-full cursor-pointer rounded-[22px] shadow-[0_18px_50px_rgba(0,0,0,0.28)] [transform-style:preserve-3d]"

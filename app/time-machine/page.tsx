@@ -54,7 +54,7 @@ export default function TimeMachinePage() {
             <li key={g.gameKey} className="border-b border-line last:border-b-0">
               <Link href={`/time-machine/${g.gameKey}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{g.label ?? `${MODE[g.mode]} vs ${findOpponent(g.opponentId)?.name ?? "Fatma"}`}</span>
+                  <span className="block truncate font-medium">{g.label ?? `${MODE[g.mode]} vs ${findOpponent(g.opponentId)?.name ?? "Sherine"}`}</span>
                   <span className="text-xs text-muted">
                     {new Date(g.startedAt).toLocaleDateString()} · {Math.ceil(g.moveCount / 2)} moves{g.parentGameKey ? " · branch" : ""}
                   </span>

@@ -82,7 +82,7 @@ async function nextMemberNumber(ctx: MutationCtx): Promise<number> {
 }
 
 /** Everything a Chess card shows. Stats only when the owner allows them. */
-async function cardData(ctx: QueryCtx, profile: Doc<"chessProfiles">, includeStats: boolean) {
+export async function cardData(ctx: QueryCtx, profile: Doc<"chessProfiles">, includeStats: boolean) {
   const fatma = await ctx.db.query("fatmaStates").withIndex("by_owner", (q) => q.eq("owner", profile.owner)).unique();
   const climbProgress = await ctx.db.query("climbProgress").withIndex("by_owner", (q) => q.eq("owner", profile.owner)).unique();
   const stats = fatma?.stats ?? { wins: 0, losses: 0, draws: 0, undos: 0, lessons: 0 };

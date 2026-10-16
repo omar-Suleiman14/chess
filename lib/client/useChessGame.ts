@@ -125,7 +125,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
       const { tree, node } = appendMove(g.tree, g.tree.activeBranchKey, applied.uci, nodeKey, Date.now(), clock?.remainingMs[mover]);
       let next: LocalGame = { ...g, tree, clock, meta: { ...g.meta, updatedAt: Date.now() } };
       if (!g.meta.synced) {
-        // A Fatma move before the human ever moved (human plays Black): create first.
+        // A Sherine move before the human ever moved (human plays Black): create first.
         next = await ensureCreated(next);
       }
       void sync.enqueue(g.meta.gameKey, "append", {
@@ -184,14 +184,14 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
     } catch (error) {
       if (error instanceof SearchCancelled) return;
       if (generation === replyGeneration.current) {
-        setEngineError(error instanceof Error ? error.message : "Fatma could not move.");
+        setEngineError(error instanceof Error ? error.message : "Sherine could not move.");
       }
     } finally {
       if (generation === replyGeneration.current) setThinking(false);
     }
   }, [play]);
 
-  // Whenever it is Fatma's turn in an active game, ask for a reply.
+  // Whenever it is Sherine's turn in an active game, ask for a reply.
   const headKey = game ? game.tree.branches[game.tree.activeBranchKey]?.headKey : null;
   useEffect(() => {
     const g = gameRef.current;
@@ -239,7 +239,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
       commit(g);
       await store.setCurrent(g.meta.gameKey);
       callbacks.current.onFatma?.("game_start");
-      // Branch sessions and Black games must exist on the server before Fatma moves.
+      // Branch sessions and Black games must exist on the server before Sherine moves.
       if (opts.parentGameKey || opts.humanColor === "b") commit(await ensureCreated(g));
       return g;
     },

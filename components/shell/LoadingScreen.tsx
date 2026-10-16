@@ -11,7 +11,7 @@ let shownThisVisit = false;
 type Phase = "loading" | "leaving" | "gone";
 
 /**
- * Boot screen shown once per visit while Fatma's engine downloads and wakes up.
+ * Boot screen shown once per visit while Sherine's engine downloads and wakes up.
  * The bar tracks real progress (WASM bytes, then the UCI handshake) and never
  * blocks for more than a few seconds.
  */

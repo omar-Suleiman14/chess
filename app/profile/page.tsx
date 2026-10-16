@@ -20,7 +20,7 @@ const SCOPES = [
   { id: "chess.read", label: "Read games, analysis and progress" },
   { id: "chess.write", label: "Create practice branches from your games" },
   { id: "lessons.write", label: "Create lessons and practice positions" },
-  { id: "fatma.write", label: "Propose upgrades for Fatma" },
+  { id: "fatma.write", label: "Propose upgrades for Sherine" },
 ] as const;
 
 export default function ProfilePage() {
@@ -31,16 +31,16 @@ export default function ProfilePage() {
   if (!isLoading && !isAuthenticated) {
     return (
       <main className="mx-auto max-w-xl pb-12">
-        <PageHeader title="Profile & Fatma" />
+        <PageHeader title="Profile & Sherine" />
         <div className="grid gap-4 px-4">
           <section className="flex items-center gap-4 rounded-2xl bg-surface p-4 shadow-[var(--shadow)]">
             <FatmaSprite expression={fatma.enabled ? "smug" : "idle"} size={72} reducedMotion={reducedMotion} />
             <div className="grid gap-2">
-              <p className="text-sm text-muted">{fatma.enabled ? "Fatma is on." : "Fatma is off."}</p>
+              <p className="text-sm text-muted">{fatma.enabled ? "Sherine is on." : "Sherine is off."}</p>
               <FatmaToggle fatma={fatma} />
             </div>
           </section>
-          <p>Sign in for a Chess card, synced Fatma memory and AI coach access.</p>
+          <p>Sign in for a Chess card, synced Sherine memory and AI coach access.</p>
           <SignInButton mode="modal">
             <button className="justify-self-start rounded-full bg-accent px-4 py-2 text-accent-text">Sign in</button>
           </SignInButton>
@@ -91,7 +91,7 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
 
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-16">
-      <PageHeader title="Profile & Fatma" />
+      <PageHeader title="Profile & Sherine" />
       <div className="grid gap-6 px-4">
         {profile && (
           <section aria-labelledby="card" className="grid gap-4 pt-4">
@@ -155,7 +155,7 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
           <div className="flex items-center gap-4">
             <FatmaSprite expression={fatma.enabled ? "smug" : "idle"} size={72} reducedMotion={reducedMotion} />
             <div>
-              <h2 id="fatma" className="font-semibold">Fatma</h2>
+              <h2 id="fatma" className="font-semibold">Sherine</h2>
               <p className="text-sm text-muted">
                 {fatma.enabled ? "On" : "Off"} · turned off {fatma.memory.disableCount}× · brought back {fatma.memory.reenableCount}×
               </p>
@@ -216,7 +216,7 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
                 }
               />
             ))}
-            <SwitchRow label="Install Fatma upgrades without asking me" checked={grant?.grant?.allowAutoInstall ?? false} onChange={(on) => void setGrant({ scopes, allowAutoInstall: on })} />
+            <SwitchRow label="Install Sherine upgrades without asking me" checked={grant?.grant?.allowAutoInstall ?? false} onChange={(on) => void setGrant({ scopes, allowAutoInstall: on })} />
           </div>
           {grant && grant.audits.length > 0 && (
             <details className="text-sm">

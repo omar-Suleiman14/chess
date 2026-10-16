@@ -132,7 +132,7 @@ function withHead(tree: GameTree, branchKey: string, headKey: string): GameTree 
 
 /**
  * Where Undo goes: the latest earlier position where it is the human's turn.
- * After Fatma replied that is two plies back (a full turn); if Fatma has not
+ * After Sherine replied that is two plies back (a full turn); if Sherine has not
  * replied yet it is one ply back.
  */
 export function undoTarget(tree: GameTree, branchKey: string, human: Color): string | null {

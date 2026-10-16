@@ -37,7 +37,7 @@ export async function ensureFatma(ctx: MutationCtx, owner: Owner): Promise<Doc<"
 
 /** Achievements earned from real play; deterministic, no LLM involved. */
 export const ACHIEVEMENTS: Array<{ id: string; label: string; test: (s: Doc<"fatmaStates">["stats"]) => boolean; unlock?: string }> = [
-  { id: "first-win", label: "First win against Fatma", test: (s) => s.wins >= 1, unlock: "respect-1" },
+  { id: "first-win", label: "First win against Sherine", test: (s) => s.wins >= 1, unlock: "respect-1" },
   { id: "five-wins", label: "Five wins", test: (s) => s.wins >= 5, unlock: "respect-2" },
   { id: "stubborn", label: "Ten games played", test: (s) => s.wins + s.losses + s.draws >= 10 },
   { id: "student", label: "Five lessons finished", test: (s) => s.lessons >= 5 },

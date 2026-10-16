@@ -7,7 +7,7 @@ import { EXPRESSION_ANIMATION, type Expression } from "@/lib/chess/personality/f
 type Atlas = { cellWidth: number; cellHeight: number; columns: number; rows: number; animations: Record<string, number[]> };
 const A = atlas as Atlas;
 
-/** Pixel-art Fatma, animated from the sliced atlas. Lazy image, no layout shift. */
+/** Pixel-art Sherine, animated from the sliced atlas. Lazy image, no layout shift. */
 export function FatmaSprite({ expression, size = 64, reducedMotion = false, className = "" }: { expression: Expression; size?: number; reducedMotion?: boolean; className?: string }) {
   const spec = EXPRESSION_ANIMATION[expression];
   const frames = A.animations[spec.animation] ?? A.animations.idle;
@@ -34,7 +34,7 @@ export function FatmaSprite({ expression, size = 64, reducedMotion = false, clas
   return (
     <div
       role="img"
-      aria-label={`Fatma looks ${expression}`}
+      aria-label={`Sherine looks ${expression}`}
       className={`pixelated shrink-0 ${className}`}
       style={{
         width: A.cellWidth * scale,

@@ -10,7 +10,7 @@ import type { FatmaApi } from "@/lib/client/useFatma";
 import { FatmaSprite } from "./FatmaSprite";
 
 /**
- * Fatma's corner: a fixed-size space (sprite + bubble) so her lines never
+ * Sherine's corner: a fixed-size space (sprite + bubble) so her lines never
  * move the board or controls. The bubble floats inside it, max two lines.
  * With `showName` it is a player row: sprite, name/captures, then her bubble
  * right beside her.
@@ -20,8 +20,8 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, c
   const bubble = fatma.enabled && fatma.line && (
     <button
       onClick={fatma.dismiss}
-      className="bubble-in pointer-events-auto max-w-[min(100%,280px)] rounded-2xl rounded-bl-sm bg-surface px-3 py-1.5 text-left text-sm leading-snug shadow-[var(--shadow)]"
-      aria-label={`Fatma says: ${fatma.line.text}. Tap to dismiss.`}
+      className="bubble-in pointer-events-auto max-w-[min(100%,280px)] rounded-2xl rounded-es-sm bg-surface px-3 py-1.5 text-start text-sm leading-snug shadow-[var(--shadow)]"
+      aria-label={`Sherine says: ${fatma.line.text}. Tap to dismiss.`}
     >
       <StreamedText key={fatma.line.text} text={fatma.line.text} instant={reducedMotion} />
     </button>
@@ -31,12 +31,12 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, c
     return (
       <div className="pointer-events-none flex h-14 w-full min-w-0 items-center gap-2">
         {fatma.enabled && (
-          <button onClick={() => fatma.say("poke")} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label="Talk to Fatma" title="Talk to Fatma">
+          <button onClick={() => fatma.say("poke")} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label="Talk to Sherine" title="Talk to Sherine">
             <FatmaSprite expression={expression} size={48} reducedMotion={reducedMotion} />
           </button>
         )}
         <div className="min-w-0 max-w-[50%] shrink-0">
-          <span className="block text-sm font-semibold">Fatma</span>
+          <span className="block text-sm font-semibold">Sherine</span>
           <CapturedPieces pieces={captures} color={capturedColor} advantage={advantage} />
         </div>
         <div aria-live="polite" className="flex min-w-0 flex-1 items-center">
@@ -50,10 +50,10 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, c
     <div className="pointer-events-none relative h-16 w-full">
       {fatma.enabled && (
         <>
-          <div className="absolute bottom-0 left-0">
+          <div className="absolute bottom-0 start-0">
             <FatmaSprite expression={expression} size={56} reducedMotion={reducedMotion} />
           </div>
-          <div aria-live="polite" className="absolute bottom-3 left-14 right-0 flex items-end">
+          <div aria-live="polite" className="absolute bottom-3 start-14 end-0 flex items-end">
             {bubble}
           </div>
         </>
@@ -87,7 +87,7 @@ function StreamedText({ text, instant }: { text: string; instant: boolean }) {
 }
 
 /**
- * The disable flow: Fatma pleads, but "Turn off" is always immediate and
+ * The disable flow: Sherine pleads, but "Turn off" is always immediate and
  * clearly labelled. Keeping her on softens her briefly.
  */
 export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
@@ -100,7 +100,7 @@ export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
   if (!fatma.enabled) {
     return (
       <button onClick={() => void fatma.setEnabled("enable")} className="rounded-full bg-surface-2 px-4 py-2 text-sm">
-        Bring Fatma back
+        Bring Sherine back
       </button>
     );
   }
@@ -113,7 +113,7 @@ export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
         }}
         className="rounded-full bg-surface-2 px-4 py-2 text-sm"
       >
-        Turn Fatma off
+        Turn Sherine off
       </button>
       {asking && (
         <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setAsking(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -143,7 +143,7 @@ export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
                 }}
                 className="w-full rounded-2xl bg-accent py-3 font-medium text-accent-text"
               >
-                Turn off Fatma
+                Turn off Sherine
               </button>
               <button
                 onClick={() => {

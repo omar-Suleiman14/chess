@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { Board, type LastMove } from "@/components/chess/Board";
 import { CapturedPieces } from "@/components/chess/CapturedPieces";
-import { Dialog } from "@/components/chess/GameScreen";
+import { Dialog, KeyboardHelp } from "@/components/chess/GameScreen";
 import { GameResult } from "@/components/chess/GameResult";
 import { MoveList, MoveStrip } from "@/components/chess/MoveStrip";
 import { ReviewArrows } from "@/components/chess/ReviewArrows";
@@ -15,7 +15,7 @@ import { MenuButton } from "@/components/shell/AppShell";
 import { IOS_SPRING } from "@/components/ui/Switch";
 import { capturesAlongLine } from "@/lib/chess/captures";
 import { formatClock } from "@/lib/chess/clock";
-import { applyUci, DEFAULT_POSITION, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
+import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
 import { haptic, installAudioUnlock, playSound, unlockAudio } from "@/lib/client/sound";
 import { timeControlLabel, useServerOffset } from "@/lib/client/online";
@@ -67,6 +67,8 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const [confirmResign, setConfirmResign] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rematchAsked, setRematchAsked] = useState(false);
+  const [showKeys, setShowKeys] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => installAudioUnlock(), []);
 
@@ -118,13 +120,15 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       if (last && !mine) {
         setViewPly(null);
         const applied = applyUci(prevFen.current, last.uci);
+        const mover = sideToMove(prevFen.current);
+        if (applied) setAnnouncement(`${(mover === "w" ? room.white : room.black) ?? "Opponent"}: ${describeMove(applied, mover)}`);
         if (applied && settings.sound) playSound(moveSound(applied), settings.volume);
         if (settings.haptics) haptic(8);
       }
     }
     seenPly.current = room.ply;
     prevFen.current = room.fen;
-  }, [room.ply, room.fen, room.moves, you, settings.sound, settings.volume, settings.haptics]);
+  }, [room.ply, room.fen, room.moves, room.white, room.black, you, settings.sound, settings.volume, settings.haptics]);
 
   const ended = useRef(room.status === "finished");
   useEffect(() => {
@@ -193,18 +197,23 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
     if (settings.sound) playSound("lowtime", settings.volume);
   }, [myClock, active, settings.sound, settings.volume]);
 
-  // Keyboard: arrows review, F flips.
+  // Keyboard: arrows/Home/End review, F flips, M mutes, ? lists shortcuts.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target instanceof HTMLElement && e.target.closest("[role=dialog]")) return;
       const inBoard = e.target instanceof HTMLElement && e.target.closest("[role=grid]");
       if (!inBoard && e.key === "ArrowLeft") step(-1);
       if (!inBoard && e.key === "ArrowRight") step(1);
+      if (!inBoard && e.key === "Home") jumpTo(0);
+      if (!inBoard && e.key === "End") jumpTo(line.length);
       if (e.key === "f") setOrientationOverride((o) => ((o ?? you ?? "w") === "w" ? "b" : "w"));
+      if (e.key === "m") update({ sound: !settings.sound });
+      if (e.key === "?") setShowKeys(true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step, you]);
+  }, [step, jumpTo, line.length, you, update, settings.sound]);
 
   const captures = useMemo(() => capturesAlongLine(DEFAULT_POSITION, reviewing ? room.moves.slice(0, viewPly!) : room.moves), [reviewing, viewPly, room.moves]);
   const status = useMemo(() => positionStatus(fen), [fen]);
@@ -390,6 +399,9 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
           }}
         />
       )}
+
+      <p className="sr-only" aria-live="assertive">{announcement}</p>
+      {showKeys && <KeyboardHelp onClose={() => setShowKeys(false)} />}
 
       {confirmResign && (
         <Dialog title={room.ply < 2 ? "Abort this game?" : "Resign this game?"} onClose={() => setConfirmResign(false)}>

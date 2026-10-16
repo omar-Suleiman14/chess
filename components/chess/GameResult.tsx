@@ -15,14 +15,14 @@ type Props = {
   reducedMotion: boolean;
   onRematch: () => void;
   reviewUrl?: string;
-  /** Who "they" are in the title (default Fatma). */
+  /** Who "they" are in the title (default Sherine). */
   opponentName?: string;
   rematchLabel?: string;
   rematchDisabled?: boolean;
 };
 
 /** A finite end-of-game celebration; dismiss it to inspect the final board. */
-export function GameResult({ result, reason, human, description, reducedMotion, onRematch, reviewUrl, opponentName = "Fatma", rematchLabel = "Rematch", rematchDisabled = false }: Props) {
+export function GameResult({ result, reason, human, description, reducedMotion, onRematch, reviewUrl, opponentName = "Sherine", rematchLabel = "Rematch", rematchDisabled = false }: Props) {
   const [dismissed, setDismissed] = useState(false);
   const { settings } = useSettings();
   if (dismissed) return null;
@@ -43,7 +43,7 @@ export function GameResult({ result, reason, human, description, reducedMotion, 
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 30, delay: resigned ? 0.15 : 0.45 }}
       >
-        <button onClick={() => setDismissed(true)} aria-label="Dismiss result" className="absolute right-1 top-1 grid h-11 w-11 place-items-center rounded-full text-muted">
+        <button onClick={() => setDismissed(true)} aria-label="Dismiss result" className="absolute end-1 top-1 grid h-11 w-11 place-items-center rounded-full text-muted">
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
         </button>
         <div className="relative mx-auto mb-3 grid h-20 w-20 place-items-center rounded-full" style={{ color: accent, backgroundColor: `${accent}20` }} aria-hidden="true">

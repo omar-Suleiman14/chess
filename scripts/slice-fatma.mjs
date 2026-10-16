@@ -1,4 +1,4 @@
-// Slices the supplied Fatma sprite sheet into a uniform atlas.
+// Slices the supplied Sherine sprite sheet into a uniform atlas.
 // Usage: node scripts/slice-fatma.mjs <source.webp|png>
 // Output: public/fatma/fatma-atlas.png + public/fatma/atlas.json
 import sharp from "sharp";

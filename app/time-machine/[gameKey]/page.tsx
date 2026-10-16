@@ -266,8 +266,8 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
     if (!game) return;
     const text = exportPgn(tree, {
       Date: new Date().toISOString().slice(0, 10).replace(/-/g, "."),
-      White: game.meta.humanColor === "w" ? "You" : "Fatma",
-      Black: game.meta.humanColor === "b" ? "You" : "Fatma",
+      White: game.meta.humanColor === "w" ? "You" : "Sherine",
+      Black: game.meta.humanColor === "b" ? "You" : "Sherine",
       Result: game.meta.result ?? "*",
     }, tree.branches[activeBranch].headKey);
     const blob = new Blob([text], { type: "application/x-chess-pgn" });
@@ -297,7 +297,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
       <PageHeader title="Time Machine" />
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
         <div className="mx-auto w-full max-w-[min(92vw,calc(100dvh-260px),640px)]">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FatmaSprite expression="idle" size={42} reducedMotion={reducedMotion} /><div>Fatma<CapturedPieces pieces={captures.captured[game.meta.humanColor === "w" ? "b" : "w"]} color={game.meta.humanColor} advantage={captures.advantage[game.meta.humanColor === "w" ? "b" : "w"]} /></div></div>
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FatmaSprite expression="idle" size={42} reducedMotion={reducedMotion} /><div>Sherine<CapturedPieces pieces={captures.captured[game.meta.humanColor === "w" ? "b" : "w"]} color={game.meta.humanColor} advantage={captures.advantage[game.meta.humanColor === "w" ? "b" : "w"]} /></div></div>
           <Board
             moveBadge={selectedReview && selectedStyle && node ? { square: node.uci.slice(2, 4) as Square, symbol: selectedStyle.symbol, color: selectedStyle.color, label: selectedStyle.label } : undefined}
             result={game.meta.status === "finished" && cursor === path.length && activeBranch === tree.activeBranchKey ? { result: game.meta.result, reason: game.meta.resultReason } : undefined}
@@ -484,7 +484,7 @@ function ContinueDialog({ node, onClose, onStart }: { node: TreeNode; onClose: (
   return (
     <Dialog title={`Continue from ${moveLabel(node)}`} onClose={onClose}>
       <p className="text-sm text-muted">Creates a new, unrated game. The original stays exactly as played.</p>
-      <Segmented label="Opponent" value={kind} onChange={setKind} options={[["full", "Full Power"], ["climb", "Easier Fatma"]]} />
+      <Segmented label="Opponent" value={kind} onChange={setKind} options={[["full", "Full Power"], ["climb", "Easier Sherine"]]} />
       {kind === "full" ? (
         <Segmented label="Thinking time" value={think} onChange={setThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
       ) : (

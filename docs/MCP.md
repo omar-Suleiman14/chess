@@ -16,7 +16,7 @@ MCP is remote authenticated API access to chess records and authoring. No MCP Ap
 
 | Tool | Permission | Contract |
 | --- | --- | --- |
-| `get_chess_profile` | chess.read | Ratings/pools, trends, Fatma status, privacy |
+| `get_chess_profile` | chess.read | Ratings/pools, trends, Sherine status, privacy |
 | `list_games` | chess.read | Pagination, mode/date/result, immutable ids |
 | `get_game` | chess.read | PGN, start FEN, mode, branch metadata, move nodes (bounded/paged) |
 | `get_game_analysis` | chess.read | Stored eval snapshots, mistakes, quality/depth/source |
@@ -79,7 +79,7 @@ No VPS compute: a headless MCP call cannot silently run browser WASM on the user
 - "Review my last five games" -> `list_games` -> `get_game` -> `get_game_analysis`/progress -> concise feedback with game links.
 - "I blundered at move 24; start another line" -> `get_game` to resolve move node -> `create_branch` -> link opens exact position on website.
 - "Teach me Queen's Gambit with no reading" -> `create_lesson` -> link to playable mini-lesson.
-- "Upgrade Fatma so she thanks me and has new insults" -> `propose_fatma_upgrade` -> user reviews -> `install_fatma_upgrade`; audited, reversible, bounded.
+- "Upgrade Sherine so she thanks me and has new insults" -> `propose_fatma_upgrade` -> user reviews -> `install_fatma_upgrade`; audited, reversible, bounded.
 
 ## Acceptance
 

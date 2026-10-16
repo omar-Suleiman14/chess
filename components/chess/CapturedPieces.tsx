@@ -16,7 +16,7 @@ export function CapturedPieces({ pieces = [], color = "b", advantage = 0 }: { pi
       <div className="flex min-w-0 flex-wrap items-center -space-x-1.5" aria-hidden="true">
         {pieces.map((piece, i) => <span key={`${piece}-${i}`} className="block h-6 w-[18px] shrink-0"><Piece type={piece} color={color} set={settings.pieceSet} className="h-full w-full object-contain" style={color === "b" ? DARK_PIECE_HALO : undefined} /></span>)}
       </div>
-      {advantage > 0 && <span className="ml-2 shrink-0 text-xs font-medium tabular-nums text-muted" aria-hidden="true">+{advantage}</span>}
+      {advantage > 0 && <span className="ms-2 shrink-0 text-xs font-medium tabular-nums text-muted" aria-hidden="true">+{advantage}</span>}
     </div>
   );
 }

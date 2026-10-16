@@ -14,11 +14,11 @@ Thanks for considering contributions. This is a small open-source *personal ches
 
 - Chess legality is never determined by an LLM or by UI animations.
 - Stockfish Lite single-threaded in a local Worker only; no full engine, no hosted Stockfish on Wareed.
-- A maximum Fatma label of 3000 means in-app nominal strength; do not describe it as official rating.
+- A maximum Sherine label of 3000 means in-app nominal strength; do not describe it as official rating.
 - Undo/branching must not corrupt original games, and assisted rated games stay unrated.
 - Respect low-text, board-first, Apple-inspired design; no Liquid Glass and no generic browser alert/confirm.
 - OAuth MCP tool writes must be authenticated, authorized, auditable and safe.
-- Never commit secrets, user's private game data, private asset licenses, or unapproved Fatma sprites.
+- Never commit secrets, user's private game data, private asset licenses, or unapproved Sherine sprites.
 
 ## Licensing
 

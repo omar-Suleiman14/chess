@@ -1,6 +1,6 @@
 // EngineController: one Stockfish worker, serialised UCI, priority scheduling.
 //
-// Priorities: "move" (Fatma's reply) > "eval" (bar) > "review" (background).
+// Priorities: "move" (Sherine's reply) > "eval" (bar) > "review" (background).
 // A higher-priority request stops the running search; the stopped search's
 // late `bestmove` is consumed and discarded by generation tracking.
 import { legalUcis, sideToMove } from "../rules";

@@ -103,7 +103,7 @@ describe("lessons", () => {
   });
 });
 
-describe("Fatma", () => {
+describe("Sherine", () => {
   it("is silent when disabled and rate-limited when enabled", () => {
     const off = disable(initialMemory());
     expect(pickLine(off, "human_blunder", BASE_LINES, 100_000, 1)).toBeNull();

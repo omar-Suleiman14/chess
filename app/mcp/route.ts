@@ -26,9 +26,9 @@ async function handle(req: Request): Promise<Response> {
   const handler = createMcpHandler((server) => registerTools(server, { origin }), {
     serverInfo: { name: "chess-by-chaos", version: "1.0.0" },
     instructions:
-      "Chess by Chaos: the player's own chess games, lessons and Fatma (a Stockfish-powered rival). You are a coach, not a chessboard: " +
+      "Chess by Chaos: the player's own chess games, lessons and Sherine (a Stockfish-powered rival). You are a coach, not a chessboard: " +
       "link the player to the website for play. Never invent engine evaluations; use saved analysis or say it is missing. " +
-      "Fatma's 3000 is a nominal label, not a measured Elo. Write tools require the player's in-app permission.",
+      "Sherine's 3000 is a nominal label, not a measured Elo. Write tools require the player's in-app permission.",
   });
   const authed = withMcpAuth(handler, verifyToken, {
     required: true,

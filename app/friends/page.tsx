@@ -7,8 +7,11 @@ import { useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { ChallengeDialog } from "@/components/online/ChallengeDialog";
 import { errorText } from "@/components/online/OnlineShared";
+import { Segmented } from "@/components/chess/GameScreen";
+import { CardStack } from "@/components/profile/CardStack";
 import { Avatar } from "@/components/profile/ChessCard";
 import { PageHeader } from "@/components/shell/AppShell";
+import { useOrigin } from "@/lib/client/useOrigin";
 
 type Person = { alias: string; avatarSeed: string; hue: number };
 
@@ -47,6 +50,26 @@ export default function FriendsPage() {
   const [alias, setAlias] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [challenging, setChallenging] = useState<string | null>(null);
+  const cards = useQuery(api.friends.cards, isAuthenticated ? {} : "skip");
+  const origin = useOrigin();
+  const [view, setView] = useState<"cards" | "list">("cards");
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("cbc.friends.view");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (saved === "list" || saved === "cards") setView(saved);
+    } catch {
+      // ignore
+    }
+  }, []);
+  const changeView = (v: "cards" | "list") => {
+    setView(v);
+    try {
+      localStorage.setItem("cbc.friends.view", v);
+    } catch {
+      // ignore
+    }
+  };
 
   // Friends need a card (alias) to find each other.
   useEffect(() => {
@@ -68,7 +91,7 @@ export default function FriendsPage() {
 
   if (!isLoading && !isAuthenticated) {
     return (
-      <main className="mx-auto min-h-dvh max-w-xl pb-10">
+      <main className="mx-auto min-h-dvh max-w-xl overflow-x-clip pb-10">
         <PageHeader title="Friends" />
         <div className="grid gap-4 px-4 text-center">
           <p className="text-sm text-muted">Sign in to add friends, see their cards and challenge them. You can still play anyone with a link or PIN without an account.</p>
@@ -82,7 +105,7 @@ export default function FriendsPage() {
   }
 
   return (
-    <main className="mx-auto min-h-dvh max-w-xl pb-10">
+    <main className="mx-auto min-h-dvh max-w-xl overflow-x-clip pb-10">
       <PageHeader title="Friends" />
       <div className="grid gap-4 px-4">
         <form
@@ -136,7 +159,22 @@ export default function FriendsPage() {
           </Section>
         )}
 
-        {data && (
+        {data && data.friends.length > 0 && <Segmented label="Show friends as" value={view} onChange={changeView} options={[["cards", "Cards"], ["list", "List"]]} />}
+
+        {data && view === "cards" && cards && cards.length > 0 && (
+          <CardStack
+            cards={cards.map((c) => ({ id: c.alias, face: "identity" as const, data: c, url: `${origin}/u/${c.alias}`, label: `@${c.alias}` }))}
+            label="Friends' cards"
+            footer={(card) => (
+              <>
+                <button onClick={() => setChallenging(card.id)} className={`${pill} min-h-11 bg-accent px-5 text-accent-text`}>Challenge @{card.id}</button>
+                <Link href={`/u/${card.id}`} className={`${pill} grid min-h-11 place-items-center bg-surface px-5 shadow-[var(--shadow)]`}>Open profile</Link>
+              </>
+            )}
+          />
+        )}
+
+        {data && (view === "list" || data.friends.length === 0) && (
           <Section title={`Friends${data.friends.length ? ` · ${data.friends.length}` : ""}`}>
             {data.friends.length === 0 && <li className="py-3 text-sm text-muted">No friends yet. Add someone by username, or scan their card.</li>}
             {data.friends.map((p) => (

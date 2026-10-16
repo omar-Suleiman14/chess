@@ -6,7 +6,7 @@ export type CardStats = { wins: number; losses: number; draws: number; undos: nu
 export function cardTitle(s: CardStats): string {
   const games = s.wins + s.losses + s.draws;
   if (s.climbBeaten >= 8) return "Summit Seeker";
-  if (s.wins >= 10) return "Fatma's Nemesis";
+  if (s.wins >= 10) return "Sherine's Nemesis";
   if (s.wins >= 3) return "Stubborn Rival";
   if (s.climbBeaten >= 4) return "Steady Climber";
   if (s.lessons >= 8) return "Patient Student";

@@ -23,7 +23,7 @@ const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: strin
   {
     title: "Play",
     items: [
-      { href: "/", label: "Full Power", hint: "Fatma · 3000" },
+      { href: "/", label: "Full Power", hint: "Sherine · 3000" },
       { href: "/climb", label: "The Climb", hint: "Rated ladder" },
       { href: "/timed", label: "Timed", hint: "Clock presets" },
       { href: "/play", label: "Play a friend", hint: "Link · QR · PIN" },
@@ -40,7 +40,7 @@ const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: strin
   {
     title: "You",
     items: [
-      { href: "/profile", label: "Profile & Fatma" },
+      { href: "/profile", label: "Profile & Sherine" },
       { href: "/friends", label: "Friends", hint: "Requests · invites" },
       { href: "/u", label: "Players" },
       { href: "/settings", label: "Settings" },
@@ -317,7 +317,7 @@ function BackButton() {
       aria-label="Back"
       className="grid h-11 w-11 place-items-center rounded-full"
     >
-      <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+      <svg viewBox="0 0 24 24" className="h-5 w-5 rtl:rotate-180" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>

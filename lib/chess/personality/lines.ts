@@ -1,4 +1,4 @@
-// Fatma's dialogue in every language she speaks. One row per line keeps the
+// Sherine's dialogue in every language she speaks. One row per line keeps the
 // mood gates, grudges and follow-ups identical across languages; ids stay
 // stable for English so existing "seen" memory keeps working.
 import type { DialogueLine, Expression, FatmaEvent, Mood } from "./fatma";

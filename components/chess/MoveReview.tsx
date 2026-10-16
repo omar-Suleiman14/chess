@@ -12,7 +12,7 @@ export function MoveReview({ moves, total, human, cursor, onSelect }: { moves: R
       <p className="mt-1 text-xs text-muted">{moves.length} / {total} moves reviewed · depth 10+</p>
       {moves.length === 0 && <p className="mt-3 text-sm text-muted">Tap Analyse to review both sides with Stockfish.</p>}
       <table className="mt-3 w-full text-sm">
-        <thead><tr className="text-xs text-muted"><th className="pb-2 text-left">Quality</th><th className="pb-2">You</th><th className="pb-2">Fatma</th></tr></thead>
+        <thead><tr className="text-xs text-muted"><th className="pb-2 text-left">Quality</th><th className="pb-2">You</th><th className="pb-2">Sherine</th></tr></thead>
         <tbody>
           {(Object.entries(MOVE_QUALITY) as [MoveQuality, typeof MOVE_QUALITY[MoveQuality]][]).map(([quality, style]) => (
             <tr key={quality}>
@@ -20,7 +20,7 @@ export function MoveReview({ moves, total, human, cursor, onSelect }: { moves: R
               {[human, human === "w" ? "b" : "w"].map((color) => {
                 const matching = moves.filter((move) => move.color === color && move.quality === quality);
                 const next = matching.find((move) => move.ply > cursor) ?? matching[0];
-                return <td key={color} className="text-center"><button disabled={!next} onClick={() => next && onSelect(next.ply)} aria-label={`${color === human ? "Your" : "Fatma's"} ${style.label} moves: ${matching.length}. Jump to next.`} className="min-h-9 min-w-9 rounded-lg font-semibold disabled:opacity-40" style={{ color: style.color }}>{moves.length ? matching.length : "—"}</button></td>;
+                return <td key={color} className="text-center"><button disabled={!next} onClick={() => next && onSelect(next.ply)} aria-label={`${color === human ? "Your" : "Sherine's"} ${style.label} moves: ${matching.length}. Jump to next.`} className="min-h-9 min-w-9 rounded-lg font-semibold disabled:opacity-40" style={{ color: style.color }}>{moves.length ? matching.length : "—"}</button></td>;
               })}
             </tr>
           ))}

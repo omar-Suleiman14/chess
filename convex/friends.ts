@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { fail, optionalOwner, requireOwner, type Owner } from "./model/auth";
+import { cardData } from "./profiles";
 
 const MAX_FRIENDS = 200;
 const CHALLENGE_TTL_MS = 24 * 60 * 60_000;
@@ -178,5 +179,23 @@ export const overview = query({
       outgoing: await people(sentPending.map((r) => r.addressee)),
       challenges,
     };
+  },
+});
+
+/** Your friends' cards (private ones included: friends may see them) for the deck view. */
+export const cards = query({
+  args: {},
+  handler: async (ctx) => {
+    const owner = await optionalOwner(ctx);
+    if (!owner) return [];
+    const [sent, got] = await Promise.all([
+      ctx.db.query("friendships").withIndex("by_requester_and_status", (q) => q.eq("requester", owner).eq("status", "accepted")).take(60),
+      ctx.db.query("friendships").withIndex("by_addressee_and_status", (q) => q.eq("addressee", owner).eq("status", "accepted")).take(60),
+    ]);
+    const profiles = (await Promise.all([...sent.map((r) => r.addressee), ...got.map((r) => r.requester)].map((o) => profileByOwner(ctx, o)))).filter(
+      (p): p is Doc<"chessProfiles"> => p !== null,
+    );
+    profiles.sort((a, b) => a.alias.localeCompare(b.alias));
+    return await Promise.all(profiles.map((p) => cardData(ctx, p, p.showRatings)));
   },
 });

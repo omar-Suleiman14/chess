@@ -1,4 +1,4 @@
-// Fatma upgrade packs: data only. Validation rejects code, markup, URLs,
+// Sherine upgrade packs: data only. Validation rejects code, markup, URLs,
 // oversized content and profanity. Packs can add lines and unlock expressions,
 // never moves, engine settings, or remote assets.
 import { z } from "zod";

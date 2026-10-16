@@ -63,7 +63,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       }
       setLastMove({ from: applied.from, to: applied.to, rookFrom, rookTo, key: node.key });
       const mover: Color = node.ply % 2 === 1 ? "w" : "b";
-      setAnnouncement(`${by === "fatma" ? "Fatma: " : ""}${describeMove(applied, mover)}`);
+      setAnnouncement(`${by === "fatma" ? "Sherine: " : ""}${describeMove(applied, mover)}`);
       if (settings.sound) {
         playSound(applied.checkmate ? "mate" : applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : "move", settings.volume);
       }
@@ -250,20 +250,26 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     }
   }, [chess, game, navigationFeedback]);
 
-  // Keyboard shortcuts: U = undo, F = flip, N = new game.
+  // Keyboard shortcuts (press ? for the list). Ignored while typing or inside a dialog.
+  const [showKeys, setShowKeys] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target instanceof HTMLElement && e.target.closest("[role=dialog]")) return;
       const inBoard = e.target instanceof HTMLElement && e.target.closest("[role=grid]");
       if (!inBoard && e.key === "ArrowLeft") step(-1);
       if (!inBoard && e.key === "ArrowRight") step(1);
+      if (!inBoard && e.key === "Home") jumpTo(0);
+      if (!inBoard && e.key === "End") jumpTo(line.length);
       if (e.key === "u" && game && (head?.ply ?? 0) > 0) setConfirmUndo(true);
       if (e.key === "f") setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"));
       if (e.key === "n") setShowNew(true);
+      if (e.key === "m") update({ sound: !settings.sound });
+      if (e.key === "?") setShowKeys(true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [game, head?.ply, human, step]);
+  }, [game, head?.ply, human, step, jumpTo, line.length, update, settings.sound]);
 
   const tc = game?.meta.timeControlId ? findTimeControl(game.meta.timeControlId) : undefined;
   const now = monotonicNow();
@@ -290,7 +296,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
             </p>
           </div>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ms-auto flex items-center gap-1.5">
           <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 shrink-0 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)]" aria-label="New game" aria-keyshortcuts="n">
             New
           </motion.button>
@@ -373,7 +379,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               showLegalDots={settings.legalDots}
               coordinates={settings.coordinates}
               reducedMotion={reducedMotion}
-              label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : "Fatma to move.") : "Game over."}`}
+              label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : "Sherine to move.") : "Game over."}`}
               onSelect={() => settings.sound && playSound("select", settings.volume)}
             />
           </div>
@@ -396,8 +402,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
         <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted [grid-area:status] lg:justify-start" aria-live="polite">
-          {engineWaking && <span>Fatma is waking up…</span>}
-          {chess.thinking && !engineWaking && <span>Fatma is thinking…</span>}
+          {engineWaking && <span>Sherine is waking up…</span>}
+          {chess.thinking && !engineWaking && <span>Sherine is thinking…</span>}
           {chess.engineError && (
             <span className="text-danger">
               {chess.engineError}{" "}
@@ -435,6 +441,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
       </footer>
       </div>
+
+      {showKeys && <KeyboardHelp onClose={() => setShowKeys(false)} extra={[["U", "Undo (asks first)"], ["N", "New game"]]} />}
 
       {confirmUndo && (
         <Dialog title="Undo your last move?" onClose={() => setConfirmUndo(false)}>
@@ -502,7 +510,7 @@ function resultLine(result: string | undefined, reason: string | undefined, huma
     threefold: "threefold repetition",
   };
   if (result === "1/2-1/2") return `Draw · ${why[reason ?? ""] ?? reason ?? ""}`;
-  return `${humanWon ? "You win" : "Fatma wins"} ${why[reason ?? ""] ?? ""}`.trim();
+  return `${humanWon ? "You win" : "Sherine wins"} ${why[reason ?? ""] ?? ""}`.trim();
 }
 
 function ClockChip({ ms, running, large }: { ms: number | null; running: boolean; large?: boolean }) {
@@ -523,26 +531,54 @@ function ClockChip({ ms, running, large }: { ms: number | null; running: boolean
 
 export function Dialog({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>("button,input,select")?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    onCloseRef.current = onClose;
+  });
+  useEffect(() => {
+    // Focus moves in, Tab stays inside, Escape closes, and focus returns to where it was.
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.querySelector<HTMLElement>("button,input,select,a[href]")?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== "Tab" || !ref.current) return;
+      const items = Array.from(ref.current.querySelectorAll<HTMLElement>("button:not([disabled]),input,select,a[href],[tabindex]:not([tabindex='-1'])"));
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      previous?.focus?.();
+    };
+  }, []);
   return (
     <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
       <motion.div
         ref={ref}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
         className="w-full max-w-sm rounded-3xl bg-surface p-5 shadow-[var(--shadow)]"
         onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, y: 48, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={IOS_SPRING}
       >
-        <p className="mb-4 text-lg font-semibold">{title}</p>
+        <h2 id={titleId} className="mb-4 text-lg font-semibold">{title}</h2>
         <div className="grid gap-2">{children}</div>
       </motion.div>
     </motion.div>
@@ -571,7 +607,7 @@ function NewGameDialog({
     <Dialog title="New game" onClose={onClose}>
       <Segmented label="Play as" value={color} onChange={setColor} options={[["w", "White"], ["random", "Random"], ["b", "Black"]]} />
       {defaults.mode === "full_power" && (
-        <Segmented label="Fatma thinks" value={think} onChange={onThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
+        <Segmented label="Sherine thinks" value={think} onChange={onThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
       )}
       <p className="text-xs text-muted">Full strength in every setting. Thinking time changes how long she searches, not a fake Elo.</p>
       <button onClick={start} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text">
@@ -586,12 +622,36 @@ function NewGameDialog({
 
 export function Segmented<T extends string>({ label, value, onChange, options }: { label: string; value: T; onChange: (v: T) => void; options: Array<[T, string]> }) {
   const group = useId();
+  const labelId = useId();
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  // Radio-group keyboard pattern: one Tab stop, arrow keys move the choice.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const index = options.findIndex(([v]) => v === value);
+    const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
+    const forward = e.key === "ArrowDown" || e.key === (rtl ? "ArrowLeft" : "ArrowRight");
+    const backward = e.key === "ArrowUp" || e.key === (rtl ? "ArrowRight" : "ArrowLeft");
+    if (!forward && !backward) return;
+    e.preventDefault();
+    const next = (index + (forward ? 1 : -1) + options.length) % options.length;
+    onChange(options[next][0]);
+    refs.current[next]?.focus();
+  };
   return (
-    <div role="radiogroup" aria-label={label}>
-      <p className="mb-1 px-1 text-sm text-muted">{label}</p>
+    <div role="radiogroup" aria-labelledby={labelId} onKeyDown={onKeyDown}>
+      <p id={labelId} className="mb-1 px-1 text-sm text-muted">{label}</p>
       <div className="grid rounded-[14px] bg-surface-2 p-[3px]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
-        {options.map(([v, text]) => (
-          <button key={v} role="radio" aria-checked={value === v} onClick={() => onChange(v)} className="relative min-h-10 rounded-[11px] text-sm">
+        {options.map(([v, text], i) => (
+          <button
+            key={v}
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
+            role="radio"
+            aria-checked={value === v}
+            tabIndex={value === v ? 0 : -1}
+            onClick={() => onChange(v)}
+            className="relative min-h-10 rounded-[11px] text-sm"
+          >
             {value === v && (
               <motion.span layoutId={`seg-${group}`} className="absolute inset-0 rounded-[11px] bg-surface shadow-[0_3px_8px_rgba(0,0,0,0.12),0_1px_1px_rgba(0,0,0,0.06)]" transition={IOS_SPRING} />
             )}
@@ -600,5 +660,33 @@ export function Segmented<T extends string>({ label, value, onChange, options }:
         ))}
       </div>
     </div>
+  );
+}
+
+/** "?" opens this: every shortcut on the game screens. */
+export function KeyboardHelp({ onClose, extra = [] }: { onClose: () => void; extra?: Array<[string, string]> }) {
+  const rows: Array<[string, string]> = [
+    ["← →", "Previous / next move"],
+    ["Home / End", "Start / back to the live position"],
+    ["Hold ← → button", "Scrub quickly"],
+    ["Tab, then arrows", "Move around the board"],
+    ["Enter or Space", "Pick up / drop a piece"],
+    ["Esc", "Cancel selection or close"],
+    ["F", "Flip board"],
+    ["M", "Sound on / off"],
+    ...extra,
+  ];
+  return (
+    <Dialog title="Keyboard shortcuts" onClose={onClose}>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+        {rows.map(([keys, what]) => (
+          <div key={keys} className="contents">
+            <dt><kbd className="rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-xs">{keys}</kbd></dt>
+            <dd className="text-muted">{what}</dd>
+          </div>
+        ))}
+      </dl>
+      <button onClick={onClose} className="mt-2 w-full rounded-2xl bg-surface-2 py-3">Close</button>
+    </Dialog>
   );
 }

@@ -86,7 +86,7 @@ let unlockInstalled = false;
 /**
  * Unlock audio on the very first touch/click/key anywhere on the page, so the
  * opening move sounds even when it is made by dragging (pointerup alone does
- * not count as a gesture on iOS) or when Fatma moves first.
+ * not count as a gesture on iOS) or when Sherine moves first.
  */
 export function installAudioUnlock(): void {
   if (unlockInstalled || typeof document === "undefined") return;

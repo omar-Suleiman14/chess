@@ -326,7 +326,8 @@ export function Board({
   const size = drag?.size ?? 0;
 
   return (
-    <div className="relative w-full">
+    // The board is always left-to-right (files a-h), even when the page is RTL.
+    <div className="relative w-full" dir="ltr">
       <div
         ref={boardRef}
         role="grid"

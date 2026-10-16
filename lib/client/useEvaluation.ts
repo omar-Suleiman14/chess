@@ -13,7 +13,7 @@ export type Evaluation = { nodeKey: string; fen: string; score: WhiteScore; dept
 
 /**
  * Bounded, lower-priority evaluation of the current position. Never runs
- * when disabled, never blocks Fatma's move search (the controller preempts).
+ * when disabled, never blocks Sherine's move search (the controller preempts).
  */
 export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, onFinal?: (e: Evaluation) => void) {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);

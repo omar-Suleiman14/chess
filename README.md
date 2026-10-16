@@ -8,18 +8,18 @@
 
 ## The idea
 
-Open the site, see the board, and play against **Fatma**: Stockfish 19 Lite running locally in a browser Web Worker. Lose, learn, undo, replay, and try again. ChatGPT and Claude are optional coaches through MCP; the board never moves into a chat.
+Open the site, see the board, and play against **Sherine**: Stockfish 19 Lite running locally in a browser Web Worker. Lose, learn, undo, replay, and try again. ChatGPT and Claude are optional coaches through MCP; the board never moves into a chat.
 
 ## What's in the app
 
 | Area | What you get |
 | --- | --- |
-| **Full Power** (`/`) | Boot screen with real engine-download progress, then unhandicapped Stockfish 19 Lite, shown as **Fatma · 3000**. That's a nominal label, not a measured Elo. Fast / Standard / Deep thinking time, unlimited full-turn Undo (old lines are kept as variations), ‹ › move review without undoing, resign, colour choice, eval bar, resume after reload. |
+| **Full Power** (`/`) | Boot screen with real engine-download progress, then unhandicapped Stockfish 19 Lite, shown as **Sherine · 3000**. That's a nominal label, not a measured Elo. Fast / Standard / Deep thinking time, unlimited full-turn Undo (old lines are kept as variations), ‹ › move review without undoing, resign, colour choice, eval bar, resume after reload. |
 | **The Climb** (`/climb`) | 11-level ladder: four scripted beginner bots below Stockfish's weakest setting, then limited Stockfish, then Full Power. Glicko-2 provisional rating, applied exactly once per eligible game. Undo, hints or the eval bar make a game unrated, permanently. |
 | **Timed** (`/timed`) | Clock presets picked before the game (3+2, 5+3, 10+5, 15+10). Monotonic clock, increments, timeout adjudication with insufficient-material draws. The server re-checks rated timeouts. One rating pool per time control. |
 | **Time Machine** (`/time-machine`) | Animated replay, drag scrubber, play/pause/speed, move list, branch switching, on-device analysis with mistake markers, **Continue from here** (a new linked unrated game; the original is untouched), PGN export, and PGN import with variations. |
 | **Learn** (`/learn`) | Fixed micro-path (pieces → special moves → check → mate → tactics → endgames → opening principles), curated topics (Queen's Gambit, Sicilian, Italian, Ruy Lopez, London, French, Caro-Kann, forks, pins), progressive hints, explanations of wrong moves, and spaced-repetition practice built from your own analysed mistakes. |
-| **Fatma** | Pixel-art sprite, short rate-limited lines, playful disable confirmation with an immediate "Turn off", grudges when re-enabled, achievements, and validated data-only upgrade packs. She never chooses moves. |
+| **Sherine** | Pixel-art sprite, short rate-limited lines, playful disable confirmation with an immediate "Turn off", grudges when re-enabled, achievements, and validated data-only upgrade packs. She never chooses moves. |
 | **Profile** (`/profile`) | Separate Chess identity card (alias, blobatar avatar, hue, theme, tilt/flip, optional public `/u/<alias>`), AI-coach permissions with audit log and revocation, JSON export, full data deletion. |
 | **Settings** | Ivory / Sage / Slate / Blue boards, five open-licensed piece sets, recorded move/capture sounds and volume, iOS-style switches and sliders, haptics (Android), reduced motion. |
 
@@ -45,12 +45,12 @@ pnpm dev
 
 | Command | What it does |
 | --- | --- |
-| `pnpm test` | Vitest: rules, engine controller, PGN/tree, Glicko-2, clock, lessons, Fatma, and Convex backend tests (ownership, idempotency, branching, rating ledger, MCP gating) |
+| `pnpm test` | Vitest: rules, engine controller, PGN/tree, Glicko-2, clock, lessons, Sherine, and Convex backend tests (ownership, idempotency, branching, rating ledger, MCP gating) |
 | `pnpm lint` | ESLint (Next, TypeScript, Convex rules) |
 | `pnpm typecheck` | TypeScript, whole repo |
 | `pnpm build` | Typecheck, then production Next build |
 | `pnpm calibrate -- --games 40 --pairs 0-10` | Bot-vs-bot Climb calibration; writes evidence to `docs/calibration/` |
-| `pnpm slice-fatma <sheet.webp>` | Regenerates the Fatma sprite atlas |
+| `pnpm slice-fatma <sheet.webp>` | Regenerates the Sherine sprite atlas |
 
 Convex needs these environment variables (`npx convex env set ...`): `CLERK_JWT_ISSUER_DOMAIN` and `MCP_SERVICE_SECRET` (the same value as in `.env.local`).
 
@@ -79,7 +79,7 @@ Not yet verified:
 - Climb opponent strengths are **uncalibrated estimates**. A 6-games-per-pair sample is in `docs/calibration/`. A large run is needed before calling ratings calibrated.
 - End-to-end OAuth with ChatGPT and with Claude: needs a public HTTPS deployment and Dynamic Client Registration enabled.
 - Screen-reader passes with VoiceOver and TalkBack, and Playwright E2E/visual suites.
-- Fatma sprite redistribution rights: see [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md).
+- Sherine sprite redistribution rights: see [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md).
 
 ## Open source and licences
 

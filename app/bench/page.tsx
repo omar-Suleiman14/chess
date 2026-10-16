@@ -95,7 +95,7 @@ export default function BenchPage() {
       }
       out.searches = searches;
 
-      // 3. First Fatma reply in a fresh game (handshake already warm).
+      // 3. First Sherine reply in a fresh game (handshake already warm).
       const t0 = performance.now();
       await engine.search({ kind: "move", fen: POSITIONS[0], movetimeMs: 1200 });
       out.firstMoveStandardMs = Math.round(performance.now() - t0);
@@ -114,7 +114,7 @@ export default function BenchPage() {
       <PageHeader title="Engine benchmark" />
       <div className="grid gap-4 px-4 text-sm">
         <p className="text-muted">
-          Measures Stockfish 19 Lite on this device: worker start-up, search depth per thinking time, and whether the page stays smooth while Fatma thinks.
+          Measures Stockfish 19 Lite on this device: worker start-up, search depth per thinking time, and whether the page stays smooth while Sherine thinks.
           Takes about 30 seconds. Keep this tab in front.
         </p>
         <button onClick={() => void run()} disabled={running} className="min-h-12 rounded-2xl bg-accent font-semibold text-accent-text disabled:opacity-50">

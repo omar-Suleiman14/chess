@@ -11,7 +11,7 @@ Phone / desktop browser
   │    ├─ game controller: mode/rated state, Undo, clocks, branch pointer
   │    ├─ Web Worker EngineController (Stockfish 19 Lite UCI)
   │    ├─ evaluation scheduler (lower priority than move requests)
-  │    ├─ Fatma character event/state renderer
+  │    ├─ Sherine character event/state renderer
   │    └─ IndexedDB local saves + engine/asset Cache Storage
   ├─ Clerk authentication
   └─ Convex authenticated queries/mutations (separate Chess deployment)
@@ -20,7 +20,7 @@ Phone / desktop browser
        ├─ ratings and eligible result ledger
        ├─ lessons, attempts, practice queue
        ├─ chess profiles, card themes, avatar seed
-       └─ Fatma personality/upgrade state + audit log
+       └─ Sherine personality/upgrade state + audit log
 
 Secure HTTP MCP endpoint (on app deployment)
   ├─ OAuth discovery, scopes, owner-level auth, audit and rate limits

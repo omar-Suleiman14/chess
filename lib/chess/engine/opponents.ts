@@ -40,20 +40,20 @@ export const CLIMB_OPPONENTS: Opponent[] = [
   { id: "climb-02", version: 1, name: "Snack Grabber", rating: 450, ratingDeviation: 300, calibrated: false, policy: { kind: "beginner", policy: "greedy", blunderRate: 0.35 } },
   { id: "climb-03", version: 1, name: "Nervous Knight", rating: 650, ratingDeviation: 300, calibrated: false, policy: { kind: "beginner", policy: "careful", blunderRate: 0.25 } },
   { id: "climb-04", version: 1, name: "Tidy Bishop", rating: 850, ratingDeviation: 300, calibrated: false, policy: { kind: "beginner", policy: "careful", blunderRate: 0.08 } },
-  { id: "climb-05", version: 1, name: "Fatma (sleepy)", rating: 1050, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { "Skill Level": 0 }, movetimeMs: 60, depth: 2 } },
-  { id: "climb-06", version: 1, name: "Fatma (distracted)", rating: 1250, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { "Skill Level": 3 }, movetimeMs: 120, depth: 4 } },
-  { id: "climb-07", version: 1, name: "Fatma (warming up)", rating: 1450, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 1450 }, movetimeMs: 400 } },
-  { id: "climb-08", version: 1, name: "Fatma (focused)", rating: 1750, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 1750 }, movetimeMs: 600 } },
-  { id: "climb-09", version: 1, name: "Fatma (serious)", rating: 2050, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 2050 }, movetimeMs: 800 } },
-  { id: "climb-10", version: 1, name: "Fatma (ruthless)", rating: 2400, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 2400 }, movetimeMs: 1000 } },
-  { id: "climb-11", version: 1, name: "Fatma · Full Power", rating: FULL_POWER_LABEL, ratingDeviation: 350, calibrated: false, policy: { kind: "stockfish", options: {}, movetimeMs: THINK_TIME_MS.standard } },
+  { id: "climb-05", version: 1, name: "Sherine (sleepy)", rating: 1050, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { "Skill Level": 0 }, movetimeMs: 60, depth: 2 } },
+  { id: "climb-06", version: 1, name: "Sherine (distracted)", rating: 1250, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { "Skill Level": 3 }, movetimeMs: 120, depth: 4 } },
+  { id: "climb-07", version: 1, name: "Sherine (warming up)", rating: 1450, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 1450 }, movetimeMs: 400 } },
+  { id: "climb-08", version: 1, name: "Sherine (focused)", rating: 1750, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 1750 }, movetimeMs: 600 } },
+  { id: "climb-09", version: 1, name: "Sherine (serious)", rating: 2050, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 2050 }, movetimeMs: 800 } },
+  { id: "climb-10", version: 1, name: "Sherine (ruthless)", rating: 2400, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 2400 }, movetimeMs: 1000 } },
+  { id: "climb-11", version: 1, name: "Sherine · Full Power", rating: FULL_POWER_LABEL, ratingDeviation: 350, calibrated: false, policy: { kind: "stockfish", options: {}, movetimeMs: THINK_TIME_MS.standard } },
 ];
 
 export function fullPowerOpponent(preset: ThinkPreset): Opponent {
   return {
     id: `full-power-${preset}`,
     version: 1,
-    name: "Fatma",
+    name: "Sherine",
     rating: FULL_POWER_LABEL,
     ratingDeviation: 350,
     calibrated: false,

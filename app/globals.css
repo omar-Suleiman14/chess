@@ -175,3 +175,60 @@ button {
   background: linear-gradient(to right, hsl(0 80% 60%), hsl(60 80% 55%), hsl(120 60% 50%), hsl(180 70% 50%), hsl(240 75% 62%), hsl(300 70% 60%), hsl(360 80% 60%));
 }
 .ios-range.hue::-webkit-slider-thumb { margin-top: -10px; }
+
+/* Card stack (/u, Friends): front card upright, neighbours lean back to each
+   side; tapping one behind fans them out. --pos is the slot (-2..2), --depth its distance. */
+.card-stack-scene { --stack-card: clamp(260px, 70vw, 440px); }
+.card-stack { position: relative; width: min(100%, calc(var(--stack-card) + (var(--fan-count, 5) - 1) * 150px)); height: calc(var(--stack-card) / 1.586 + 150px); margin: 0 auto; perspective: 1200px; touch-action: pan-y; outline-offset: 4px; }
+.card-stack__card { position: absolute; width: var(--stack-card); left: 50%; top: 70px; margin-left: calc(var(--stack-card) / -2); padding: 0; border: 0; background: none; color: inherit; border-radius: 22px;
+  transform: translateX(calc(var(--pos) * clamp(26px, 6vw, 70px))) translateY(calc(var(--depth) * 8px)) translateZ(calc(var(--depth) * -90px)) rotateY(calc(var(--pos) * -12deg)) rotateZ(calc(var(--pos) * 3deg));
+  transform-origin: center bottom; transition: transform 420ms cubic-bezier(.22,.8,.3,1), opacity 320ms; opacity: calc(1 - var(--depth) * .14); cursor: pointer; }
+.card-stack__card[data-active=true] { transform: translateZ(0); cursor: grab; }
+.card-stack__card[data-active=true]:active { cursor: grabbing; }
+.card-stack[data-fanned=true] .card-stack__card[data-active=false] { opacity: 1;
+  transform: translateX(calc(var(--pos) * clamp(70px, 16vw, 190px))) translateY(calc(var(--depth) * -16px)) translateZ(calc(var(--depth) * -35px)) rotateY(calc(var(--pos) * -5deg)) rotateZ(calc(var(--pos) * 9deg)); }
+.card-stack__card:focus-visible { outline: 2px solid var(--focus); outline-offset: 5px; }
+/* The art (not the slot) drifts away from the mouse, so the stack keeps its shape. */
+.card-stack__art { display: block; border-radius: 22px; will-change: transform; transform: perspective(1200px) translate(var(--tx, 0px), var(--ty, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
+/* Phones: the card takes nearly the full width; neighbours just peek out behind it. */
+@media (max-width: 600px) {
+  .card-stack-scene { --stack-card: min(calc(100vw - 40px), 420px); }
+  .card-stack { height: calc(var(--stack-card) / 1.586 + 110px); }
+  .card-stack__card { top: 48px; transform: translateX(calc(var(--pos) * 14px)) translateY(calc(var(--depth) * 10px)) translateZ(calc(var(--depth) * -80px)) rotateY(calc(var(--pos) * -8deg)) rotateZ(calc(var(--pos) * 2.5deg)); }
+  /* Fanned on a phone: cards lift up and lean out rather than slide off the edge. */
+  .card-stack[data-fanned=true] .card-stack__card[data-active=false] { transform: translateX(calc(var(--pos) * 12vw)) translateY(calc(var(--depth) * -38px)) translateZ(calc(var(--depth) * -35px)) rotateY(calc(var(--pos) * -3deg)) rotateZ(calc(var(--pos) * 7deg)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-stack__card { transition: none; transform: translateX(calc(var(--pos) * 28px)) scale(calc(1 - var(--depth) * .04)); }
+  .card-stack__card[data-active=true] { transform: none; }
+  .card-stack[data-fanned=true] .card-stack__card[data-active=false] { transform: translateX(calc(var(--pos) * 40px)) scale(calc(1 - var(--depth) * .04)); }
+}
+/* A card opening morphs between the stack and its page. */
+::view-transition-group(*) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.22,.8,.3,1); }
+
+/* A player's card page: always light, glowing in the card's own colours (--a/--b/--c). */
+.card-public { --a: #a9cbff; --b: #72a9ff; --c: #33d4f2;
+  /* Light tokens here whatever the app theme, so shared controls (menu, dialogs) match the page. */
+  --bg: #f6f4ef; --surface: #ffffff; --surface-2: #efece5; --text: #1d1c1a; --muted: #6d6a64; --line: #e2ded5; --accent: #1d1c1a; --accent-text: #ffffff;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.06);
+  position: relative; isolation: isolate; overflow: hidden; min-height: 100dvh; display: grid; place-items: center; padding: clamp(20px, 4dvh, 48px) 20px;
+  color-scheme: light; color: #1d1d1f; background: #f5f5f7; }
+.card-public::before { content: ""; position: absolute; inset: -25%; z-index: -1; opacity: .55; filter: blur(80px);
+  background: radial-gradient(38% 38% at 28% 30%, var(--a), transparent 70%), radial-gradient(34% 34% at 74% 70%, var(--c), transparent 70%), radial-gradient(28% 28% at 72% 22%, var(--b), transparent 70%); }
+.card-public__card { width: min(640px, 92vw, max(280px, calc((100dvh - 250px) * 1.586))); }
+.card-public__btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 500; color: #1d1d1f;
+  background: rgba(255,255,255,.72); border: 1px solid rgba(0,0,0,.06); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); transition: background .2s ease; }
+.card-public__btn:hover { background: rgba(255,255,255,.92); }
+.card-public__btn:disabled { opacity: .55; }
+.card-public__cta { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #fff; background: #1d1d1f; transition: transform .2s ease, background .2s ease; }
+.card-public__cta:hover { background: #000; transform: translateY(-1px); }
+.card-public :focus-visible { outline: 2px solid #0071e3; outline-offset: 4px; }
+
+/* The single card leans toward / drifts from the pointer (vars from useShyTilt), rising in on arrival. */
+.card-public__tilt { perspective: 1400px; }
+.card-public__tilt > div { will-change: transform; transform-style: preserve-3d; transform: translate(var(--tx, 0px), var(--ty, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); animation: card-rise .9s cubic-bezier(.2,.9,.2,1) backwards; }
+.card-public__glare { pointer-events: none; position: absolute; inset: 0; border-radius: 22px; opacity: 0; transition: opacity .3s ease; mix-blend-mode: soft-light;
+  background: radial-gradient(60% 60% at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,.75), transparent 70%); }
+.card-public__tilt:hover .card-public__glare { opacity: 1; }
+@keyframes card-rise { from { opacity: 0; transform: translateY(24px); } }
+@media (prefers-reduced-motion: reduce) { .card-public__tilt > div { animation: none; transform: none; } .card-public__glare { display: none; } }

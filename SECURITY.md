@@ -10,6 +10,6 @@ Security expectations before launch:
 - OAuth-protected MCP tool endpoints with least-privilege scopes, revocation, rate limits, idempotency and audit logs.
 - Disallow mutations that arbitrarily set rating, completed rated result, user ownership or raw evaluation cache authority.
 - Validate PGN/FEN and lesson solution data with library/game rules; bound input lengths and complexity.
-- Treat MCP-supplied text and Fatma dialogue packs as untrusted content; never execute arbitrary HTML/JS.
+- Treat MCP-supplied text and Sherine dialogue packs as untrusted content; never execute arbitrary HTML/JS.
 - Ensure secrets are server-side, not bundled into browser assets or recorded in telemetry.
 - Security and license audit must pass prior to public deployment.
