@@ -171,6 +171,38 @@ button {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
 
+/* Liquid Glass off: the original native iOS-style slider. */
+/* iOS-style slider. Set --pct on the element for the filled track. */
+.ios-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.ios-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--range-fill, #0a84ff) var(--pct, 50%), var(--switch-off) var(--pct, 50%));
+}
+.ios-range::-moz-range-track { height: 4px; border-radius: 999px; background: var(--switch-off); }
+.ios-range::-moz-range-progress { height: 4px; border-radius: 999px; background: var(--range-fill, #0a84ff); }
+.ios-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -12px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.15), 0 1px 1px rgb(0 0 0 / 0.16), 0 0 0 0.5px rgb(0 0 0 / 0.04);
+}
+.ios-range::-moz-range-thumb { width: 28px; height: 28px; border: none; border-radius: 999px; background: #fff; box-shadow: 0 3px 8px rgb(0 0 0 / 0.15); }
+.ios-range.hue::-webkit-slider-runnable-track {
+  height: 8px;
+  background: linear-gradient(to right, hsl(0 80% 60%), hsl(60 80% 55%), hsl(120 60% 50%), hsl(180 70% 50%), hsl(240 75% 62%), hsl(300 70% 60%), hsl(360 80% 60%));
+}
+.ios-range.hue::-webkit-slider-thumb { margin-top: -10px; }
+
 /* Card stack (/u, Friends): front card upright, neighbours lean back to each
    side; tapping one behind fans them out. --pos is the slot (-2..2), --depth its distance. */
 .card-stack-scene { --stack-card: clamp(260px, 70vw, 440px); }
@@ -283,11 +315,5 @@ button {
   .glass-button[data-variant="tint"] > .glass-layer { background: var(--accent); }
   .glass-panel > .glass-layer { background: var(--surface); }
 }
-/* Liquid Glass turned off (Settings, or by default on weak devices): plain solid controls. */
-:root[data-glass="off"] .glass-layer { background: var(--surface); box-shadow: var(--shadow); }
-:root[data-glass="off"] .glass-layer::after { display: none; }
-:root[data-glass="off"] .glass-button[data-variant="tint"] > .glass-layer { background: var(--accent); }
-:root[data-glass="off"] .glass-panel > .glass-layer { background: var(--surface); box-shadow: var(--shadow); }
-:root[data-glass="off"] .glass-switch-thumb > .glass-layer, :root[data-glass="off"] .glass-slider .glass-layer { background: transparent; box-shadow: none; }
 :root[data-contrast="high"] .glass-layer { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), var(--glass-shadow); }
 :root[data-contrast="high"] .glass-button[data-variant="tint"] > .glass-layer { background: var(--accent); }

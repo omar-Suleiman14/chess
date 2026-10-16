@@ -21,6 +21,12 @@ export type SearchRequest = {
   multiPv?: number;
   /** UCI options for this search; omitted options are reset to defaults. */
   options?: EngineOptions;
+  /**
+   * The game this search belongs to. When it differs from the previous
+   * search's game, `ucinewgame` is sent first so hash and history from the
+   * other game cannot bleed into this one. Omit for position-only work (eval).
+   */
+  gameId?: string;
   onInfo?: (info: SearchInfo) => void;
 };
 
@@ -94,6 +100,7 @@ export class EngineController {
   private active: Pending | null = null;
   private nextId = 1;
   private currentOptions: EngineOptions = {};
+  private currentGame: string | null = null;
   private listeners = new Set<(state: EngineState) => void>();
   private _state: EngineState = "idle";
 
@@ -133,6 +140,7 @@ export class EngineController {
     this.post("setoption name Hash value 16");
     await this.withTimeout(this.send("isready", (l) => l === "readyok"), "Engine did not become ready");
     this.currentOptions = {};
+    this.currentGame = null;
     this.setState("ready");
   }
 
@@ -208,8 +216,12 @@ export class EngineController {
     const next = this.queue.shift()!;
     this.active = next;
     this.setState("thinking");
+    if (next.request.gameId !== undefined && next.request.gameId !== this.currentGame) {
+      this.post("ucinewgame");
+      this.currentGame = next.request.gameId;
+    }
     this.applyOptions(next.options);
-    // Make sure option changes are applied before the search starts.
+    // Make sure ucinewgame and option changes are applied before the search starts.
     await this.send("isready", (l) => l === "readyok");
     if (this.active !== next) return;
     if (next.cancelled) {

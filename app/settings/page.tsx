@@ -27,7 +27,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function SettingsPage() {
-  const { settings, update, glassOn, weakDevice } = useSettings();
+  const { settings, update, glassOn, glassOffReason } = useSettings();
   const palette = PALETTES.find((p) => p[0] === settings.palette) ?? PALETTES[0];
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-16">
@@ -92,15 +92,30 @@ export default function SettingsPage() {
             <SwitchRow label="High contrast" checked={settings.highContrast} onChange={(v) => update({ highContrast: v })} />
             <SwitchRow
               label="Liquid Glass"
-              hint={settings.glass === "auto" ? (weakDevice ? "Off by default on this device to keep it smooth." : "Glass buttons, switches and sliders.") : "Set by you."}
+              badge="Experimental"
+              hint={
+                settings.glass !== "auto"
+                  ? "Set by you."
+                  : glassOffReason === "webkit"
+                    ? "Off by default in Safari and on iPhone and iPad, which can't show the refraction."
+                    : glassOffReason === "weak"
+                      ? "Off by default on this device to keep it smooth."
+                      : "Refractive glass buttons, switches and sliders."
+              }
               checked={glassOn}
               onChange={(v) => update({ glass: v ? "on" : "off" })}
             />
             {settings.glass !== "auto" && (
               <button onClick={() => update({ glass: "auto" })} className="flex min-h-12 w-full items-center px-4 text-start text-sm font-medium text-[#0a84ff]">
-                Reset Liquid Glass to this device&apos;s default ({weakDevice ? "off" : "on"})
+                Reset Liquid Glass to this device&apos;s default ({glassOffReason ? "off" : "on"})
               </button>
             )}
+            <SwitchRow
+              label="Living background"
+              hint="Faint drifting characters behind the app. Tap empty space to send a ripple through them."
+              checked={settings.livingBackground}
+              onChange={(v) => update({ livingBackground: v })}
+            />
           </div>
         </Group>
 

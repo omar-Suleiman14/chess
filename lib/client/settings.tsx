@@ -23,8 +23,10 @@ export type Settings = {
   /** English, Franco (Egyptian Arabic in Latin letters) or Egyptian Arabic. */
   fatmaLanguage: FatmaLanguage;
   highContrast: boolean;
-  /** Liquid Glass controls. "auto" turns them off on weak devices. */
+  /** Experimental Liquid Glass controls. "auto" follows the device default (see glassDefault). */
   glass: "auto" | "on" | "off";
+  /** Faint drifting characters behind the app that ripple when you tap empty space. */
+  livingBackground: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fatmaLanguage: "en",
   highContrast: false,
   glass: "auto",
+  livingBackground: false,
 };
 
 const KEY = "cbc.settings.v1";
@@ -52,8 +55,8 @@ type Ctx = {
   reducedMotion: boolean;
   /** Whether Liquid Glass is on right now (the setting, or the device default for "auto"). */
   glassOn: boolean;
-  /** This device is too weak for glass by default. */
-  weakDevice: boolean;
+  /** Why "auto" means off on this device, or null when it means on. */
+  glassOffReason: GlassOffReason;
 };
 const SettingsContext = createContext<Ctx | null>(null);
 
@@ -84,16 +87,37 @@ export function isWeakDevice(): boolean {
   return (nav.hardwareConcurrency > 0 && nav.hardwareConcurrency < 4) || (nav.deviceMemory !== undefined && nav.deviceMemory < 4) || nav.connection?.saveData === true;
 }
 
+/**
+ * WebKit: Safari, and every browser on iPhone/iPad (Apple requires WebKit there,
+ * so Chrome/Edge/Firefox on iOS count too). WebKit cannot render the refraction,
+ * so glass would only ever be the fallback there.
+ */
+export function isWebKit(ua: string, maxTouchPoints = 0): boolean {
+  const iOS = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && maxTouchPoints > 1);
+  if (iOS) return true;
+  return /AppleWebKit/.test(ua) && !/Chrome|Chromium|Edg|OPR|Android/.test(ua);
+}
+
+export type GlassOffReason = "webkit" | "weak" | null;
+
+export function glassOffReason(): GlassOffReason {
+  if (typeof navigator === "undefined") return null;
+  if (isWebKit(navigator.userAgent, navigator.maxTouchPoints)) return "webkit";
+  return isWeakDevice() ? "weak" : null;
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [systemReduced, setSystemReduced] = useState(false);
-  const [weakDevice, setWeakDevice] = useState(false);
+  // Until the device is known, render the plain controls: upgrading to glass
+  // after mount is less jarring than flashing glass on a device that turns it off.
+  const [offReason, setOffReason] = useState<GlassOffReason | "unknown">("unknown");
 
   useEffect(() => {
     // Hydrate after mount so server and first client render match.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSettings(load());
-    setWeakDevice(isWeakDevice());
+    setOffReason(glassOffReason());
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setSystemReduced(media.matches);
     const onChange = () => setSystemReduced(media.matches);
@@ -114,7 +138,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reducedMotion = settings.motion === "reduced" || (settings.motion === "system" && systemReduced);
-  const glassOn = settings.glass === "on" || (settings.glass === "auto" && !weakDevice);
+  const glassOn = offReason !== "unknown" && (settings.glass === "on" || (settings.glass === "auto" && offReason === null));
+  const glassOffReasonValue = offReason === "unknown" ? null : offReason;
 
   useEffect(() => {
     document.documentElement.dataset.palette = settings.palette;
@@ -124,13 +149,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.palette, settings.highContrast, reducedMotion, glassOn]);
 
 
-  const value = useMemo(() => ({ settings, update, reducedMotion, glassOn, weakDevice }), [settings, update, reducedMotion, glassOn, weakDevice]);
+  const value = useMemo(() => ({ settings, update, reducedMotion, glassOn, glassOffReason: glassOffReasonValue }), [settings, update, reducedMotion, glassOn, glassOffReasonValue]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 
-/** Glass on/off without requiring a provider (defaults to on). */
+/** Glass on/off without requiring a provider (defaults to off: the plain controls). */
 export function useGlassOn(): boolean {
-  return useContext(SettingsContext)?.glassOn ?? true;
+  return useContext(SettingsContext)?.glassOn ?? false;
 }
 
 export function useSettings(): Ctx {

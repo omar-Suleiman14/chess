@@ -116,6 +116,31 @@ describe("games", () => {
     expect(main.headKey).toBe(keys[1]);
   });
 
+  it("rejects an append made against a stale revision without writing anything", async () => {
+    const t = setup();
+    const g = await newGame(t);
+    const base = { gameKey: g.gameKey, branchKey: g.branchKey, parentKey: "root" };
+    const first = await g.user.mutation(api.games.appendMove, { ...base, opId: opId(), nodeKey: "rev-ok", uci: "e2e4", expectedRevision: 0 });
+    expect(first.revision).toBe(1);
+    await expect(
+      g.user.mutation(api.games.appendMove, { ...base, opId: opId(), parentKey: first.nodeKey, nodeKey: "rev-stale", uci: "e7e5", expectedRevision: 0 }),
+    ).rejects.toThrow(/changed/);
+    const snap = await g.user.query(api.games.get, { gameKey: g.gameKey });
+    expect(snap!.game.revision).toBe(1);
+    expect(snap!.nodes.some((n) => n.key === "rev-stale")).toBe(false);
+    // The current revision goes through.
+    const next = await g.user.mutation(api.games.appendMove, { ...base, opId: opId(), parentKey: first.nodeKey, nodeKey: "rev-next", uci: "e7e5", expectedRevision: 1 });
+    expect(next.revision).toBe(2);
+  });
+
+  it("a replayed append is not treated as stale after it succeeded", async () => {
+    const t = setup();
+    const g = await newGame(t);
+    const args = { opId: opId(), gameKey: g.gameKey, branchKey: g.branchKey, parentKey: "root", nodeKey: "rev-replay", uci: "d2d4", expectedRevision: 0 };
+    const first = await g.user.mutation(api.games.appendMove, args);
+    expect(await g.user.mutation(api.games.appendMove, args)).toEqual(first);
+  });
+
   it("decides checkmate on the server", async () => {
     const t = setup();
     const g = await newGame(t);
