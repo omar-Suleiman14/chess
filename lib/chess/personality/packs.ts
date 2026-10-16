@@ -4,6 +4,9 @@
 import { z } from "zod";
 import type { DialogueLine, Expression, FatmaEvent } from "./fatma";
 
+// No eval-based JIT: our CSP forbids it, and zod's probe would be reported as a violation.
+z.config({ jitless: true });
+
 export const PACK_SCHEMA_VERSION = 1;
 export const PACK_LIMITS = { lines: 40, text: 120, name: 40, description: 160 } as const;
 

@@ -14,6 +14,7 @@ import { useSettings } from "@/lib/client/settings";
 import { store } from "@/lib/client/store";
 import { useFatma } from "@/lib/client/useFatma";
 import { useOrigin } from "@/lib/client/useOrigin";
+import { CopyField } from "@/components/ui/CopyField";
 
 const SCOPES = [
   { id: "chess.read", label: "Read games, analysis and progress" },
@@ -199,7 +200,7 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
           <p className="text-sm text-muted">
             Add this MCP server as a custom connector. It works from the web, desktop and mobile apps; the board stays here, they get links to it.
           </p>
-          <code className="select-all rounded-xl bg-surface-2 px-3 py-2 text-sm">{mcpUrl}</code>
+          <CopyField value={mcpUrl} label="MCP server URL" />
           <p className="text-sm font-medium">What they may do</p>
           <div className="-mx-4 border-y border-line">
             {SCOPES.map((sc) => (
