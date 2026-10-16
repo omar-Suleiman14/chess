@@ -82,6 +82,20 @@ export function useOnlineAvatar(): OnlineAvatar | undefined {
   return guest;
 }
 
+/**
+ * Runs a create/join call with the avatar, retrying once without it if the
+ * backend is older and rejects the field, so a website deployed before its
+ * Convex functions can still start games.
+ */
+export async function withAvatarFallback<T>(call: (avatar: OnlineAvatar | undefined) => Promise<T>, avatar: OnlineAvatar | undefined): Promise<T> {
+  try {
+    return await call(avatar);
+  } catch (error) {
+    if (avatar && error instanceof Error && /avatar|extra field|ArgumentValidationError/i.test(error.message)) return await call(undefined);
+    throw error;
+  }
+}
+
 /** Stable stand-in for rooms made before avatars existed. */
 export function avatarFromName(name: string): OnlineAvatar {
   let h = 0;

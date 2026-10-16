@@ -7,7 +7,8 @@ import { api } from "@/convex/_generated/api";
 import { Segmented } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
 import { errorText, NameField, useDefaultName } from "@/components/online/OnlineShared";
-import { ONLINE_TIME_CONTROLS, playerToken, saveName, useOnlineAvatar } from "@/lib/client/online";
+import { ONLINE_TIME_CONTROLS, playerToken, saveName, useOnlineAvatar, withAvatarFallback } from "@/lib/client/online";
+import { navigateWithTransition, PLAY_STAGE } from "@/lib/client/viewTransition";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -28,8 +29,8 @@ export default function PlayPage() {
     saveName(name);
     const control = ONLINE_TIME_CONTROLS.find((t) => t.id === tc)!;
     try {
-      const { code } = await create({ token: playerToken(), name, avatar, color, initialMs: control.initialMs, incrementMs: control.incrementMs });
-      router.push(`/play/${code}`);
+      const { code } = await withAvatarFallback((a) => create({ token: playerToken(), name, avatar: a, color, initialMs: control.initialMs, incrementMs: control.incrementMs }), avatar);
+      void navigateWithTransition(router, `/play/${code}`);
     } catch (e) {
       setError(errorText(e));
       setBusy(false);
@@ -41,8 +42,8 @@ export default function PlayPage() {
     setError(null);
     saveName(name);
     try {
-      await join({ code: pin, token: playerToken(), name, avatar });
-      router.push(`/play/${pin}`);
+      await withAvatarFallback((a) => join({ code: pin, token: playerToken(), name, avatar: a }), avatar);
+      void navigateWithTransition(router, `/play/${pin}`);
     } catch (e) {
       setError(errorText(e));
       setBusy(false);
@@ -77,7 +78,7 @@ export default function PlayPage() {
               <span className="px-1 text-xs text-muted">{tc === "none" ? "Take as long as you like." : "Clocks start after White's first move. A + B adds B seconds per move."}</span>
             </div>
             <Segmented label="You play" value={color} onChange={setColor} options={[["w", "White"], ["random", "Random"], ["b", "Black"]]} />
-            <button onClick={() => void onCreate()} disabled={busy} className="min-h-14 rounded-2xl bg-accent font-semibold text-accent-text disabled:opacity-60">
+            <button onClick={() => void onCreate()} disabled={busy} className="min-h-14 rounded-2xl bg-accent font-semibold text-accent-text disabled:opacity-60" style={{ viewTransitionName: PLAY_STAGE }}>
               {busy ? "Creating…" : "Create invite"}
             </button>
           </>
@@ -97,7 +98,7 @@ export default function PlayPage() {
               />
             </label>
             <NameField value={name} onChange={setName} />
-            <button onClick={() => void onJoin()} disabled={busy || pin.length !== 6} className="min-h-14 rounded-2xl bg-accent font-semibold text-accent-text disabled:opacity-40">
+            <button onClick={() => void onJoin()} disabled={busy || pin.length !== 6} className="min-h-14 rounded-2xl bg-accent font-semibold text-accent-text disabled:opacity-40" style={{ viewTransitionName: PLAY_STAGE }}>
               {busy ? "Joining…" : "Join game"}
             </button>
             <p className="text-xs text-muted">Got a QR code or link instead? Just open it with your camera or browser.</p>

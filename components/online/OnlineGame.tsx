@@ -7,6 +7,8 @@ import { api } from "@/convex/_generated/api";
 import { Board, type LastMove } from "@/components/chess/Board";
 import { CapturedPieces } from "@/components/chess/CapturedPieces";
 import { Dialog, KeyboardHelp } from "@/components/chess/GameScreen";
+import { ClockChip } from "@/components/chess/ClockChip";
+import { CharacterField } from "@/components/shell/CharacterField";
 import { GameResult } from "@/components/chess/GameResult";
 import { MoveList, MoveStrip } from "@/components/chess/MoveStrip";
 import { ReviewArrows } from "@/components/chess/ReviewArrows";
@@ -14,12 +16,12 @@ import { MenuButton } from "@/components/shell/AppShell";
 import { Avatar } from "@/components/profile/ChessCard";
 import { GlassButton } from "@/components/ui/Glass";
 import { capturesAlongLine } from "@/lib/chess/captures";
-import { formatClock } from "@/lib/chess/clock";
 import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
 import { haptic, installAudioUnlock, playSound, unlockAudio } from "@/lib/client/sound";
 import { avatarFromName, timeControlLabel, useServerOffset } from "@/lib/client/online";
 import { canSubmitMove, livePendingMove, type PendingMove } from "@/lib/client/onlineMoves";
+import { PLAY_STAGE } from "@/lib/client/viewTransition";
 import { errorText } from "./OnlineShared";
 import type { RoomView } from "./OnlineRoom";
 
@@ -248,7 +250,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
     : null;
 
   const row = (c: Color) => (
-    <div className="flex h-14 w-full min-w-0 items-center justify-between gap-2">
+    <div className="flex min-h-12 w-full min-w-0 items-center justify-between gap-2 py-1">
       <div className="flex min-w-0 items-center gap-2.5">
         <span className="shrink-0 overflow-hidden rounded-xl bg-surface">
           <Avatar {...avatarOf(c)} size={40} />
@@ -261,11 +263,14 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
           <CapturedPieces pieces={captures.captured[c]} color={other(c)} advantage={captures.advantage[c]} />
         </div>
       </div>
-      {timed && <Clock ms={clockOf(c)} running={active && toMove === c && room.turnStartedAt !== null} />}
+      {timed && <ClockChip ms={clockOf(c)} running={active && toMove === c && room.turnStartedAt !== null} />}
     </div>
   );
 
   return (
+    <>
+    {/* Optional living background: only behind games (Settings → Display). */}
+    {settings.livingBackground && <CharacterField reducedMotion={reducedMotion} />}
     <main className="min-h-dvh w-full px-3 sm:px-6">
       <div
         className="mx-auto grid min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-300px),790px)] grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_1fr_auto_auto] [grid-template-areas:'header'_'moves'_'board'_'status'_'footer'] lg:h-dvh lg:min-h-0 lg:w-fit lg:max-w-none lg:grid-cols-[var(--board-col)_300px] lg:grid-rows-[auto_minmax(0,1fr)_auto_auto] lg:gap-x-8 lg:py-4 lg:[grid-template-areas:'board_header'_'board_moves'_'board_status'_'board_footer']"
@@ -330,9 +335,9 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
           <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="hidden flex-1 lg:flex" />
         </div>
 
-        <section className="flex min-w-0 flex-col items-center justify-center [grid-area:board]">
+        <section className="flex min-w-0 flex-col items-center justify-center gap-1 [grid-area:board]">
           {row(top)}
-          <div className="relative w-full">
+          <div className="relative w-full" data-vt-ready style={{ viewTransitionName: PLAY_STAGE }}>
             <Board
               fen={fen}
               orientation={orientation}
@@ -415,19 +420,6 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         </Dialog>
       )}
     </main>
-  );
-}
-
-function Clock({ ms, running }: { ms: number | null; running: boolean }) {
-  if (ms === null) return null;
-  const low = ms < 20_000;
-  return (
-    <span
-      className={`min-h-10 shrink-0 content-center rounded-xl px-3 font-mono text-lg tabular-nums ${running ? (low ? "bg-danger text-white" : "bg-accent text-accent-text") : "bg-surface text-ink shadow-[var(--shadow)]"}`}
-      role="timer"
-      aria-label={`${formatClock(ms)} remaining${running ? ", running" : ""}`}
-    >
-      {formatClock(ms)}
-    </span>
+    </>
   );
 }

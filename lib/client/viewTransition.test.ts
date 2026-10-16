@@ -45,3 +45,34 @@ describe("card navigation transitions", () => {
     expect(inViewTransition()).toBe(false);
   });
 });
+
+describe("in-page view transitions", () => {
+  it("runs the update inside a transition when allowed", async () => {
+    const start = vi.fn((update: () => Promise<void>) => {
+      const done = update();
+      return { finished: done, ready: Promise.resolve(), updateCallbackDone: done };
+    });
+    vi.stubGlobal("document", { documentElement: { dataset: { motion: "full" } }, startViewTransition: start });
+    vi.stubGlobal("window", { matchMedia: () => ({ matches: false }) });
+    const { runViewTransition } = await import("./viewTransition");
+    const update = vi.fn();
+    runViewTransition(update);
+    await Promise.resolve();
+    expect(start).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledOnce();
+  });
+
+  it("just updates under reduced motion or without the API", async () => {
+    vi.stubGlobal("document", { documentElement: { dataset: { motion: "reduced" } }, startViewTransition: vi.fn() });
+    vi.stubGlobal("window", { matchMedia: () => ({ matches: false }) });
+    let mod = await import("./viewTransition");
+    const update = vi.fn();
+    mod.runViewTransition(update);
+    expect(update).toHaveBeenCalledOnce();
+    vi.resetModules();
+    vi.stubGlobal("document", { documentElement: { dataset: { motion: "full" } } });
+    mod = await import("./viewTransition");
+    mod.runViewTransition(update);
+    expect(update).toHaveBeenCalledTimes(2);
+  });
+});

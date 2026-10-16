@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isWeakDevice, isWebKit } from "./settings";
+import { DEFAULT_SETTINGS, fromSaved, isWeakDevice, isWebKit, resolveSettingsSync } from "./settings";
 
 describe("isWeakDevice", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -46,5 +46,28 @@ describe("isWebKit", () => {
     expect(isWebKit(UA.macChrome)).toBe(false);
     expect(isWebKit(UA.androidChrome)).toBe(false);
     expect(isWebKit(UA.firefox)).toBe(false);
+  });
+});
+
+describe("settings sync", () => {
+  it("adopts the account's settings when they are newer", () => {
+    const d = resolveSettingsSync(10, { settings: { palette: "sage", think: "deep" }, changedAt: 20 });
+    expect(d.action).toBe("pull");
+    if (d.action === "pull") expect(d.settings).toEqual({ ...DEFAULT_SETTINGS, palette: "sage", think: "deep" });
+  });
+
+  it("uploads this device's settings when they are newer, or the account has none", () => {
+    expect(resolveSettingsSync(30, { settings: {}, changedAt: 20 })).toEqual({ action: "push" });
+    expect(resolveSettingsSync(5, null)).toEqual({ action: "push" });
+  });
+
+  it("does nothing when in step, or when neither side ever changed anything", () => {
+    expect(resolveSettingsSync(20, { settings: {}, changedAt: 20 })).toEqual({ action: "none" });
+    expect(resolveSettingsSync(0, null)).toEqual({ action: "none" });
+  });
+
+  it("ignores unknown keys and keeps defaults for missing ones", () => {
+    expect(fromSaved({ palette: "blue", nope: 1 })).toEqual({ ...DEFAULT_SETTINGS, palette: "blue" });
+    expect(fromSaved(null)).toEqual(DEFAULT_SETTINGS);
   });
 });

@@ -5,7 +5,8 @@ import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter"
 import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { Dialog, Segmented } from "@/components/chess/GameScreen";
-import { ONLINE_TIME_CONTROLS, playerToken, savedName, useOnlineAvatar } from "@/lib/client/online";
+import { ONLINE_TIME_CONTROLS, playerToken, savedName, useOnlineAvatar, withAvatarFallback } from "@/lib/client/online";
+import { navigateWithTransition } from "@/lib/client/viewTransition";
 import { errorText } from "./OnlineShared";
 
 /** Pick a clock and colour, open a room, and drop its PIN in the friend's inbox. */
@@ -24,9 +25,9 @@ export function ChallengeDialog({ alias, myName, onClose }: { alias: string; myN
     setError(null);
     const control = ONLINE_TIME_CONTROLS.find((t) => t.id === tc)!;
     try {
-      const { code } = await create({ token: playerToken(), name: savedName() || myName, avatar, color, initialMs: control.initialMs, incrementMs: control.incrementMs });
+      const { code } = await withAvatarFallback((a) => create({ token: playerToken(), name: savedName() || myName, avatar: a, color, initialMs: control.initialMs, incrementMs: control.incrementMs }), avatar);
       await challenge({ alias, code });
-      router.push(`/play/${code}?invited=${encodeURIComponent(alias)}`);
+      void navigateWithTransition(router, `/play/${code}?invited=${encodeURIComponent(alias)}`);
     } catch (e) {
       setError(errorText(e));
       setBusy(false);
