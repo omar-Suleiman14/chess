@@ -6,24 +6,32 @@ import { IOS_SPRING } from "@/components/ui/Switch";
 import type { FatmaApi } from "@/lib/client/useFatma";
 import { FatmaSprite } from "./FatmaSprite";
 
-/** Fatma's corner: sprite + one-sentence bubble. Never blocks the board. */
+/**
+ * Fatma's corner: a fixed-size space (sprite + bubble) so her lines never
+ * move the board or controls. The bubble floats inside it, max two lines.
+ */
 export function FatmaPanel({ fatma, thinking, reducedMotion }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean }) {
-  if (!fatma.enabled) return null;
   const expression = fatma.line ? fatma.expression : thinking ? "thinking" : "idle";
   return (
-    <div className="pointer-events-none flex items-end gap-2">
-      <FatmaSprite expression={expression} size={56} reducedMotion={reducedMotion} />
-      <div aria-live="polite" className="min-h-[1px]">
-        {fatma.line && (
-          <button
-            onClick={fatma.dismiss}
-            className="bubble-in pointer-events-auto mb-3 max-w-[220px] rounded-2xl rounded-bl-sm bg-surface px-3 py-2 text-left text-sm shadow-[var(--shadow)]"
-            aria-label={`Fatma says: ${fatma.line.text}. Tap to dismiss.`}
-          >
-            {fatma.line.text}
-          </button>
-        )}
-      </div>
+    <div className="pointer-events-none relative h-16 w-full">
+      {fatma.enabled && (
+        <>
+          <div className="absolute bottom-0 left-0">
+            <FatmaSprite expression={expression} size={56} reducedMotion={reducedMotion} />
+          </div>
+          <div aria-live="polite" className="absolute bottom-3 left-14 right-0 flex items-end">
+            {fatma.line && (
+              <button
+                onClick={fatma.dismiss}
+                className="bubble-in pointer-events-auto max-w-[min(100%,280px)] rounded-2xl rounded-bl-sm bg-surface px-3 py-1.5 text-left text-sm leading-snug shadow-[var(--shadow)]"
+                aria-label={`Fatma says: ${fatma.line.text}. Tap to dismiss.`}
+              >
+                <span className="line-clamp-2">{fatma.line.text}</span>
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

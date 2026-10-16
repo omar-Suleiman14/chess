@@ -299,13 +299,26 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : "Fatma to move.") : "Game over."}`}
               onSelect={() => settings.sound && playSound("select", settings.volume)}
             />
+            {resultText && (
+              <div className="bubble-in absolute inset-x-3 bottom-3 z-40 rounded-2xl bg-surface/95 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.35)]" role="status">
+          <p className="text-lg font-semibold">{resultText}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button onClick={() => void chess.newGame({ ...defaults, opponentId: game?.meta.opponentId ?? defaults.opponentId })} className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-text">
+              Rematch
+            </button>
+            {game?.meta.synced && (
+              <Link href={`/time-machine/${game.meta.gameKey}`} prefetch={false} className="rounded-full bg-surface-2 px-4 py-2 text-sm">
+                Review in Time Machine
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
           </div>
         </div>
 
-        {/* Fatma and game status share one row under the board. */}
-        <div className="mt-2 flex min-h-[56px] w-full items-end justify-between gap-3">
-          <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} />
-        <div className="mb-1 flex flex-wrap items-center justify-end gap-2 text-right text-xs text-muted" aria-live="polite">
+        {/* Fixed-height status line, then Fatma's fixed-size corner: nothing here can resize the layout. */}
+        <div className="mt-1.5 flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted" aria-live="polite">
           {reviewing && viewNode && (
             <button onClick={() => setViewPly(null)} className="rounded-full bg-surface px-3 py-1 font-medium text-ink shadow-[var(--shadow)]">
               Viewing {viewNode.ply === 0 ? "start" : moveLabel(viewNode)} · Back to game
@@ -324,30 +337,16 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           {game && (game.meta.mode === "climb" || game.meta.mode === "timed") && (
             <span className={ratedEligible ? "text-ok" : ""}>{ratedEligible ? "Rated" : game.meta.rated === "ineligible" ? "Unrated · assistance used" : "Unrated"}</span>
           )}
-          {sync.status.error && <span className="text-danger">{sync.status.error}</span>}
+          {sync.status.error && <span className="truncate text-danger">{sync.status.error}</span>}
         </div>
-        </div>
+        <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} />
       </section>
 
       <p className="sr-only" aria-live="assertive">
         {announcement}
       </p>
 
-      {resultText && (
-        <div className="bubble-in mb-3 mt-1 w-full rounded-2xl bg-surface p-4 shadow-[var(--shadow)]" role="status">
-          <p className="text-lg font-semibold">{resultText}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={() => void chess.newGame({ ...defaults, opponentId: game?.meta.opponentId ?? defaults.opponentId })} className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-text">
-              Rematch
-            </button>
-            {game?.meta.synced && (
-              <Link href={`/time-machine/${game.meta.gameKey}`} prefetch={false} className="rounded-full bg-surface-2 px-4 py-2 text-sm">
-                Review in Time Machine
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+
 
       <footer className="safe-bottom flex w-full items-center gap-1.5 pt-2">
         {tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}
