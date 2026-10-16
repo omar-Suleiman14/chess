@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react";
 
 const CELL = 15; // px per character cell
 const CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const BASE_ALPHA = 0.16; // brightest a resting character gets
+const BASE_ALPHA = 0.1; // brightest a resting character gets
 const RIPPLE_SPEED = 0.55; // px per ms
 const RIPPLE_LIFE = 1600; // ms
-const RIPPLE_WIDTH = 46; // px, thickness of the lit band
+const RIPPLE_WIDTH = 34; // px, thickness of the lit band
 const AMBIENT_MS = 220; // redraw interval when nothing is rippling
 
 type Ripple = { x: number; y: number; t0: number };
@@ -21,9 +21,11 @@ const randomChar = () => CHARS[(Math.random() * CHARS.length) | 0];
 function cloud(x: number, y: number, t: number) {
   const a = Math.sin(x * 0.011 + t * 0.00007) + Math.sin(y * 0.013 - t * 0.00005);
   const b = Math.sin((x + y) * 0.006 + t * 0.00004) + Math.sin((x - y) * 0.009 + 1.7);
-  const v = (a + b) / 4 + 0.5; // ~0..1
-  // Sharpen so the field breaks into islands with empty gaps between them.
-  return Math.max(0, Math.min(1, (v - 0.48) * 3.2));
+  // A third, incommensurate wave keeps the islands from repeating as neat circles.
+  const c = Math.sin(x * 0.0037 + y * 0.0071 + Math.sin(y * 0.004) * 2 + t * 0.00003);
+  const v = (a + b + c) / 6 + 0.5; // ~0..1
+  // Sharpen hard so the field breaks into sparse islands with wide empty gaps.
+  return Math.max(0, Math.min(1, (v - 0.6) * 4.5));
 }
 
 /**
@@ -89,7 +91,7 @@ export function CharacterField({ reducedMotion }: { reducedMotion: boolean }) {
           }
           const i = r * cols + c;
           if (lit > 0.15 && Math.random() < 0.35) chars[i] = randomChar();
-          alpha = Math.min(0.85, alpha + lit * 0.7);
+          alpha = Math.min(0.9, alpha + lit * lit * 0.8);
           if (alpha < 0.012) continue;
           ctx.fillStyle = `rgb(${color} / ${alpha.toFixed(3)})`;
           ctx.fillText(chars[i], cx, cy);
