@@ -89,7 +89,7 @@ function ArtPanel({ face, data, theme }: { face: CardFace; data: CardData; theme
 
 function CardFront({ face, data }: { face: CardFace; data: CardData }) {
   const theme = themeOf(data.cardTheme);
-  const since = new Date(data.memberSince).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/(\w{3})\w*/, "$1");
+  const since = new Date(data.memberSince).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).replace(/(\w{3})\w*/, "$1");
   const headline =
     face === "identity"
       ? data.fatma

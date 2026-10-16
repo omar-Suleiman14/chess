@@ -64,7 +64,7 @@ export function ScrollRow({ children, label, selectedIndex, role = "group" }: { 
         onScroll={measure}
         role={role}
         aria-label={label}
-        className="no-scrollbar flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-smooth px-1 py-2"
+        className="no-scrollbar flex snap-x snap-mandatory scroll-px-3 gap-2.5 overflow-x-auto scroll-smooth px-3 py-2"
         style={{ maskImage: mask, WebkitMaskImage: mask }}
       >
         {children}

@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/shell/AppShell";
 import { useSettings } from "@/lib/client/settings";
 import { store } from "@/lib/client/store";
 import { useFatma } from "@/lib/client/useFatma";
+import { useOrigin } from "@/lib/client/useOrigin";
 
 const SCOPES = [
   { id: "chess.read", label: "Read games, analysis and progress" },
@@ -81,10 +82,11 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
   };
 
   const card = useQuery(api.profiles.myCard);
-  const cardUrl = typeof window !== "undefined" && profile ? `${window.location.origin}/u/${profile.alias}` : "";
+  const origin = useOrigin();
+  const cardUrl = profile ? `${origin}/u/${profile.alias}` : "";
 
   const scopes = grant?.grant?.scopes ?? [];
-  const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/mcp` : "/mcp";
+  const mcpUrl = `${origin}/mcp`;
 
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-16">
