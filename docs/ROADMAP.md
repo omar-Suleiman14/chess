@@ -20,31 +20,31 @@ No feature code is implemented yet. Phase and blocker labels describe planning, 
 
 | Order | Work package | Dependencies | Risk/owner gate |
 | --- | --- | --- | --- |
-| P00 | Dev setup (Next, TS, Convex, Clerk, lint/CI/testing) | none | blocker for everything |
-| P01 | License/third-party assets audit | none | blocker for code reuse/public bundles |
-| P02 | iPhone Stockfish Lite benchmark spike | none | blocker for engine UX assumptions |
-| P03 | Chess schema, immutable nodes and branch rules | P00 | blocker for saving/Undo/Time Machine |
-| P04 | Chess.js legality + interactive board | P00 | blocker for playable flow |
-| P05 | Engine worker, UCI manager, scheduling/failover | P02,P04 | blocker for Fatma play |
-| P06 | Full Power game + unrestricted Lite + Undo | P03,P04,P05 | first playable |
-| P07 | Convex sync/offline resilience and PGN | P03,P06 | persisted history |
-| P08 | Evaluation bar + fast/high-quality analysis | P05,P06 | no stale scores |
-| P09 | iOS UI system/navigation sheet/prefetch | P04 | fine after first playable |
-| P10 | Board themes, sounds, haptics, accessibility | P04,P09 | must not delay responsiveness |
-| P11 | Fatma sprite/dialogue baseline + disable flow | P01,P06 | character opt-in/out |
-| P12 | Chess-specific Chaos Card/Blobatar adaptation | P01,P00 | isolated Chess identity |
-| P13 | Opponent calibration, Elo policy, anti-assistance | P05,P07 | blocker for rated Climb |
-| P14 | Climb ladder and separate timed mode | P13,P06 | game modes |
-| P15 | Time Machine replay and nested saved branches | P03,P07,P08 | deep history |
-| P16 | Fixed interactive micro-curriculum | P04,P07 | core learning |
-| P17 | Adaptive + on-demand openings and lessons | P08,P16 | built from real positions |
-| P18 | MCP authenticated foundation and read tools | P07,P01 | OAuth and authorization |
-| P19 | MCP branch/lesson write operations | P15,P17,P18 | domain validation/audit |
-| P20 | Natural Fatma progression + scripted upgrades | P11,P07 | persistence, pack schemas |
-| P21 | MCP-proposed/approved Fatma upgrades | P18,P20 | explicit scopes |
-| P22 | End-to-end hardening, offline, performance, release | all relevant | final gate |
+| [P00](https://github.com/omar-Suleiman14/chess/issues/1) | Dev setup (Next, TS, Convex, Clerk, lint/CI/testing) | none | blocker for everything |
+| [P01](https://github.com/omar-Suleiman14/chess/issues/2) | License/third-party assets audit | none | blocker for code reuse/public bundles |
+| [P02](https://github.com/omar-Suleiman14/chess/issues/3) | iPhone Stockfish Lite benchmark spike | none | blocker for engine UX assumptions |
+| [P03](https://github.com/omar-Suleiman14/chess/issues/4) | Chess schema, immutable nodes and branch rules | P00 | blocker for saving/Undo/Time Machine |
+| [P04](https://github.com/omar-Suleiman14/chess/issues/5) | Chess.js legality + interactive board | P00 | blocker for playable flow |
+| [P05](https://github.com/omar-Suleiman14/chess/issues/6) | Engine worker, UCI manager, scheduling/failover | P02,P04 | blocker for Fatma play |
+| [P06](https://github.com/omar-Suleiman14/chess/issues/7) | Full Power game + unrestricted Lite + Undo | P03,P04,P05 | first playable |
+| [P07](https://github.com/omar-Suleiman14/chess/issues/8) | Convex sync/offline resilience and PGN | P03,P06 | persisted history |
+| [P08](https://github.com/omar-Suleiman14/chess/issues/9) | Evaluation bar + fast/high-quality analysis | P05,P06 | no stale scores |
+| [P09](https://github.com/omar-Suleiman14/chess/issues/10) | iOS UI system/navigation sheet/prefetch | P04 | fine after first playable |
+| [P10](https://github.com/omar-Suleiman14/chess/issues/11) | Board themes, sounds, haptics, accessibility | P04,P09 | must not delay responsiveness |
+| [P11](https://github.com/omar-Suleiman14/chess/issues/12) | Fatma sprite/dialogue baseline + disable flow | P01,P06 | character opt-in/out |
+| [P12](https://github.com/omar-Suleiman14/chess/issues/13) | Chess-specific Chaos Card/Blobatar adaptation | P01,P00 | isolated Chess identity |
+| [P13](https://github.com/omar-Suleiman14/chess/issues/14) | Opponent calibration, Elo policy, anti-assistance | P05,P07 | blocker for rated Climb |
+| [P14](https://github.com/omar-Suleiman14/chess/issues/15) | Climb ladder and separate timed mode | P13,P06 | game modes |
+| [P15](https://github.com/omar-Suleiman14/chess/issues/16) | Time Machine replay and nested saved branches | P03,P07,P08 | deep history |
+| [P16](https://github.com/omar-Suleiman14/chess/issues/17) | Fixed interactive micro-curriculum | P04,P07 | core learning |
+| [P17](https://github.com/omar-Suleiman14/chess/issues/18) | Adaptive + on-demand openings and lessons | P08,P16 | built from real positions |
+| [P18](https://github.com/omar-Suleiman14/chess/issues/19) | MCP authenticated foundation and read tools | P07,P01 | OAuth and authorization |
+| [P19](https://github.com/omar-Suleiman14/chess/issues/20) | MCP branch/lesson write operations | P15,P17,P18 | domain validation/audit |
+| [P20](https://github.com/omar-Suleiman14/chess/issues/21) | Natural Fatma progression + scripted upgrades | P11,P07 | persistence, pack schemas |
+| [P21](https://github.com/omar-Suleiman14/chess/issues/22) | MCP-proposed/approved Fatma upgrades | P18,P20 | explicit scopes |
+| [P22](https://github.com/omar-Suleiman14/chess/issues/23) | End-to-end hardening, offline, performance, release | all relevant | final gate |
 
-These IDs are specification work-package identifiers. GitHub issues give them exact titles/numbers and acceptance checklists; use [Issues](https://github.com/omar-Suleiman14/chess/issues) as execution source of truth. Work packages can be split into smaller PRs, but preserve dependency order.
+These IDs are specification work-package identifiers. GitHub issues give them exact titles/numbers and acceptance checklists; use [Issues](https://github.com/omar-Suleiman14/chess/issues) as execution source of truth. Work packages can be split into smaller PRs, but preserve dependency order. Browse [all implementation issues](https://github.com/omar-Suleiman14/chess/issues?q=is%3Aissue+is%3Aopen) and filter by **phase:G0–G6**, **priority:P0–P2**, or **area:** labels.
 
 ## Top blockers
 
