@@ -45,6 +45,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const [orientationOverride, setOrientationOverride] = useState<Color | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [confirmResign, setConfirmResign] = useState(false);
+  const [confirmUndo, setConfirmUndo] = useState(false);
   const [evalOptIn, setEvalOptIn] = useState(false);
   const evals = useRef(new Map<string, Evaluation>());
 
@@ -241,13 +242,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       const inBoard = e.target instanceof HTMLElement && e.target.closest("[role=grid]");
       if (!inBoard && e.key === "ArrowLeft") step(-1);
       if (!inBoard && e.key === "ArrowRight") step(1);
-      if (e.key === "u") void onUndo();
+      if (e.key === "u" && game && (head?.ply ?? 0) > 0) setConfirmUndo(true);
       if (e.key === "f") setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"));
       if (e.key === "n") setShowNew(true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onUndo, human, step]);
+  }, [game, head?.ply, human, step]);
 
   const tc = game?.meta.timeControlId ? findTimeControl(game.meta.timeControlId) : undefined;
   const now = monotonicNow();
@@ -403,11 +404,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
 
       <footer className="safe-bottom flex w-full items-center gap-3 pt-2 [grid-area:footer] lg:pb-0">
-        <div className="flex-1 lg:hidden" />
         <motion.button
           whileTap={{ scale: 0.94 }}
           transition={IOS_SPRING}
-          onClick={() => void onUndo()}
+          onClick={() => setConfirmUndo(true)}
           disabled={!game || moveCount === 0}
           className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-accent px-4 lg:flex-1 text-base font-semibold text-accent-text disabled:opacity-40"
           aria-keyshortcuts="u"
@@ -415,6 +415,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
         </motion.button>
+        <div className="flex-1 lg:hidden" />
         <div className="flex h-14 shrink-0 overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
           <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-14 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
             <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -427,6 +428,23 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
       </footer>
       </div>
+
+      {confirmUndo && (
+        <Dialog title="Undo your last move?" onClose={() => setConfirmUndo(false)}>
+          <button
+            onClick={() => {
+              setConfirmUndo(false);
+              void onUndo();
+            }}
+            className="w-full rounded-2xl bg-accent py-3 font-medium text-accent-text"
+          >
+            Undo
+          </button>
+          <button onClick={() => setConfirmUndo(false)} className="w-full rounded-2xl bg-surface-2 py-3">
+            Keep playing
+          </button>
+        </Dialog>
+      )}
 
       {confirmResign && (
         <Dialog title="Resign this game?" onClose={() => setConfirmResign(false)}>

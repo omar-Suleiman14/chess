@@ -236,7 +236,7 @@ export function Board({
           aria-label={description}
           aria-selected={isSelected}
           onFocus={() => setCursor(square)}
-          className={`relative ${light ? "sq-light" : "sq-dark"}`}
+          className={`relative ${light ? "sq-light" : "sq-dark"} ${piece && movable && piece.color === movable ? "cursor-grab" : target ? "cursor-pointer" : ""}`}
         >
           {isLast && <div className="absolute inset-0" style={{ background: "var(--hl-last)" }} />}
           {isSelected && <div className="absolute inset-0" style={{ background: "var(--hl-select)" }} />}
@@ -305,7 +305,7 @@ export function Board({
         ref={boardRef}
         role="grid"
         aria-label={label}
-        className="board relative grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[10px] shadow-[var(--shadow)]"
+        className={`board relative grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[10px] shadow-[var(--shadow)] ${drag ? "[&_*]:!cursor-grabbing !cursor-grabbing" : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
