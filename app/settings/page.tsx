@@ -5,6 +5,7 @@ import { Piece, PIECE_SETS } from "@/components/chess/Pieces";
 import { PageHeader } from "@/components/shell/AppShell";
 import { ScrollRow } from "@/components/ui/ScrollRow";
 import { SwitchRow } from "@/components/ui/Switch";
+import { Slider } from "@/components/ui/Slider";
 import { FATMA_LANGUAGES } from "@/lib/chess/personality/lines";
 import { useSettings, type Palette } from "@/lib/client/settings";
 import { haptic, playSound, unlockAudio } from "@/lib/client/sound";
@@ -105,18 +106,18 @@ export default function SettingsPage() {
             />
             <div className="flex min-h-14 items-center gap-3 border-b border-line px-4">
               <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" /></svg>
-              <input type="range"
+              <Slider
                 min={0}
                 max={1}
                 step={0.05}
                 value={settings.volume}
-                onChange={(e) => update({ volume: Number(e.target.value) })}
+                onValueChange={(v) => update({ volume: v })}
                 onPointerUp={() => {
                   unlockAudio();
                   playSound("capture", settings.volume);
                 }}
-                className="ios-range flex-1"
-                style={{ ["--pct" as string]: `${settings.volume * 100}%` }}
+                className="flex-1"
+                fill="#0a84ff"
                 aria-label="Volume"
               />
               <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-muted" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z" fill="currentColor" /></svg>

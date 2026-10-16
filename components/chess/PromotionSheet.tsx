@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { pieceName, type Color, type PromotionPiece } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
 import { Piece } from "./Pieces";
+import { GlassLayer } from "@/components/ui/Glass";
 
 const OPTIONS: PromotionPiece[] = ["q", "r", "b", "n"];
 
@@ -22,9 +23,10 @@ export function PromotionSheet({ color, onPick, onCancel }: { color: Color; onPi
         role="dialog"
         aria-modal="true"
         aria-label="Choose a promotion piece"
-        className="bubble-in w-full max-w-sm rounded-2xl bg-surface p-3 shadow-[var(--shadow)]"
+        className="glass-panel w-full max-w-sm rounded-[22px] p-3"
         onClick={(e) => e.stopPropagation()}
       >
+        <GlassLayer radius={22} blur={8} glassThickness={80} bezelWidth={20} specularOpacity={0.6} />
         <p className="mb-2 text-center text-sm text-muted">Promote to</p>
         <div className="grid grid-cols-4 gap-2">
           {OPTIONS.map((p, i) => (
@@ -33,7 +35,7 @@ export function PromotionSheet({ color, onPick, onCancel }: { color: Color; onPi
               ref={i === 0 ? first : undefined}
               onClick={() => onPick(p)}
               aria-label={pieceName(p)}
-              className="aspect-square rounded-xl bg-surface-2 p-2 transition-transform active:scale-95"
+              className="aspect-square rounded-xl bg-surface-2/70 p-2 transition-transform active:scale-95"
             >
               <Piece type={p} color={color} set={settings.pieceSet} className="h-full w-full" />
             </button>

@@ -50,6 +50,10 @@ Licences as listed in [lila's COPYING.md](https://github.com/lichess-org/lila/bl
 
 `public/sounds/standard/*.mp3` (Move, Capture, GenericNotify, Select, Confirmation, Error, LowTime) are part of lila, © the lila authors, **AGPL-3.0-or-later**. They are combined with this GPL-3.0 project as GPL-3.0 §13 permits, and keep their AGPL terms. Their corresponding source is the files themselves plus [lila](https://github.com/lichess-org/lila). Unmodified.
 
+## Liquid Glass technique (kube.io)
+
+`lib/client/liquidGlass.ts` and the filter chain in `components/ui/Glass.tsx` implement the refraction technique described in Chris Kube's article [Liquid Glass in the Browser: Refraction with CSS and SVG](https://kube.io/blog/liquid-glass-css-svg/) (source: [kube/kube.io](https://github.com/kube/kube.io)). The physics (Snell's law, displacement maps) is standard; the surface profiles, map layout and SVG filter order follow the article's code closely. **Open:** the kube.io repository has no licence file, so its code is not under an open licence by default. Get the author's permission (or a licence) for this adaptation, or replace it with an independent rewrite, before relying on it in a release.
+
 ## Original assets (GPL-3.0, this repository)
 
 - **Board palettes, icon and UI.**
