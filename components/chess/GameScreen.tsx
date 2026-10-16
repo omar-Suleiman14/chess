@@ -7,6 +7,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { FatmaPanel } from "@/components/fatma/FatmaPanel";
 import { IOS_SPRING } from "@/components/ui/Switch";
 import { GlassButton, GlassLayer } from "@/components/ui/Glass";
+import { useGlassOn } from "@/lib/client/settings";
 import { MenuButton } from "@/components/shell/AppShell";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, formatClock, remaining } from "@/lib/chess/clock";
@@ -535,6 +536,7 @@ function ClockChip({ ms, running, large }: { ms: number | null; running: boolean
 export function Dialog({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const glassOn = useGlassOn();
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -575,10 +577,11 @@ export function Dialog({ title, children, onClose }: { title: string; children: 
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="glass-panel w-full max-w-sm rounded-3xl p-5"
+        className={glassOn ? "glass-panel w-full max-w-sm rounded-3xl p-5" : "w-full max-w-sm rounded-3xl bg-surface p-5 shadow-[var(--shadow)]"}
         onClick={(e) => e.stopPropagation()}
-        initial={{ y: 48, scale: 0.96 }}
-        animate={{ y: 0, scale: 1 }}
+        // Glass skips the fade: a translucent parent would cut the lens off from the page.
+        initial={glassOn ? { y: 48, scale: 0.96 } : { opacity: 0, y: 48, scale: 0.96 }}
+        animate={glassOn ? { y: 0, scale: 1 } : { opacity: 1, y: 0, scale: 1 }}
         transition={IOS_SPRING}
       >
         <GlassLayer radius={24} blur={10} glassThickness={90} bezelWidth={24} specularOpacity={0.6} />

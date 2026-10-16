@@ -101,6 +101,26 @@ describe("EngineController", () => {
     await expect(pending).rejects.toBeInstanceOf(EngineFailure);
   });
 
+  it("sends ucinewgame once per game, before the position, and not for eval", async () => {
+    const fake = new FakeEngine();
+    const engine = new EngineController(() => fake);
+    const run = async (request: Parameters<EngineController["search"]>[0]) => {
+      const pending = engine.search(request);
+      await tick();
+      await tick();
+      fake.complete();
+      await pending;
+    };
+    await run({ kind: "move", fen: DEFAULT_POSITION, movetimeMs: 50, gameId: "game-a" });
+    await run({ kind: "move", fen: DEFAULT_POSITION, movetimeMs: 50, gameId: "game-a" });
+    await run({ kind: "eval", fen: DEFAULT_POSITION, movetimeMs: 50 });
+    await run({ kind: "move", fen: DEFAULT_POSITION, movetimeMs: 50, gameId: "game-b" });
+    expect(fake.sent.filter((m) => m === "ucinewgame")).toHaveLength(2);
+    // Each ucinewgame is followed by isready before the next position is set.
+    const first = fake.sent.indexOf("ucinewgame");
+    expect(fake.sent.indexOf("isready", first)).toBeLessThan(fake.sent.indexOf(`position fen ${DEFAULT_POSITION}`, first));
+  });
+
   it("resets weakening options for full-power searches", async () => {
     const fake = new FakeEngine();
     const engine = new EngineController(() => fake);

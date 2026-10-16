@@ -76,11 +76,13 @@ export function GlassLayer({ radius = "pill", blur = 0.6, refraction = 1, specul
   const scale = useTransform(ratio, (v) => v * max);
 
   const live = refract && maps && size;
+  // Off: no layer at all, so the control keeps its original solid surface.
+  if (!glassOn) return null;
   return (
     <span
       ref={ref}
       aria-hidden="true"
-      className={`glass-layer ${live ? "glass-layer--refract" : glassOn ? "glass-layer--frost" : "glass-layer--solid"} ${className}`}
+      className={`glass-layer ${live ? "glass-layer--refract" : "glass-layer--frost"} ${className}`}
       style={{ borderRadius: r, ...style }}
     >
       {/* The lens must stay unstyled: a background or shadow on the element that
@@ -144,9 +146,19 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(funct
   { variant = "clear", radius = "pill", glass, className = "", style, children, onPointerDown, disabled, ...rest },
   ref,
 ) {
+  const glassOn = useGlassOn();
   const pressed = usePressed();
   const lift = useSpring(useTransform(pressed, [0, 1], [1, 1.06]), PRESS);
   const refraction = useSpring(useTransform(pressed, [0, 1], [0.55, 1]), PRESS);
+  if (!glassOn) {
+    // Liquid Glass off: exactly the original solid button.
+    const surface = variant === "tint" ? "bg-accent text-accent-text" : "bg-surface shadow-[var(--shadow)]";
+    return (
+      <button ref={ref} {...rest} disabled={disabled} onPointerDown={onPointerDown} className={`press-overlay ${surface} disabled:opacity-40 ${className}`} style={style}>
+        {children}
+      </button>
+    );
+  }
   return (
     <motion.button
       ref={ref}
@@ -165,13 +177,3 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(funct
     </motion.button>
   );
 });
-
-/** A glass panel for popups and sheets: same material, softer and thicker. */
-export function GlassPanel({ radius = 28, className = "", children, ...rest }: { radius?: number; className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={`glass-panel ${className}`} style={{ borderRadius: radius }} {...rest}>
-      <GlassLayer radius={radius} blur={8} glassThickness={90} bezelWidth={22} specularOpacity={0.6} />
-      {children}
-    </div>
-  );
-}

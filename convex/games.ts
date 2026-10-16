@@ -44,9 +44,17 @@ export const appendMove = mutation({
   },
   handler: async (ctx, { opId, expectedRevision, ...args }) => {
     const owner = await requireOwner(ctx);
+    // A replayed opId returns its stored result first, so a retried write is
+    // never mistaken for a stale one. Callers that omit expectedRevision (the
+    // offline queue) still get conflict branches instead of a rejection.
     return await idempotent(ctx, owner, opId, "games.appendMove", async () => {
-      const result = await Games.appendMove(ctx, owner, args);
-      return { ...result, revisionConflict: expectedRevision !== undefined && result.revision !== expectedRevision + 1 };
+      if (expectedRevision !== undefined) {
+        const game = await Games.getGame(ctx, owner, args.gameKey);
+        if (game.revision !== expectedRevision) {
+          fail("stale_revision", `The game changed (revision ${game.revision}, expected ${expectedRevision}). Reload it and try again.`);
+        }
+      }
+      return await Games.appendMove(ctx, owner, args);
     });
   },
 });

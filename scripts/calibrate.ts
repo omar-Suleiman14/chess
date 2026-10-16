@@ -3,7 +3,11 @@
 // a 95% interval and the implied rating gap. Output is EVIDENCE, not truth:
 // bot-vs-bot results on one machine are not human ratings.
 //
-//   pnpm calibrate -- --games 20 --pairs 0-4 --out docs/calibration/climb-v1.json
+//   pnpm calibrate -- --games 40 --pairs 0-10 --out docs/calibration/climb-v1.json
+//
+// Each game starts from one of a fixed set of balanced openings, and every
+// opening is played twice with colours swapped, so deterministic presets
+// cannot replay the same game and neither side gets the better opening.
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createRequire } from "node:module";
@@ -60,6 +64,13 @@ class NodeEngine {
     this.engine.processCommand(`go ${opp.depth ? `depth ${opp.depth} ` : ""}movetime ${opp.movetimeMs}`);
     return parseBestMove(await best)?.bestmove ?? null;
   }
+  /** Clears hash and history so one game cannot inform the next. */
+  async newGame(): Promise<void> {
+    this.engine.processCommand("ucinewgame");
+    const ready = this.until((l) => l === "readyok");
+    this.engine.processCommand("isready");
+    await ready;
+  }
   quit(): void {
     this.engine.terminate?.();
   }
@@ -70,9 +81,25 @@ async function choose(engine: NodeEngine, opp: Opponent, fen: string, seed: stri
   return await engine.move(fen, opp.policy);
 }
 
-async function play(engine: NodeEngine, white: Opponent, black: Opponent, gameId: string): Promise<number> {
+/** Short, mainstream openings (SAN). Game g uses OPENINGS[floor(g / 2) % n]. */
+export const OPENINGS: string[][] = [
+  ["e4", "e5"],
+  ["d4", "d5"],
+  ["e4", "c5"],
+  ["d4", "Nf6"],
+  ["c4", "e5"],
+  ["e4", "e6"],
+  ["Nf3", "d5"],
+  ["e4", "c6"],
+  ["d4", "Nf6", "c4", "e6"],
+  ["e4", "e5", "Nf3", "Nc6"],
+];
+
+async function play(engine: NodeEngine, white: Opponent, black: Opponent, gameId: string, opening: string[]): Promise<number> {
+  await engine.newGame();
   const chess = new Chess();
-  for (let ply = 0; ply < MAX_PLIES && !chess.isGameOver(); ply++) {
+  for (const san of opening) chess.move(san);
+  for (let ply = chess.history().length; ply < MAX_PLIES && !chess.isGameOver(); ply++) {
     const side = chess.turn() === "w" ? white : black;
     const uci = await choose(engine, side, chess.fen(), `${gameId}:${ply}`);
     if (!uci) break;
@@ -80,6 +107,14 @@ async function play(engine: NodeEngine, white: Opponent, black: Opponent, gameId
   }
   if (chess.isCheckmate()) return chess.turn() === "w" ? 0 : 1; // score for White
   return 0.5; // draws and adjudicated long games
+}
+
+/** Wilson score interval on the per-game score (draw = 0.5); stays sensible at 0% and 100%. */
+function wilson(mean: number, n: number, z = 1.96): [number, number] {
+  const denom = 1 + (z * z) / n;
+  const centre = (mean + (z * z) / (2 * n)) / denom;
+  const half = (z * Math.sqrt((mean * (1 - mean)) / n + (z * z) / (4 * n * n))) / denom;
+  return [Math.max(0, centre - half), Math.min(1, centre + half)];
 }
 
 function eloGap(score: number): number {
@@ -98,24 +133,29 @@ async function main(): Promise<void> {
     const results: number[] = [];
     for (let g = 0; g < GAMES; g++) {
       const upperIsWhite = g % 2 === 0;
-      const whiteScore = await play(engine, upperIsWhite ? upper : lower, upperIsWhite ? lower : upper, `${upper.id}-${lower.id}-${g}`);
+      const opening = OPENINGS[Math.floor(g / 2) % OPENINGS.length];
+      const whiteScore = await play(engine, upperIsWhite ? upper : lower, upperIsWhite ? lower : upper, `${upper.id}-${lower.id}-${g}`, opening);
       const s = upperIsWhite ? whiteScore : 1 - whiteScore;
       upperScore += s;
       results.push(s);
       process.stdout.write(s === 1 ? "W" : s === 0 ? "L" : "D");
     }
     const mean = upperScore / GAMES;
-    const sd = Math.sqrt(results.reduce((acc, r) => acc + (r - mean) ** 2, 0) / Math.max(1, GAMES - 1));
-    const half = (1.96 * sd) / Math.sqrt(GAMES);
+    const [lo, hi] = wilson(mean, GAMES);
     const row = {
       upper: upper.id,
       lower: lower.id,
       games: GAMES,
+      wins: results.filter((r) => r === 1).length,
+      draws: results.filter((r) => r === 0.5).length,
+      losses: results.filter((r) => r === 0).length,
       upperScore: Number(mean.toFixed(3)),
-      score95: [Number(Math.max(0, mean - half).toFixed(3)), Number(Math.min(1, mean + half).toFixed(3))],
+      score95: [Number(lo.toFixed(3)), Number(hi.toFixed(3))],
       impliedGap: eloGap(mean),
+      impliedGap95: [eloGap(lo), eloGap(hi)],
       nominalGap: upper.rating - lower.rating,
-      monotonic: mean > 0.5,
+      // Monotonic only when the whole interval clears 50%, not just the point estimate.
+      monotonic: lo > 0.5,
     };
     pairs.push(row);
     console.log(`\n${upper.name} vs ${lower.name}: ${JSON.stringify(row)}`);
@@ -127,6 +167,7 @@ async function main(): Promise<void> {
     date: new Date().toISOString(),
     machine: { platform: process.platform, arch: process.arch, node: process.version },
     maxPlies: MAX_PLIES,
+    openings: OPENINGS.map((o) => o.join(" ")),
     note: "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
     pairs,
   };

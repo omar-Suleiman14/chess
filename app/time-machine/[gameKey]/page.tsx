@@ -43,7 +43,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
   const sync = useSync();
-  const { settings, reducedMotion } = useSettings();
+  const { settings, reducedMotion, glassOn } = useSettings();
   const remote = useQuery(api.games.get, isAuthenticated ? { gameKey } : "skip");
   const saved = useQuery(api.analysis.forGame, isAuthenticated && remote ? { gameKey } : "skip");
   const childGames = useQuery(api.games.children, isAuthenticated && remote ? { gameKey } : "skip");
@@ -188,7 +188,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
         const settingsHash = `review:mt${REVIEW_MOVETIME}:mpv1`;
         const cached = await readAnalysis(n.fen, settingsHash);
         if (run !== analysisRun.current) return;
-        const result = cached ? { ...cached, elapsedMs: cached.computeMs } : await getEngine().search({ kind: "review", fen: n.fen, movetimeMs: REVIEW_MOVETIME });
+        const result = cached ? { ...cached, elapsedMs: cached.computeMs } : await getEngine().search({ kind: "review", fen: n.fen, gameId: `review:${game.meta.gameKey}`, movetimeMs: REVIEW_MOVETIME });
         if (run !== analysisRun.current) return;
         if (!cached) void writeAnalysis(n.fen, settingsHash, result);
         setScores((s) => ({ ...s, [n.key]: { score: result.score, depth: result.depth, bestmove: result.bestmove } }));
@@ -354,12 +354,12 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
             }}
             aria-label="Scrub through the game"
             aria-valuetext={node ? moveLabel(node) : "Start"}
-            className="mt-2 w-full"
+            className={glassOn ? "mt-2 w-full" : "mt-3 w-full"}
             fill="var(--accent)"
           />
-          <div className="relative -mt-1 h-2" aria-hidden="true">
+          <div className={`relative h-2 ${glassOn ? "-mt-1" : ""}`} aria-hidden="true">
             {[...mistakePlies].map((ply) => (
-              <span key={ply} className="absolute top-0 h-2 w-1 rounded bg-danger" style={{ left: `calc(19px + (100% - 38px) * ${ply / Math.max(1, path.length)})` }} />
+              <span key={ply} className="absolute top-0 h-2 w-1 rounded bg-danger" style={{ left: glassOn ? `calc(19px + (100% - 38px) * ${ply / Math.max(1, path.length)})` : `${(ply / Math.max(1, path.length)) * 100}%` }} />
             ))}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">

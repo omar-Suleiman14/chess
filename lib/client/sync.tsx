@@ -22,7 +22,7 @@ type SyncCtx = {
 const Context = createContext<SyncCtx | null>(null);
 
 /** Errors that will never succeed on retry: drop the op and surface the message. */
-const PERMANENT = new Set(["illegal_move", "not_found", "bad_request", "bad_fen", "bad_pgn", "game_over", "stale_node", "conflict", "too_long", "clock_disagrees", "quota"]);
+const PERMANENT = new Set(["illegal_move", "not_found", "bad_request", "bad_fen", "bad_pgn", "game_over", "stale_node", "conflict", "too_long", "clock_disagrees", "quota", "stale_revision"]);
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const convex = useConvex();

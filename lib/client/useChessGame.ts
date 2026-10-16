@@ -171,6 +171,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
         const result = await getEngine().search({
           kind: "move",
           fen: head.fen,
+          gameId: g.meta.gameKey,
           movetimeMs: movetime,
           depth: opponent.policy.depth,
           options: opponent.policy.options,

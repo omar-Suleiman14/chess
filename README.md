@@ -83,7 +83,6 @@ Not yet verified:
 - Climb opponent strengths are **uncalibrated estimates**. A 6-games-per-pair sample is in `docs/calibration/`. A large run is needed before calling ratings calibrated.
 - End-to-end OAuth with ChatGPT and with Claude: needs a public HTTPS deployment and Dynamic Client Registration enabled.
 - Screen-reader passes with VoiceOver and TalkBack, and Playwright E2E/visual suites.
-- Sherine sprite redistribution rights: see [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md).
 
 ## Open source and licences
 

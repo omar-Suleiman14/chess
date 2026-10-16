@@ -10,7 +10,7 @@ const OPTIONS: PromotionPiece[] = ["q", "r", "b", "n"];
 
 export function PromotionSheet({ color, onPick, onCancel }: { color: Color; onPick: (p: PromotionPiece) => void; onCancel: () => void }) {
   const first = useRef<HTMLButtonElement>(null);
-  const { settings } = useSettings();
+  const { settings, glassOn } = useSettings();
   useEffect(() => {
     first.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
@@ -23,7 +23,7 @@ export function PromotionSheet({ color, onPick, onCancel }: { color: Color; onPi
         role="dialog"
         aria-modal="true"
         aria-label="Choose a promotion piece"
-        className="glass-panel w-full max-w-sm rounded-[22px] p-3"
+        className={glassOn ? "glass-panel w-full max-w-sm rounded-[22px] p-3" : "bubble-in w-full max-w-sm rounded-2xl bg-surface p-3 shadow-[var(--shadow)]"}
         onClick={(e) => e.stopPropagation()}
       >
         <GlassLayer radius={22} blur={8} glassThickness={80} bezelWidth={20} specularOpacity={0.6} />
@@ -35,7 +35,7 @@ export function PromotionSheet({ color, onPick, onCancel }: { color: Color; onPi
               ref={i === 0 ? first : undefined}
               onClick={() => onPick(p)}
               aria-label={pieceName(p)}
-              className="aspect-square rounded-xl bg-surface-2/70 p-2 transition-transform active:scale-95"
+              className={`aspect-square rounded-xl p-2 transition-transform active:scale-95 ${glassOn ? "bg-surface-2/70" : "bg-surface-2"}`}
             >
               <Piece type={p} color={color} set={settings.pieceSet} className="h-full w-full" />
             </button>

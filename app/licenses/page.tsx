@@ -32,7 +32,7 @@ export default function LicensesPage() {
             <li>Pieces: Classic/cburnett and Merida (GPL-2.0+), Chessnut (Apache-2.0), MP Chess (GPL-3.0+), Fantasy (MIT), from lichess-org/lila.</li>
             <li>Move and capture sounds: lichess-org/lila standard set, AGPL-3.0-or-later, used unmodified under GPL-3.0 §13.</li>
             <li>qrcode (MIT) for card QR codes.</li>
-            <li>Sherine pixel-art sprite: supplied by the project owner for this project. See THIRD_PARTY_NOTICES.md for provenance.</li>
+            <li>Sherine pixel-art sprite: original artwork by the project owner, GPL-3.0. See THIRD_PARTY_NOTICES.md.</li>
           </ul>
         </section>
     </InfoPage>

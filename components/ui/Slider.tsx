@@ -2,6 +2,7 @@
 
 import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { useEffect, type CSSProperties, type InputHTMLAttributes } from "react";
+import { useGlassOn } from "@/lib/client/settings";
 import { GlassLayer } from "./Glass";
 
 const THUMB_W = 38;
@@ -25,7 +26,28 @@ type SliderProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "value" 
  * thumb is a convex glass lens that grows and turns clear while you drag,
  * bending the track beneath it.
  */
-export function Slider({ value, min = 0, max = 100, onValueChange, fill = "var(--switch-on)", className = "", style, onPointerDown, ...input }: SliderProps) {
+export function Slider(props: SliderProps) {
+  return useGlassOn() ? <GlassSlider {...props} /> : <PlainSlider {...props} />;
+}
+
+/** The original native slider, used whenever Liquid Glass is off. */
+function PlainSlider({ value, min = 0, max = 100, onValueChange, fill = "#0a84ff", className = "", style, ...input }: SliderProps) {
+  const pct = max > min ? ((Math.min(max, Math.max(min, value)) - min) / (max - min)) * 100 : 0;
+  return (
+    <input
+      {...input}
+      type="range"
+      min={min}
+      max={max}
+      value={value}
+      onChange={(e) => onValueChange(Number(e.target.value))}
+      className={`ios-range ${className}`}
+      style={{ ["--pct" as string]: `${pct}%`, ["--range-fill" as string]: fill, ...style }}
+    />
+  );
+}
+
+function GlassSlider({ value, min = 0, max = 100, onValueChange, fill = "var(--switch-on)", className = "", style, onPointerDown, ...input }: SliderProps) {
   const pct = max > min ? (Math.min(max, Math.max(min, value)) - min) / (max - min) : 0;
   const pressed = useMotionValue(0);
   const scale = useSpring(useTransform(pressed, [0, 1], [1, 1.55]), SPRING);

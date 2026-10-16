@@ -2,6 +2,7 @@
 
 import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { useEffect, useId, useRef } from "react";
+import { useGlassOn } from "@/lib/client/settings";
 import { GlassLayer } from "./Glass";
 
 export const IOS_SPRING = { type: "spring" as const, stiffness: 520, damping: 38, mass: 0.9 };
@@ -13,12 +14,41 @@ const THUMB_H = 24;
 const TRAVEL = TRACK_W - THUMB_W - 4;
 const DRAG_SPRING = { stiffness: 1000, damping: 80 };
 
+type SwitchProps = { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean };
+
+/** Glass switch when Liquid Glass is on; otherwise the original iOS-style switch. */
+export function Switch(props: SwitchProps) {
+  return useGlassOn() ? <GlassSwitch {...props} /> : <PlainSwitch {...props} />;
+}
+
+/** The original switch, used whenever Liquid Glass is off. */
+function PlainSwitch({ checked, onChange, label, disabled }: SwitchProps) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 disabled:opacity-40 ${checked ? "bg-[#0a84ff]" : "bg-[var(--switch-off)]"}`}
+    >
+      <motion.span
+        className="absolute left-[2px] top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.15)]"
+        initial={false}
+        animate={{ x: checked ? 20 : 0 }}
+        transition={IOS_SPRING}
+      />
+    </button>
+  );
+}
+
 /**
  * iOS 26-style Liquid Glass switch. The thumb is a lip-shaped lens: at rest
  * it is solid white; held, it swells and clears so you see the track bend
  * through it. Tap or drag it. Fully keyboard and screen-reader accessible.
  */
-export function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
+function GlassSwitch({ checked, onChange, label, disabled }: SwitchProps) {
   const pressed = useMotionValue(0);
   const drag = useMotionValue<number | null>(null);
   const start = useRef<{ x: number; moved: boolean } | null>(null);
@@ -90,12 +120,15 @@ export function Switch({ checked, onChange, label, disabled }: { checked: boolea
 }
 
 /** A settings row: label (and hint) on the left, switch on the right. */
-export function SwitchRow({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }) {
+export function SwitchRow({ label, hint, badge, checked, onChange }: { label: string; hint?: string; badge?: string; checked: boolean; onChange: (v: boolean) => void }) {
   const id = useId();
   return (
     <div className="flex min-h-14 items-center justify-between gap-4 border-b border-line px-4 py-2.5 last:border-b-0">
       <span id={id}>
-        <span className="block">{label}</span>
+        <span className="flex items-center gap-2">
+          {label}
+          {badge && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted">{badge}</span>}
+        </span>
         {hint && <span className="block text-xs text-muted">{hint}</span>}
       </span>
       <Switch checked={checked} onChange={onChange} label={label} />

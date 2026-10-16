@@ -47,9 +47,10 @@ Floating controls use one glass material (`components/ui/Glass.tsx`, optics in `
 
 - The rim (bezel) of each shape is a curved surface (squircle for buttons and sliders, lip for switch thumbs). A vertical ray is refracted through it by Snell's law (n = 1.5), traced once along a radius, then swept around the rounded rectangle into an SVG displacement map applied with `backdrop-filter: url(#…)`. A second map adds the rim light.
 - Pressing a control raises the refraction (and swells buttons ~6 %); switch and slider thumbs turn from solid white to clear lenses while held, so the track bends through them.
-- True refraction only renders in Chromium. Safari (all iPhone browsers) and Firefox get a frosted blur with the same tint and rim, chosen by feature detection, never by layout.
+- True refraction only renders in Chromium. Firefox (and WebKit, if someone turns glass on there) gets a frosted blur with the same tint and rim.
 - `prefers-reduced-transparency` and High contrast fall back to solid surfaces.
-- Settings → Display → **Liquid Glass** turns it off (solid controls, no filters). It defaults to `auto`: off on weak devices (fewer than 4 cores, under 4 GB memory, or Data Saver), on elsewhere. Once changed, a reset link returns it to the device default.
+- Liquid Glass is **experimental**. Settings → Display → **Liquid Glass** turns it on or off. It defaults to `auto`: off in WebKit (Safari, and every browser on iPhone and iPad, which can't render the refraction) and on weak devices (fewer than 4 cores, under 4 GB memory, or Data Saver); on elsewhere. Once changed, a reset link returns it to the device default.
+- **Off means the original UI**, not a degraded glass: every glass component renders the exact pre-glass markup (solid `bg-surface` buttons, the original blue switch, the native slider, solid dialogs and a static menu header). Until the device is known after load, the app renders the off state, so a WebKit device never flashes glass.
 - The menu sheet has no visible close button: swipe down, tap outside or press Escape. A Close button stays for screen readers and appears on keyboard focus.
 - Keep the lens element unstyled, and never put `mix-blend-mode`, `filter`, `opacity < 1` or `mask` on it or its ancestors: those make Chromium cut the lens off from the page behind it.
 
