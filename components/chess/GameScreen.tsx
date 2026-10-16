@@ -1,5 +1,6 @@
 "use client";
 
+import { capturesAlongLine } from "@/lib/chess/captures";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FatmaPanel } from "@/components/fatma/FatmaPanel";
@@ -120,6 +121,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     },
     [line.length, viewPly, navigationFeedback],
   );
+  const captures = useMemo(() => capturesAlongLine(tree?.originFen ?? liveFen, reviewing ? line.slice(0, viewPly ?? 0) : line), [tree?.originFen, liveFen, reviewing, line, viewPly]);
   const human: Color = game?.meta.humanColor ?? "w";
   const orientation = orientationOverride ?? human;
   const status = useMemo(() => positionStatus(fen), [fen]);
@@ -272,18 +274,16 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </motion.button>
-          {active && moveCount > 0 && (
-            <button onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-muted shadow-[var(--shadow)]" aria-label="Resign" title="Resign">
+            <button disabled={!active} onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-ink shadow-[var(--shadow)] disabled:opacity-40" aria-label="Resign" title="Resign">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
-          )}
           <MenuButton />
         </div>
       </header>
 
       <section className="flex flex-1 flex-col items-center justify-center">
         <div className="mb-2 flex w-full items-center gap-2">
-          <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName />
+          <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName captures={captures.captured[fatmaColor]} capturedColor={human} advantage={captures.advantage[fatmaColor]} />
           {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
         </div>
         <div className="flex w-full items-stretch gap-2">
@@ -330,7 +330,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           </div>
         </div>
 
-        <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}</div>
+        <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}</div>
 
         {/* Fixed-height status line, then Fatma's fixed-size corner: nothing here can resize the layout. */}
         <div className="mt-1.5 flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted" aria-live="polite">
@@ -369,19 +369,19 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           transition={IOS_SPRING}
           onClick={() => void onUndo()}
           disabled={!game || moveCount === 0}
-          className="flex h-11 items-center gap-1.5 rounded-full bg-accent px-3.5 text-sm font-semibold text-accent-text disabled:opacity-40"
+          className="flex h-16 shrink-0 items-center gap-2 rounded-full bg-accent px-4 text-base font-semibold text-accent-text disabled:opacity-40"
           aria-keyshortcuts="u"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
         </motion.button>
-        <div className="flex h-11 shrink-0 overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
-          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-14 shrink-0 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <div className="flex h-16 shrink-0 overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
+          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-16 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
+            <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
           <span className="my-2.5 w-px bg-line" aria-hidden="true" />
-          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-11 w-14 shrink-0 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-16 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
+            <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         </div>
 
