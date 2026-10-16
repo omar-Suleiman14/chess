@@ -1,5 +1,7 @@
 "use client";
 
+import { capturesAlongLine } from "@/lib/chess/captures";
+import { CapturedPieces } from "@/components/chess/CapturedPieces";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { motion } from "motion/react";
 import Link from "next/link";
@@ -118,6 +120,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
   }
 
   const status = positionStatus(fen);
+  const captures = useMemo(() => capturesAlongLine(tree.originFen, path.slice(0, cursor)), [tree.originFen, path, cursor]);
 
   useEffect(() => {
     if (cursor > 0 && settings.sound && !reducedMotion) playSound("select", settings.volume * 0.7);
@@ -294,7 +297,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
       <PageHeader title="Time Machine" />
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
         <div className="mx-auto w-full max-w-[min(92vw,calc(100dvh-260px),640px)]">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FatmaSprite expression="idle" size={42} reducedMotion={reducedMotion} />Fatma</div>
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FatmaSprite expression="idle" size={42} reducedMotion={reducedMotion} /><div>Fatma<CapturedPieces pieces={captures.captured[game.meta.humanColor === "w" ? "b" : "w"]} color={game.meta.humanColor} advantage={captures.advantage[game.meta.humanColor === "w" ? "b" : "w"]} /></div></div>
           <Board
             moveBadge={selectedReview && selectedStyle && node ? { square: node.uci.slice(2, 4) as Square, symbol: selectedStyle.symbol, color: selectedStyle.color, label: selectedStyle.label } : undefined}
             result={game.meta.status === "finished" && cursor === path.length && activeBranch === tree.activeBranchKey ? { result: game.meta.result, reason: game.meta.resultReason } : undefined}
@@ -310,7 +313,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
             reducedMotion={reducedMotion}
             label={`Replay board at ${node ? moveLabel(node) : "start"}`}
           />
-          <PlayerIdentity />
+          <PlayerIdentity captures={captures.captured[game.meta.humanColor]} capturedColor={game.meta.humanColor === "w" ? "b" : "w"} advantage={captures.advantage[game.meta.humanColor]} />
           <div className="mt-3 flex items-center gap-2">
             <button onClick={() => setCursor(0)} aria-label="Go to start" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">⏮</button>
             <button onClick={() => setCursor((c) => Math.max(0, c - 1))} aria-label="Previous move" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">◀</button>

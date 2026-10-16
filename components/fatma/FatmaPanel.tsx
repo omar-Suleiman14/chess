@@ -1,5 +1,8 @@
 "use client";
 
+import { CapturedPieces } from "@/components/chess/CapturedPieces";
+import type { CapturedPiece } from "@/lib/chess/captures";
+import type { Color } from "@/lib/chess/rules";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { IOS_SPRING } from "@/components/ui/Switch";
@@ -10,14 +13,14 @@ import { FatmaSprite } from "./FatmaSprite";
  * Fatma's corner: a fixed-size space (sprite + bubble) so her lines never
  * move the board or controls. The bubble floats inside it, max two lines.
  */
-export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean }) {
+export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, captures, capturedColor, advantage }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean; captures?: CapturedPiece[]; capturedColor?: Color; advantage?: number }) {
   const expression = fatma.line ? fatma.expression : thinking ? "thinking" : "idle";
   return (
-    <div className="pointer-events-none relative h-16 w-full">
-      {showName && <span className="absolute left-14 top-0 text-sm font-semibold">Fatma</span>}
+    <div className={`pointer-events-none relative w-full ${showName ? "h-20" : "h-16"}`}>
+      {showName && <div className="absolute left-14 right-0 top-0"><span className="block text-sm font-semibold">Fatma</span><CapturedPieces pieces={captures} color={capturedColor} advantage={advantage} /></div>}
       {fatma.enabled && (
         <>
-          <div className="absolute bottom-0 left-0">
+          <div className={`absolute left-0 ${showName ? "top-0" : "bottom-0"}`}>
             <FatmaSprite expression={expression} size={56} reducedMotion={reducedMotion} />
           </div>
           <div aria-live="polite" className={`absolute ${showName ? "bottom-0" : "bottom-3"} left-14 right-0 flex items-end`}>
