@@ -23,6 +23,8 @@ export type Settings = {
   /** English, Franco (Egyptian Arabic in Latin letters) or Egyptian Arabic. */
   fatmaLanguage: FatmaLanguage;
   highContrast: boolean;
+  /** Liquid Glass controls. "auto" turns them off on weak devices. */
+  glass: "auto" | "on" | "off";
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -39,11 +41,20 @@ export const DEFAULT_SETTINGS: Settings = {
   fatmaSound: false,
   fatmaLanguage: "en",
   highContrast: false,
+  glass: "auto",
 };
 
 const KEY = "cbc.settings.v1";
 
-type Ctx = { settings: Settings; update: (patch: Partial<Settings>) => void; reducedMotion: boolean };
+type Ctx = {
+  settings: Settings;
+  update: (patch: Partial<Settings>) => void;
+  reducedMotion: boolean;
+  /** Whether Liquid Glass is on right now (the setting, or the device default for "auto"). */
+  glassOn: boolean;
+  /** This device is too weak for glass by default. */
+  weakDevice: boolean;
+};
 const SettingsContext = createContext<Ctx | null>(null);
 
 function load(): Settings {
@@ -63,14 +74,26 @@ function load(): Settings {
   }
 }
 
+/**
+ * Few cores, little memory or Data Saver: the per-frame backdrop filters cost
+ * more than they are worth, so glass starts off. Unknown values count as capable.
+ */
+export function isWeakDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
+  return (nav.hardwareConcurrency > 0 && nav.hardwareConcurrency < 4) || (nav.deviceMemory !== undefined && nav.deviceMemory < 4) || nav.connection?.saveData === true;
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [systemReduced, setSystemReduced] = useState(false);
+  const [weakDevice, setWeakDevice] = useState(false);
 
   useEffect(() => {
     // Hydrate after mount so server and first client render match.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSettings(load());
+    setWeakDevice(isWeakDevice());
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setSystemReduced(media.matches);
     const onChange = () => setSystemReduced(media.matches);
@@ -91,16 +114,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reducedMotion = settings.motion === "reduced" || (settings.motion === "system" && systemReduced);
+  const glassOn = settings.glass === "on" || (settings.glass === "auto" && !weakDevice);
 
   useEffect(() => {
     document.documentElement.dataset.palette = settings.palette;
     document.documentElement.dataset.contrast = settings.highContrast ? "high" : "normal";
     document.documentElement.dataset.motion = reducedMotion ? "reduced" : "full";
-  }, [settings.palette, settings.highContrast, reducedMotion]);
+    document.documentElement.dataset.glass = glassOn ? "on" : "off";
+  }, [settings.palette, settings.highContrast, reducedMotion, glassOn]);
 
 
-  const value = useMemo(() => ({ settings, update, reducedMotion }), [settings, update, reducedMotion]);
+  const value = useMemo(() => ({ settings, update, reducedMotion, glassOn, weakDevice }), [settings, update, reducedMotion, glassOn, weakDevice]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
+}
+
+/** Glass on/off without requiring a provider (defaults to on). */
+export function useGlassOn(): boolean {
+  return useContext(SettingsContext)?.glassOn ?? true;
 }
 
 export function useSettings(): Ctx {

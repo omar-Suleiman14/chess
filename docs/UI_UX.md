@@ -49,6 +49,8 @@ Floating controls use one glass material (`components/ui/Glass.tsx`, optics in `
 - Pressing a control raises the refraction (and swells buttons ~6 %); switch and slider thumbs turn from solid white to clear lenses while held, so the track bends through them.
 - True refraction only renders in Chromium. Safari (all iPhone browsers) and Firefox get a frosted blur with the same tint and rim, chosen by feature detection, never by layout.
 - `prefers-reduced-transparency` and High contrast fall back to solid surfaces.
+- Settings → Display → **Liquid Glass** turns it off (solid controls, no filters). It defaults to `auto`: off on weak devices (fewer than 4 cores, under 4 GB memory, or Data Saver), on elsewhere. Once changed, a reset link returns it to the device default.
+- The menu sheet has no visible close button: swipe down, tap outside or press Escape. A Close button stays for screen readers and appears on keyboard focus.
 - Keep the lens element unstyled, and never put `mix-blend-mode`, `filter`, `opacity < 1` or `mask` on it or its ancestors: those make Chromium cut the lens off from the page behind it.
 
 ## Motion specification

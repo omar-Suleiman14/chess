@@ -3,6 +3,7 @@
 import { isMotionValue, motion, useMotionValue, useSpring, useTransform, type MotionValue } from "motion/react";
 import { forwardRef, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import { glassMaps, supportsSvgBackdrop, type GlassOptics } from "@/lib/client/liquidGlass";
+import { useGlassOn } from "@/lib/client/settings";
 
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -37,10 +38,13 @@ export function GlassLayer({ radius = "pill", blur = 0.6, refraction = 1, specul
   const ref = useRef<HTMLSpanElement>(null);
   const id = `glass${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  const [refract, setRefract] = useState(false);
+  const [canRefractHere, setCanRefract] = useState(false);
+  // Turned off in Settings (or by default on a weak device): solid, no filters at all.
+  const glassOn = useGlassOn();
+  const refract = canRefractHere && glassOn;
 
   useIsoLayoutEffect(() => {
-    setRefract(canRefract());
+    setCanRefract(canRefract());
     const el = ref.current;
     if (!el) return;
     const measure = () => {
@@ -76,7 +80,7 @@ export function GlassLayer({ radius = "pill", blur = 0.6, refraction = 1, specul
     <span
       ref={ref}
       aria-hidden="true"
-      className={`glass-layer ${live ? "glass-layer--refract" : "glass-layer--frost"} ${className}`}
+      className={`glass-layer ${live ? "glass-layer--refract" : glassOn ? "glass-layer--frost" : "glass-layer--solid"} ${className}`}
       style={{ borderRadius: r, ...style }}
     >
       {/* The lens must stay unstyled: a background or shadow on the element that

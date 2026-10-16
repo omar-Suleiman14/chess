@@ -27,7 +27,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function SettingsPage() {
-  const { settings, update } = useSettings();
+  const { settings, update, glassOn, weakDevice } = useSettings();
   const palette = PALETTES.find((p) => p[0] === settings.palette) ?? PALETTES[0];
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-16">
@@ -90,6 +90,17 @@ export default function SettingsPage() {
             <SwitchRow label="Coordinates" checked={settings.coordinates} onChange={(v) => update({ coordinates: v })} />
             <SwitchRow label="Evaluation bar" hint="Hide it to test yourself. Never live in rated games." checked={settings.evalBar} onChange={(v) => update({ evalBar: v })} />
             <SwitchRow label="High contrast" checked={settings.highContrast} onChange={(v) => update({ highContrast: v })} />
+            <SwitchRow
+              label="Liquid Glass"
+              hint={settings.glass === "auto" ? (weakDevice ? "Off by default on this device to keep it smooth." : "Glass buttons, switches and sliders.") : "Set by you."}
+              checked={glassOn}
+              onChange={(v) => update({ glass: v ? "on" : "off" })}
+            />
+            {settings.glass !== "auto" && (
+              <button onClick={() => update({ glass: "auto" })} className="flex min-h-12 w-full items-center px-4 text-start text-sm font-medium text-[#0a84ff]">
+                Reset Liquid Glass to this device&apos;s default ({weakDevice ? "off" : "on"})
+              </button>
+            )}
           </div>
         </Group>
 

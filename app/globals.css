@@ -283,5 +283,11 @@ button {
   .glass-button[data-variant="tint"] > .glass-layer { background: var(--accent); }
   .glass-panel > .glass-layer { background: var(--surface); }
 }
+/* Liquid Glass turned off (Settings, or by default on weak devices): plain solid controls. */
+:root[data-glass="off"] .glass-layer { background: var(--surface); box-shadow: var(--shadow); }
+:root[data-glass="off"] .glass-layer::after { display: none; }
+:root[data-glass="off"] .glass-button[data-variant="tint"] > .glass-layer { background: var(--accent); }
+:root[data-glass="off"] .glass-panel > .glass-layer { background: var(--surface); box-shadow: var(--shadow); }
+:root[data-glass="off"] .glass-switch-thumb > .glass-layer, :root[data-glass="off"] .glass-slider .glass-layer { background: transparent; box-shadow: none; }
 :root[data-contrast="high"] .glass-layer { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), var(--glass-shadow); }
 :root[data-contrast="high"] .glass-button[data-variant="tint"] > .glass-layer { background: var(--accent); }

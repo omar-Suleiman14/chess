@@ -202,14 +202,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* The header floats as a glass bar; the menu scrolls underneath and bends through it. */}
         <div className="absolute inset-x-0 top-0 z-10 cursor-grab touch-none px-3 pt-2 active:cursor-grabbing" onPointerDown={(e) => dragControls.start(e)}>
           <div className="mx-auto h-1.5 w-10 rounded-full bg-line" />
-          <div className="glass-panel mt-2 flex items-center justify-between rounded-full py-1.5 pe-1.5 ps-5">
+          <div className="glass-panel mt-2 flex min-h-14 items-center rounded-full px-5">
             <GlassLayer radius="pill" blur={3} glassThickness={70} bezelWidth={20} specularOpacity={0.6} />
             <span className="text-lg font-semibold">Chess by Chaos</span>
-            <GlassButton onClick={closeMenu} className="grid h-11 w-11 place-items-center rounded-full" aria-label="Close menu">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </GlassButton>
+            {/* No visible close: swipe down, tap outside or Escape. Screen readers still get a button. */}
+            <button onClick={closeMenu} className="sr-only focus-visible:not-sr-only focus-visible:ms-auto focus-visible:rounded-full focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm" aria-label="Close menu">
+              Close
+            </button>
           </div>
         </div>
         <nav className="no-scrollbar flex-1 overflow-y-auto overscroll-contain bg-surface px-4 pb-4 pt-[76px]">
