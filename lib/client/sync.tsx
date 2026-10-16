@@ -88,6 +88,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             failedGames.add(op.gameKey);
             await store.updateOp({ ...op, attempts: op.attempts + 1, lastError: message });
             setStatus((s) => ({ ...s, error: message }));
+            // Later sessions must not overtake a failed creation and close it
+            // before its queued moves have had a chance to sync.
+            if (op.kind === "create") break;
           }
         }
       }

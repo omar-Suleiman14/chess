@@ -111,6 +111,7 @@ export default defineSchema({
     createdBy: v.union(v.literal("app"), v.literal("mcp"), v.literal("import")),
   })
     .index("by_owner_and_gameKey", ["owner", "gameKey"])
+    .index("by_owner_and_status_and_mode_and_parentGameKey_and_startedAt", ["owner", "status", "mode", "parentGameKey", "startedAt"])
     .index("by_owner_and_updatedAt", ["owner", "updatedAt"])
     .index("by_owner_and_parentGameKey", ["owner", "parentGameKey"]),
 

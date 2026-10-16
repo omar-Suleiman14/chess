@@ -3,8 +3,8 @@
 // IndexedDB persistence for local games and the offline operation queue.
 // localStorage is never used for game trees.
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { GameTree } from "../chess/history/tree";
-import type { ClockState } from "../chess/clock";
+import { ROOT_KEY, type GameTree } from "../chess/history/tree";
+import { pause, type ClockState } from "../chess/clock";
 import type { Color, Outcome } from "../chess/rules";
 import type { WhiteScore } from "../chess/engine/uci";
 
@@ -115,6 +115,30 @@ async function safe<T>(fn: (d: IDBPDatabase<ChessDB>) => Promise<T>, fallback: T
 export const store = {
   saveGame: (game: LocalGame) => safe((d) => d.put("games", game).then(() => true), false),
   getGame: (gameKey: string) => safe((d) => d.get("games", gameKey), undefined),
+  closePreviousGames: (keepKey: string, startedAt: number, clockNow: number) => safe(async (d) => {
+    const tx = d.transaction("games", "readwrite");
+    const closed: LocalGame[] = [];
+    let cursor = await tx.store.openCursor();
+    while (cursor) {
+      const game = cursor.value;
+      const meta = game.meta;
+      if (meta.gameKey !== keepKey && meta.status === "active" && !meta.parentGameKey &&
+        (meta.mode === "full_power" || meta.mode === "climb" || meta.mode === "timed") &&
+        (game.tree.nodes[ROOT_KEY]?.createdAt ?? 0) <= startedAt) {
+        const ply = game.tree.nodes[game.tree.branches[game.tree.activeBranchKey].headKey]?.ply ?? 0;
+        const playedRated = ply > 1 && meta.rated === "eligible" && (meta.mode === "climb" || meta.mode === "timed");
+        const next: LocalGame = { ...game, clock: game.clock ? pause(game.clock, clockNow) : undefined,
+          meta: { ...meta, status: "finished", result: playedRated ? meta.humanColor === "w" ? "0-1" : "1-0" : undefined,
+            resultReason: playedRated ? "resign" : ply <= 1 ? "abort" : "replaced",
+            rated: !playedRated && meta.rated === "eligible" ? "unrated" : meta.rated, updatedAt: Date.now() } };
+        await cursor.update(next);
+        closed.push(next);
+      }
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+    return closed;
+  }, [] as LocalGame[]),
   recentGames: (limit = 30) =>
     safe(async (d) => {
       const count = Number.isFinite(limit) ? Math.max(0, Math.min(500, Math.floor(limit))) : 30;

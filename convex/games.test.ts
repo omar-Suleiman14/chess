@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 
@@ -54,6 +54,61 @@ beforeEach(() => {
 });
 
 describe("games", () => {
+  it("replaces older Sherine sessions, retaining moves, branches, imports and other owners", async () => {
+    const t = setup();
+    const old = await newGame(t, alice, { startedAt: 1 });
+    await play(t, old, ["e2e4", "e7e5"]);
+    const unopened = await newGame(t, alice, { mode: "climb", opponentId: "climb-01", startedAt: 2 });
+    const otherOwner = await newGame(t, bob, { startedAt: 1 });
+    const branch = await newGame(t, alice, { mode: "practice", parentGameKey: old.gameKey, parentNodeKey: "root", startedAt: 3 });
+    await old.user.mutation(api.games.importGame, { opId: opId(), gameKey: "import-kept", pgn: "1. e4 *", humanColor: "w" });
+    const latest = await newGame(t, alice, { replaceActive: true, startedAt: Date.now() });
+    const closed = await old.user.query(api.games.get, { gameKey: old.gameKey });
+    expect(closed!.game).toMatchObject({ status: "finished", resultReason: "replaced" });
+    expect(closed!.nodes.map(n => n.san)).toContain("e5");
+    expect((await old.user.query(api.games.get, { gameKey: unopened.gameKey }))!.game).toMatchObject({ status: "finished", resultReason: "abort", rated: "unrated" });
+    for (const key of [branch.gameKey, "import-kept", latest.gameKey]) expect((await old.user.query(api.games.get, { gameKey: key }))!.game.status).toBe("active");
+    expect((await otherOwner.user.query(api.games.get, { gameKey: otherOwner.gameKey }))!.game.status).toBe("active");
+    await expect(t.withIdentity(bob).mutation(api.games.finish, { opId: opId(), gameKey: old.gameKey, claim: "replace" })).rejects.toThrow(/not found/i);
+  });
+
+  it("a delayed offline creation cannot replace a newer session or lose its queued moves", async () => {
+    const t = setup();
+    const latest = await newGame(t, alice, { replaceActive: true, startedAt: 20 });
+    const delayed = await newGame(t, alice, { replaceActive: true, startedAt: 10 });
+    await play(t, delayed, ["e2e4", "e7e5"]);
+    await delayed.user.mutation(api.games.finish, { opId: opId(), gameKey: delayed.gameKey, claim: "replace" });
+    const old = await delayed.user.query(api.games.get, { gameKey: delayed.gameKey });
+    expect(old!.game.status).toBe("finished");
+    expect(old!.nodes).toHaveLength(3);
+    expect((await latest.user.query(api.games.get, { gameKey: latest.gameKey }))!.game.status).toBe("active");
+    await delayed.user.mutation(api.games.create, { opId: opId(), gameKey: delayed.gameKey, mode: "full_power", opponentId: "full-power-fast", humanColor: "w", mainBranchKey: delayed.branchKey, replaceActive: true, startedAt: 10 });
+    expect((await latest.user.query(api.games.get, { gameKey: latest.gameKey }))!.game.status).toBe("active");
+  });
+
+  it("replacing a started rated game preserves resignation and applies its rating once", async () => {
+    const t = setup();
+    const rated = await newGame(t, alice, { mode: "climb", opponentId: "climb-01", startedAt: 1 });
+    await play(t, rated, ["e2e4", "e7e5"]);
+    await newGame(t, alice, { replaceActive: true, startedAt: 2 });
+    await rated.user.mutation(api.games.finish, { opId: opId(), gameKey: rated.gameKey, claim: "replace" });
+    expect((await rated.user.query(api.games.get, { gameKey: rated.gameKey }))!.game).toMatchObject({ status: "finished", result: "0-1", resultReason: "resign" });
+    expect(await rated.user.query(api.progress.ledger, { pool: "climb" })).toHaveLength(1);
+  });
+
+  it("finishes a legacy backlog in bounded batches without losing history", async () => {
+    vi.useFakeTimers();
+    try {
+      const t = setup();
+      for (let i = 1; i <= 101; i++) await newGame(t, alice, { startedAt: i });
+      const latest = await newGame(t, alice, { replaceActive: true, startedAt: 1000 });
+      await t.finishAllScheduledFunctions(() => { vi.runAllTimers(); });
+      const history = await latest.user.query(api.games.list, { paginationOpts: { numItems: 200, cursor: null } });
+      expect(history.page).toHaveLength(102);
+      expect(history.page.filter(g => g.status === "active").map(g => g.gameKey)).toEqual([latest.gameKey]);
+    } finally { vi.useRealTimers(); }
+  });
+
   it("requires sign-in and isolates owners", async () => {
     const t = setup();
     await expect(

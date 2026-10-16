@@ -59,7 +59,7 @@ export default function TimeMachinePage() {
                     {new Date(g.startedAt).toLocaleDateString()} · {Math.ceil(g.moveCount / 2)} moves{g.parentGameKey ? " · branch" : ""}
                   </span>
                 </span>
-                <span className="shrink-0 text-sm tabular-nums text-muted">{g.status === "finished" ? g.result ?? "–" : "in play"}</span>
+                <span className="shrink-0 text-sm tabular-nums text-muted">{g.status === "finished" ? g.result ?? "Closed" : "in play"}</span>
               </Link>
             </li>
           ))}
@@ -70,7 +70,7 @@ export default function TimeMachinePage() {
                   <span className="block font-medium">{MODE[g.meta.mode]} · on this device</span>
                   <span className="text-xs text-muted">{new Date(g.meta.updatedAt).toLocaleDateString()}</span>
                 </span>
-                <span className="text-sm text-muted">{g.meta.result ?? "in play"}</span>
+                <span className="text-sm text-muted">{g.meta.status === "finished" ? g.meta.result ?? "Closed" : "in play"}</span>
               </Link>
             </li>
           ))}

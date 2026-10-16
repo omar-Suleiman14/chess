@@ -8,7 +8,7 @@ import { beginnerMove, hashSeed } from "../chess/engine/beginner";
 import { SearchCancelled } from "../chess/engine/controller";
 import { findOpponent, THINK_TIME_MS, type ThinkPreset } from "../chess/engine/opponents";
 import { checkFlag, findTimeControl, initialClock, pause, pressClock, startTurn, type ClockState } from "../chess/clock";
-import { appendMove, createTree, headNode, pathTo, rewindBranch, undoTarget, type GameTree, type TreeNode } from "../chess/history/tree";
+import { appendMove, createTree, headNode, pathTo, rewindBranch, ROOT_KEY, undoTarget, type GameTree, type TreeNode } from "../chess/history/tree";
 import { applyUci, DEFAULT_POSITION, sideToMove, statusFromPath, timeoutOutcome, type AppliedMove, type Color, type Outcome } from "../chess/rules";
 import type { FatmaEvent } from "../chess/personality/fatma";
 import { getEngine, supportsEngine } from "./engine";
@@ -51,6 +51,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
   const thinkRef = useRef(think);
   const callbacks = useRef({ onMove, onFatma });
   const replyGeneration = useRef(0);
+  const newGameGeneration = useRef(0);
 
   useEffect(() => {
     thinkRef.current = think;
@@ -78,6 +79,8 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
         parentGameKey: g.meta.parentGameKey,
         parentNodeKey: g.meta.parentNodeKey,
         label: g.meta.label,
+        replaceActive: !g.meta.parentGameKey && (g.meta.mode === "full_power" || g.meta.mode === "climb" || g.meta.mode === "timed"),
+        startedAt: g.tree.nodes[ROOT_KEY]?.createdAt ?? g.meta.updatedAt,
       });
       const next = { ...g, meta: { ...g.meta, synced: true } };
       return next;
@@ -212,6 +215,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
 
   const newGame = useCallback(
     async (opts: NewGameOptions) => {
+      const generation = ++newGameGeneration.current;
       replyGeneration.current++;
       if (supportsEngine()) getEngine().cancel("move");
       setThinking(false);
@@ -237,14 +241,23 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
         tree,
         clock: tc ? startTurn(initialClock(tc), sideToMove(tree.originFen), monotonicNow()) : undefined,
       };
+      const replacesSession = !opts.parentGameKey && (opts.mode === "full_power" || opts.mode === "climb" || opts.mode === "timed");
+      const closed = replacesSession ? await store.closePreviousGames(g.meta.gameKey, tree.nodes[ROOT_KEY].createdAt, monotonicNow()) : [];
+      if (generation !== newGameGeneration.current) return gameRef.current ?? g;
       commit(g);
       await store.setCurrent(g.meta.gameKey);
       callbacks.current.onFatma?.("game_start");
-      // Branch sessions and Black games must exist on the server before Sherine moves.
-      if (opts.parentGameKey || opts.humanColor === "b") commit(await ensureCreated(g));
+      // Preserve offline move order: close operations follow each old game's
+      // queued moves, and precede the new session's create.
+      for (const old of closed) if (old.meta.synced) await sync.enqueue(old.meta.gameKey, "finish", { gameKey: old.meta.gameKey, claim: "replace" });
+      // Create immediately, even with White, so starting a new game also closes
+      // older account sessions before the first move.
+      const created = await ensureCreated(g);
+      const current = gameRef.current;
+      if (current?.meta.gameKey === g.meta.gameKey) commit({ ...current, meta: { ...current.meta, synced: created.meta.synced } });
       return g;
     },
-    [commit, ensureCreated],
+    [commit, ensureCreated, sync],
   );
 
   const undo = useCallback(async () => {

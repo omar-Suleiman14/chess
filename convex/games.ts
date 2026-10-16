@@ -1,11 +1,11 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { importPgn, PgnError } from "../lib/chess/history/pgn";
 import { ROOT_KEY } from "../lib/chess/history/tree";
 import { checkKey, fail, idempotent, optionalOwner, requireOwner } from "./model/auth";
 import * as Games from "./model/games";
-import { colorValidator, modeValidator } from "./schema";
+import { colorValidator, modeValidator, outcomeValidator, ratedValidator } from "./schema";
 
 export const create = mutation({
   args: {
@@ -20,15 +20,29 @@ export const create = mutation({
     parentGameKey: v.optional(v.string()),
     parentNodeKey: v.optional(v.string()),
     label: v.optional(v.string()),
+    replaceActive: v.optional(v.boolean()),
+    startedAt: v.optional(v.number()),
   },
-  handler: async (ctx, { opId, ...args }) => {
+  returns: v.object({ gameKey: v.string(), originFen: v.string(), rated: ratedValidator, revision: v.number(), status: v.union(v.literal("active"), v.literal("finished")), result: v.union(outcomeValidator, v.null()), resultReason: v.union(v.string(), v.null()) }),
+  handler: async (ctx, { opId, replaceActive, ...args }) => {
     const owner = await requireOwner(ctx);
     return await idempotent(ctx, owner, opId, "games.create", async () => {
       if (args.mode === "import") fail("bad_request", "Use importPgn for imports.");
-      const game = await Games.createGame(ctx, owner, { ...args, createdBy: "app" });
-      return { gameKey: game.gameKey, originFen: game.originFen, rated: game.rated, revision: game.revision };
+      const existing = await ctx.db.query("games").withIndex("by_owner_and_gameKey", q => q.eq("owner", owner).eq("gameKey", args.gameKey)).unique();
+      let game = await Games.createGame(ctx, owner, { ...args, createdBy: "app" });
+      if (replaceActive && !existing) {
+        await Games.replaceActiveSessions(ctx, owner, game);
+        game = await Games.getGame(ctx, owner, game.gameKey);
+      }
+      return { gameKey: game.gameKey, originFen: game.originFen, rated: game.rated, revision: game.revision, status: game.status, result: game.result ?? null, resultReason: game.resultReason ?? null };
     });
   },
+});
+
+export const closeOlderSessions = internalMutation({
+  args: { owner: v.string(), mode: v.union(v.literal("full_power"), v.literal("climb"), v.literal("timed")), startedAt: v.number(), creationTime: v.number() },
+  returns: v.null(),
+  handler: async (ctx, { owner, ...args }) => { await Games.closeOlderSessions(ctx, owner, args); return null; },
 });
 
 export const appendMove = mutation({
@@ -105,7 +119,8 @@ export const renameBranch = mutation({
 });
 
 export const finish = mutation({
-  args: { opId: v.string(), gameKey: v.string(), claim: v.union(v.literal("resign"), v.literal("timeout"), v.literal("abort")) },
+  args: { opId: v.string(), gameKey: v.string(), claim: v.union(v.literal("resign"), v.literal("timeout"), v.literal("abort"), v.literal("replace")) },
+  returns: v.object({ status: v.literal("finished"), result: v.union(outcomeValidator, v.null()), reason: v.string(), rated: ratedValidator }),
   handler: async (ctx, { opId, ...args }) => {
     const owner = await requireOwner(ctx);
     return await idempotent(ctx, owner, opId, "games.finish", () => Games.finish(ctx, owner, args));

@@ -11,6 +11,7 @@ import { ROOT_KEY } from "../../lib/chess/history/tree";
 import { checkKey, fail, type Owner } from "./auth";
 import { applyRating } from "./ratings";
 import { recordGameForFatma } from "./fatma";
+import { internal } from "../_generated/api";
 
 export type Mode = Doc<"games">["mode"];
 export const MODE_VERSION = 1;
@@ -53,6 +54,7 @@ export type CreateGameInput = {
   parentNodeKey?: string;
   label?: string;
   createdBy: Doc<"games">["createdBy"];
+  startedAt?: number;
 };
 
 export async function createGame(ctx: MutationCtx, owner: Owner, input: CreateGameInput): Promise<Doc<"games">> {
@@ -94,6 +96,8 @@ export async function createGame(ctx: MutationCtx, owner: Owner, input: CreateGa
   const standardStart = originFen === DEFAULT_POSITION && !input.parentGameKey;
   const ratedMode = input.mode === "climb" || input.mode === "timed";
   const now = Date.now();
+  const startedAt = input.startedAt ?? now;
+  if (!Number.isFinite(startedAt) || startedAt < 0 || startedAt > now + 300_000) fail("bad_request", "Invalid game start time.");
   const gameId = await ctx.db.insert("games", {
     owner,
     gameKey: input.gameKey,
@@ -111,7 +115,7 @@ export async function createGame(ctx: MutationCtx, owner: Owner, input: CreateGa
     activeBranchKey: input.mainBranchKey,
     revision: 0,
     moveCount: 0,
-    startedAt: now,
+    startedAt,
     updatedAt: now,
     parentGameKey: input.parentGameKey,
     parentNodeKey: input.parentNodeKey,
@@ -140,6 +144,54 @@ export async function createGame(ctx: MutationCtx, owner: Owner, input: CreateGa
     updatedAt: now,
   });
   return (await ctx.db.get("games", gameId))!;
+}
+
+const SESSION_MODES = ["full_power", "climb", "timed"] as const;
+type SessionMode = typeof SESSION_MODES[number];
+
+async function closeReplacedSession(ctx: MutationCtx, owner: Owner, game: Doc<"games">): Promise<void> {
+  if (game.status !== "active") return;
+  if (game.moveCount <= 1) { await finish(ctx, owner, { gameKey: game.gameKey, claim: "abort" }); return; }
+  if (game.rated === "eligible" && (game.mode === "climb" || game.mode === "timed")) {
+    await finish(ctx, owner, { gameKey: game.gameKey, claim: "resign" });
+    return;
+  }
+  const now = Date.now();
+  await ctx.db.patch("games", game._id, { status: "finished", result: undefined, resultReason: "replaced", endedAt: now, updatedAt: now, revision: game.revision + 1 });
+}
+
+export async function closeOlderSessions(ctx: MutationCtx, owner: Owner, args: {
+  mode: SessionMode; startedAt: number; creationTime: number;
+}): Promise<void> {
+  const candidates = await ctx.db.query("games")
+    .withIndex("by_owner_and_status_and_mode_and_parentGameKey_and_startedAt", q => q.eq("owner", owner).eq("status", "active").eq("mode", args.mode).eq("parentGameKey", undefined).lte("startedAt", args.startedAt))
+    .take(101);
+  let closed = 0;
+  for (const game of candidates.slice(0, 100)) {
+    if (game.startedAt === args.startedAt && game._creationTime >= args.creationTime) continue;
+    await closeReplacedSession(ctx, owner, game);
+    closed++;
+  }
+  // Closed rows leave this index range, so each continuation reads the next
+  // bounded batch without retaining a cursor into a changing result set.
+  if (candidates.length > 100 && closed > 0) await ctx.scheduler.runAfter(0, internal.games.closeOlderSessions, { owner, ...args });
+}
+
+/** Only a freshly opened main game replaces older live sessions. Replays of
+ * an offline create cannot displace a game that was actually started later. */
+export async function replaceActiveSessions(ctx: MutationCtx, owner: Owner, game: Doc<"games">): Promise<void> {
+  if (game.parentGameKey || !SESSION_MODES.some(mode => mode === game.mode)) return;
+  for (const mode of SESSION_MODES) {
+    const latest = await ctx.db.query("games")
+      .withIndex("by_owner_and_status_and_mode_and_parentGameKey_and_startedAt", q => q.eq("owner", owner).eq("status", "active").eq("mode", mode).eq("parentGameKey", undefined))
+      .order("desc").first();
+    if (latest && (latest.startedAt > game.startedAt || (latest.startedAt === game.startedAt && latest._creationTime > game._creationTime))) {
+      // A delayed offline create must keep accepting its queued history. Its
+      // replacement operation follows those moves in the durable client queue.
+      return;
+    }
+  }
+  for (const mode of SESSION_MODES) await closeOlderSessions(ctx, owner, { mode, startedAt: game.startedAt, creationTime: game._creationTime });
 }
 
 export type AppendResult = {
@@ -345,7 +397,7 @@ export async function markAssisted(ctx: MutationCtx, owner: Owner, gameKey: stri
   return "ineligible";
 }
 
-export type FinishClaim = "resign" | "timeout" | "abort";
+export type FinishClaim = "resign" | "timeout" | "abort" | "replace";
 
 const TIMEOUT_TOLERANCE_MS = 2_500;
 
@@ -367,7 +419,12 @@ export async function finish(
   let rated = game.rated;
   const humanLoses: Outcome = game.humanColor === "w" ? "0-1" : "1-0";
 
-  if (args.claim === "resign") {
+  if (args.claim === "replace") {
+    const playedRated = game.moveCount > 1 && rated === "eligible" && (game.mode === "climb" || game.mode === "timed");
+    result = playedRated ? humanLoses : null;
+    reason = playedRated ? "resign" : game.moveCount <= 1 ? "abort" : "replaced";
+    if (!playedRated && rated === "eligible") rated = "unrated";
+  } else if (args.claim === "resign") {
     result = humanLoses;
   } else if (args.claim === "abort") {
     // Abort only before the human has moved; otherwise it is a resignation.

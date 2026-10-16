@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { openDB } from "idb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createTree } from "../chess/history/tree";
+import { appendMove, createTree } from "../chess/history/tree";
 import type { LocalGame, QueuedOp } from "./store";
 
 const FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -13,6 +13,36 @@ beforeEach(() => { vi.resetModules(); vi.stubGlobal("indexedDB", new IDBFactory(
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("local indexed storage and analysis cache", () => {
+  it("closes older local sessions without deleting history or touching imports, branches or newer sessions", async () => {
+    const { store } = await import("./store");
+    const old = game("old", 1);
+    const imported = game("imported", 2); imported.meta.mode = "import";
+    const branch = game("branch", 3); branch.meta.parentGameKey = "old";
+    const newer = game("newer", 100);
+    const current = game("keep", 10);
+    await Promise.all([old, imported, branch, newer, current].map(g => store.saveGame(g)));
+    const closed = await store.closePreviousGames("keep", 10, 10);
+    expect(closed.map(g => g.meta.gameKey)).toEqual(["old"]);
+    expect((await store.getGame("old"))?.meta).toMatchObject({ status: "finished", resultReason: "abort" });
+    expect((await store.getGame("old"))?.tree).toEqual(old.tree);
+    for (const key of ["imported", "branch", "newer", "keep"]) expect((await store.getGame(key))?.meta.status).toBe("active");
+  });
+
+  it("stops a replaced clock and preserves the result policy for a played rated game", async () => {
+    const { store } = await import("./store");
+    const rated = game("rated", 1);
+    rated.meta.mode = "climb"; rated.meta.rated = "eligible";
+    rated.tree = appendMove(rated.tree, "branch-rated", "e2e4", "rated-n1", 2).tree;
+    rated.tree = appendMove(rated.tree, "branch-rated", "e7e5", "rated-n2", 3).tree;
+    rated.clock = { remainingMs: { w: 60_000, b: 60_000 }, running: "b", turnStartedAt: 1, flagged: null };
+    await store.saveGame(rated);
+    await store.closePreviousGames("new", 10, 1000);
+    const closed = await store.getGame("rated");
+    expect(closed?.meta).toMatchObject({ status: "finished", result: "0-1", resultReason: "resign", rated: "eligible" });
+    expect(closed?.clock).toMatchObject({ running: null, turnStartedAt: null, remainingMs: { b: 59_001 } });
+    expect(Object.keys(closed!.tree.nodes)).toHaveLength(3);
+  });
+
   it("expires card snapshots and removes revoked cards and the previous account's data", async () => {
     const { store, VIEW_CACHE_TTL_MS } = await import("./store");
     const clock = vi.spyOn(Date, "now").mockReturnValue(1000);
