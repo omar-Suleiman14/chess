@@ -18,6 +18,8 @@ import { Board, type LastMove } from "@/components/chess/Board";
 import { Dialog, Segmented } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
 import { Select } from "@/components/ui/Select";
+import { GlassButton } from "@/components/ui/Glass";
+import { Slider } from "@/components/ui/Slider";
 import { ENGINE_BUILD, SearchCancelled } from "@/lib/chess/engine/controller";
 import { CLIMB_OPPONENTS } from "@/lib/chess/engine/opponents";
 import { formatScore, type WhiteScore } from "@/lib/chess/engine/uci";
@@ -320,33 +322,44 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
             label={`Replay board at ${node ? moveLabel(node) : "start"}`}
           />
           <PlayerIdentity captures={captures.captured[game.meta.humanColor]} capturedColor={game.meta.humanColor === "w" ? "b" : "w"} advantage={captures.advantage[game.meta.humanColor]} />
-          <div className="mt-3 flex items-center gap-2">
-            <button onClick={() => setCursor(0)} aria-label="Go to start" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">⏮</button>
-            <button onClick={() => setCursor((c) => Math.max(0, c - 1))} aria-label="Previous move" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">◀</button>
-            <button onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pause" : "Play"} className="grid h-11 flex-1 place-items-center rounded-full bg-accent font-medium text-accent-text">
+          <div className="mt-3 flex items-center gap-2" dir="ltr">
+            <GlassButton onClick={() => setCursor(0)} aria-label="Go to start" className="grid h-12 w-12 shrink-0 place-items-center rounded-full">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M6 5v14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /><path d="M19 5.8v12.4a.8.8 0 0 1-1.25.66L9.2 12.66a.8.8 0 0 1 0-1.32l8.55-6.2A.8.8 0 0 1 19 5.8z" fill="currentColor" /></svg>
+            </GlassButton>
+            <GlassButton onClick={() => setCursor((c) => Math.max(0, c - 1))} aria-label="Previous move" className="grid h-12 w-12 shrink-0 place-items-center rounded-full">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </GlassButton>
+            <GlassButton variant="tint" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "Pause" : "Play"} className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full font-semibold">
+              {playing ? (
+                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor" /><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor" /></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M7 5.8v12.4a.8.8 0 0 0 1.22.68l10-6.2a.8.8 0 0 0 0-1.36l-10-6.2A.8.8 0 0 0 7 5.8z" fill="currentColor" /></svg>
+              )}
               {playing ? "Pause" : "Play"}
-            </button>
-            <button onClick={() => setCursor((c) => Math.min(path.length, c + 1))} aria-label="Next move" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">▶</button>
-            <button onClick={() => setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length])} aria-label={`Playback speed ${speed}x`} className="h-11 rounded-full bg-surface px-3 text-sm tabular-nums shadow-[var(--shadow)]">
+            </GlassButton>
+            <GlassButton onClick={() => setCursor((c) => Math.min(path.length, c + 1))} aria-label="Next move" className="grid h-12 w-12 shrink-0 place-items-center rounded-full">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </GlassButton>
+            <GlassButton onClick={() => setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length])} aria-label={`Playback speed ${speed}x`} className="h-12 min-w-12 shrink-0 rounded-full px-3 text-sm font-semibold tabular-nums">
               {speed}×
-            </button>
+            </GlassButton>
           </div>
-          <input type="range"
+          <Slider
             min={0}
             max={path.length}
             value={cursor}
-            onChange={(e) => {
+            onValueChange={(v) => {
               setPlaying(false);
-              setCursor(Number(e.target.value));
+              setCursor(v);
             }}
             aria-label="Scrub through the game"
             aria-valuetext={node ? moveLabel(node) : "Start"}
-            className="ios-range mt-3 w-full"
-            style={{ ["--pct" as string]: `${(cursor / Math.max(1, path.length)) * 100}%`, ["--range-fill" as string]: "var(--accent)" }}
+            className="mt-2 w-full"
+            fill="var(--accent)"
           />
-          <div className="relative h-2" aria-hidden="true">
+          <div className="relative -mt-1 h-2" aria-hidden="true">
             {[...mistakePlies].map((ply) => (
-              <span key={ply} className="absolute top-0 h-2 w-1 rounded bg-danger" style={{ left: `${(ply / Math.max(1, path.length)) * 100}%` }} />
+              <span key={ply} className="absolute top-0 h-2 w-1 rounded bg-danger" style={{ left: `calc(19px + (100% - 38px) * ${ply / Math.max(1, path.length)})` }} />
             ))}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">

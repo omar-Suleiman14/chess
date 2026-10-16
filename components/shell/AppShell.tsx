@@ -12,6 +12,7 @@ import { useSettings } from "@/lib/client/settings";
 import { playSound } from "@/lib/client/sound";
 import { useSync } from "@/lib/client/sync";
 import { SocialPrefetch } from "@/lib/client/socialCache";
+import { GlassButton, GlassLayer } from "@/components/ui/Glass";
 
 type ShellCtx = { openMenu: () => void; closeMenu: () => void };
 const Ctx = createContext<ShellCtx | null>(null);
@@ -198,18 +199,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           else animate(sheetY, 0, SHEET_SPRING);
         }}
       >
-        <div className="bg-surface cursor-grab touch-none px-5 pb-2 pt-3 active:cursor-grabbing" onPointerDown={(e) => dragControls.start(e)}>
+        {/* The header floats as a glass bar; the menu scrolls underneath and bends through it. */}
+        <div className="absolute inset-x-0 top-0 z-10 cursor-grab touch-none px-3 pt-2 active:cursor-grabbing" onPointerDown={(e) => dragControls.start(e)}>
           <div className="mx-auto h-1.5 w-10 rounded-full bg-line" />
-          <div className="mt-3 flex items-center justify-between">
+          <div className="glass-panel mt-2 flex min-h-14 items-center rounded-full px-5">
+            <GlassLayer radius="pill" blur={3} glassThickness={70} bezelWidth={20} specularOpacity={0.6} />
             <span className="text-lg font-semibold">Chess by Chaos</span>
-            <button onClick={closeMenu} className="press-overlay grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]" aria-label="Close menu">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+            {/* No visible close: swipe down, tap outside or Escape. Screen readers still get a button. */}
+            <button onClick={closeMenu} className="sr-only focus-visible:not-sr-only focus-visible:ms-auto focus-visible:rounded-full focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm" aria-label="Close menu">
+              Close
             </button>
           </div>
         </div>
-        <nav className="no-scrollbar flex-1 overflow-y-auto overscroll-contain bg-surface px-4 pb-4">
+        <nav className="no-scrollbar flex-1 overflow-y-auto overscroll-contain bg-surface px-4 pb-4 pt-[76px]">
           {SECTIONS.map((section) => (
             <div key={section.title} className="mt-3">
               <p className="px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted">{section.title}</p>
@@ -272,13 +274,13 @@ function AccountRow() {
 export function MenuButton() {
   const { openMenu } = useShell();
   return (
-    <button onClick={openMenu} aria-label="Open menu" aria-haspopup="dialog" className="press-overlay grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">
+    <GlassButton onClick={openMenu} aria-label="Open menu" aria-haspopup="dialog" className="grid h-11 w-11 shrink-0 place-items-center rounded-full">
       <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
         <circle cx="6" cy="12" r="1.8" fill="currentColor" />
         <circle cx="12" cy="12" r="1.8" fill="currentColor" />
         <circle cx="18" cy="12" r="1.8" fill="currentColor" />
       </svg>
-    </button>
+    </GlassButton>
   );
 }
 
@@ -322,17 +324,17 @@ function writeMenuReturn(path: string | null): void {
 function BackButton() {
   const router = useRouter();
   return (
-    <button
+    <GlassButton
       onClick={() => {
         if (readMenuReturn() !== null && window.history.length > 1) router.back();
         else router.push("/");
       }}
       aria-label="Back"
-      className="press-overlay grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
+      className="grid h-11 w-11 place-items-center rounded-full"
     >
       <svg viewBox="0 0 24 24" className="h-5 w-5 rtl:rotate-180" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-    </button>
+    </GlassButton>
   );
 }

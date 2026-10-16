@@ -1,4 +1,4 @@
-# UI/UX system · Apple simplicity, not Liquid Glass
+# UI/UX system · Apple simplicity, with Liquid Glass controls
 
 > Visual direction is *minimal Apple-inspired*, not an iOS clone. Board is the product. Interactions are what feel premium. Keep onboarding and explanatory copy short.
 
@@ -7,7 +7,7 @@
 1. One primary action per screen; board occupies central attention.
 2. 8×8 board is fully legible and interactive in narrow iPhone portrait and desktop; do not shrink square hit targets under usability threshold where avoidable.
 3. Typography, spacing, contrast and restrained motion matter more than cards/gradients.
-4. No Liquid Glass, frosted-glass mania, huge dashboards, toy-like colors, heavy shadows or marketing banners.
+4. Liquid Glass is for floating controls only (buttons, switches, sliders, popups, the menu header): never on the board, cards or body text. No huge dashboards, toy-like colors, heavy shadows or marketing banners.
 5. Controls are obvious, named to accessibility APIs, and large enough for hands, not just mouse cursors.
 6. Character presence is secondary and opt-out. No interrupts in competitive modes.
 
@@ -40,6 +40,18 @@ Tap circular horizontal ellipsis near top-right. Sheet opens from bottom; **enti
 - Respect iOS safe area home indicator, keyboard appearance, screen rotation, and reduced motion. Focus trapped while modal is active and restored on close.
 - Menu entries: Play (Full Power/Climb/Timed), Learn, Time Machine, Progress, Profile & Sherine, Settings. No persistent sidebar on mobile.
 - On desktop: same modal vocabulary, optionally centered/side anchored if bottom sheet is awkward; never break parity of functionality.
+
+## Liquid Glass
+
+Floating controls use one glass material (`components/ui/Glass.tsx`, optics in `lib/client/liquidGlass.ts`), based on Chris Kube's [Liquid Glass in the Browser](https://kube.io/blog/liquid-glass-css-svg/):
+
+- The rim (bezel) of each shape is a curved surface (squircle for buttons and sliders, lip for switch thumbs). A vertical ray is refracted through it by Snell's law (n = 1.5), traced once along a radius, then swept around the rounded rectangle into an SVG displacement map applied with `backdrop-filter: url(#…)`. A second map adds the rim light.
+- Pressing a control raises the refraction (and swells buttons ~6 %); switch and slider thumbs turn from solid white to clear lenses while held, so the track bends through them.
+- True refraction only renders in Chromium. Safari (all iPhone browsers) and Firefox get a frosted blur with the same tint and rim, chosen by feature detection, never by layout.
+- `prefers-reduced-transparency` and High contrast fall back to solid surfaces.
+- Settings → Display → **Liquid Glass** turns it off (solid controls, no filters). It defaults to `auto`: off on weak devices (fewer than 4 cores, under 4 GB memory, or Data Saver), on elsewhere. Once changed, a reset link returns it to the device default.
+- The menu sheet has no visible close button: swipe down, tap outside or press Escape. A Close button stays for screen readers and appears on keyboard focus.
+- Keep the lens element unstyled, and never put `mix-blend-mode`, `filter`, `opacity < 1` or `mask` on it or its ancestors: those make Chromium cut the lens off from the page behind it.
 
 ## Motion specification
 
