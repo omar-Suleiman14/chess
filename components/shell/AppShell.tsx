@@ -13,6 +13,7 @@ import { playSound } from "@/lib/client/sound";
 import { useSync } from "@/lib/client/sync";
 import { SocialPrefetch } from "@/lib/client/socialCache";
 import { GlassButton, GlassLayer } from "@/components/ui/Glass";
+import { CharacterField } from "./CharacterField";
 
 type ShellCtx = { openMenu: () => void; closeMenu: () => void };
 const Ctx = createContext<ShellCtx | null>(null);
@@ -176,6 +177,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         aria-hidden={open}
         inert={open}
       >
+        {settings.livingBackground && <CharacterField reducedMotion={reducedMotion} />}
         {children}
       </motion.div>
       <ChallengeBanner />
