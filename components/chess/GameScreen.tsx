@@ -1,12 +1,15 @@
 "use client";
 
+import { motion } from "motion/react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FatmaPanel } from "@/components/fatma/FatmaPanel";
+import { IOS_SPRING } from "@/components/ui/Switch";
 import { MenuButton } from "@/components/shell/AppShell";
+import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, formatClock, remaining } from "@/lib/chess/clock";
 import { findOpponent, FULL_POWER_LABEL, ratingLabel } from "@/lib/chess/engine/opponents";
-import { headNode } from "@/lib/chess/history/tree";
+import { headNode, moveLabel, pathTo } from "@/lib/chess/history/tree";
 import { describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useEngineState, usePrewarmEngine } from "@/lib/client/engine";
 import { useSettings } from "@/lib/client/settings";
@@ -98,16 +101,41 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
   const tree = game?.tree;
   const head = tree ? headNode(tree) : null;
-  const fen = head?.fen ?? "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+  const liveFen = head?.fen ?? "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+  // Review mode: step through earlier positions without changing the game.
+  const [viewPly, setViewPly] = useState<number | null>(null);
+  const line = useMemo(() => (tree && head ? pathTo(tree, head.key) : []), [tree, head]);
+  const reviewing = viewPly !== null && viewPly < line.length;
+  const viewNode = reviewing ? (viewPly === 0 ? tree!.nodes.root : line[viewPly - 1]) : head;
+  const fen = viewNode?.fen ?? liveFen;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setViewPly(null);
+  }, [head?.key]);
+  const step = useCallback(
+    (delta: number) => {
+      setViewPly((v) => {
+        const at = v ?? line.length;
+        const next = Math.max(0, Math.min(line.length, at + delta));
+        return next >= line.length ? null : next;
+      });
+    },
+    [line.length],
+  );
   const human: Color = game?.meta.humanColor ?? "w";
   const orientation = orientationOverride ?? human;
   const status = useMemo(() => positionStatus(fen), [fen]);
-  const turn = sideToMove(fen);
+  const turn = sideToMove(liveFen);
   const opponent = game ? findOpponent(game.meta.opponentId) : undefined;
   const active = game?.meta.status === "active";
   const ratedEligible = game?.meta.rated === "eligible";
   const evalAllowed = settings.evalBar && (!ratedEligible || evalOptIn);
-  const checkSq = status.check ? kingSquare(fen, turn) ?? null : null;
+  const checkSq = status.check ? kingSquare(fen, sideToMove(fen)) ?? null : null;
+  const viewLastMove: LastMove = reviewing
+    ? viewNode && viewNode.ply > 0
+      ? { from: viewNode.uci.slice(0, 2) as Square, to: viewNode.uci.slice(2, 4) as Square, key: `view-${viewNode.key}` }
+      : null
+    : null;
 
   // Restore last-move highlight after reloads.
   useEffect(() => {
@@ -140,9 +168,9 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           computeMs: 1500,
         });
       }
-      // Blunder/praise detection on the human's last move.
+      // Blunder/praise detection on the human's last move (live position only).
       const node = tree.nodes[e.nodeKey];
-      if (!node?.parentKey || node.ply === 0) return;
+      if (!node?.parentKey || node.ply === 0 || e.nodeKey !== headNode(tree).key) return;
       const moverIsHuman = sideToMove(tree.nodes[node.parentKey].fen) === g.meta.humanColor;
       const before = evals.current.get(node.parentKey);
       if (!moverIsHuman || !before) return;
@@ -155,7 +183,23 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     [game, tree, sync, fatma],
   );
 
-  const evaluation = useEvaluation(fen, head?.key ?? "root", evalAllowed && !status.over, onFinalEval);
+  // End-of-game and low-time cues.
+  const endSounded = useRef<string | null>(null);
+  useEffect(() => {
+    if (!game || game.meta.status !== "finished" || endSounded.current === game.meta.gameKey) return;
+    endSounded.current = game.meta.gameKey;
+    if (settings.sound && game.meta.resultReason !== "checkmate") playSound("end", settings.volume);
+  }, [game, settings.sound, settings.volume]);
+  const lowTimeWarned = useRef<string | null>(null);
+  const humanMs = game?.clock ? remaining(game.clock, human, monotonicNow()) : null;
+  useEffect(() => {
+    if (humanMs === null || humanMs > 20_000 || !game || game.meta.status !== "active") return;
+    if (lowTimeWarned.current === game.meta.gameKey) return;
+    lowTimeWarned.current = game.meta.gameKey;
+    if (settings.sound) playSound("lowtime", settings.volume);
+  }, [humanMs, game, settings.sound, settings.volume]);
+
+  const evaluation = useEvaluation(fen, viewNode?.key ?? "root", evalAllowed && !status.over, onFinalEval);
 
   const handleMove = useCallback(
     async (uci: string) => {
@@ -179,13 +223,16 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.metaKey || e.ctrlKey || e.altKey) return;
+      const inBoard = e.target instanceof HTMLElement && e.target.closest("[role=grid]");
+      if (!inBoard && e.key === "ArrowLeft") step(-1);
+      if (!inBoard && e.key === "ArrowRight") step(1);
       if (e.key === "u") void onUndo();
       if (e.key === "f") setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"));
       if (e.key === "n") setShowNew(true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onUndo, human]);
+  }, [onUndo, human, step]);
 
   const tc = game?.meta.timeControlId ? findTimeControl(game.meta.timeControlId) : undefined;
   const now = monotonicNow();
@@ -198,6 +245,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[min(100vw,820px)] flex-col px-3 sm:px-6">
+      <LoadingScreen />
       <header className="safe-top flex items-center justify-between gap-2 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
@@ -230,7 +278,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
                 setEvalOptIn(true);
                 chess.markAssisted("eval_bar");
               }}
-              className="w-3.5 shrink-0 rounded-full bg-surface-2 sm:w-4"
+              className="w-[22px] shrink-0 rounded-[7px] bg-surface-2"
               aria-label="Show evaluation bar. This makes the current rated game unrated."
               title="Show evaluation (makes this game unrated)"
             />
@@ -239,14 +287,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
             <Board
               fen={fen}
               orientation={orientation}
-              movable={active && turn === human ? human : null}
+              movable={active && turn === human && !reviewing ? human : null}
               onMove={handleMove}
-              lastMove={lastMove}
+              lastMove={reviewing ? viewLastMove : lastMove}
               checkSquare={checkSq}
               showLegalDots={settings.legalDots}
               coordinates={settings.coordinates}
               reducedMotion={reducedMotion}
-              label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${active ? (turn === human ? "Your move." : "Fatma to move.") : "Game over."}`}
+              label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : "Fatma to move.") : "Game over."}`}
               onSelect={() => settings.sound && playSound("select", settings.volume)}
             />
             <div className="pointer-events-none absolute -bottom-2 left-1 z-30 translate-y-full sm:left-2">
@@ -256,6 +304,11 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
 
         <div className="mt-2 flex h-6 w-full max-w-[760px] items-center justify-end gap-2 text-xs text-muted" aria-live="polite">
+          {reviewing && viewNode && (
+            <button onClick={() => setViewPly(null)} className="mr-auto rounded-full bg-surface px-3 py-1 font-medium text-ink shadow-[var(--shadow)]">
+              Viewing {viewNode.ply === 0 ? "start" : moveLabel(viewNode)} · Back to game
+            </button>
+          )}
           {engineWaking && <span>Fatma is waking up…</span>}
           {chess.thinking && !engineWaking && <span>Fatma is thinking…</span>}
           {chess.engineError && (
@@ -295,29 +348,44 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
       <footer className="safe-bottom mx-auto flex w-full max-w-[760px] items-center gap-2 pt-1">
         {tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}
-        <button
+        <div className="flex overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
+          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-11 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <span className="my-2.5 w-px bg-line" aria-hidden="true" />
+          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-11 w-11 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+        </div>
+        <div className="flex-1" />
+        <motion.button
+          whileTap={{ scale: 0.94 }}
+          transition={IOS_SPRING}
           onClick={() => void onUndo()}
           disabled={!game || moveCount === 0}
-          className="min-h-12 flex-1 rounded-2xl bg-accent px-4 font-semibold text-accent-text disabled:opacity-40"
+          className="flex h-11 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-text disabled:opacity-40"
           aria-keyshortcuts="u"
         >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
-        </button>
-        <button onClick={() => setShowNew(true)} className="min-h-12 rounded-2xl bg-surface px-4 shadow-[var(--shadow)]" aria-keyshortcuts="n">
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 rounded-full bg-surface px-4 text-sm font-medium shadow-[var(--shadow)]" aria-keyshortcuts="n">
           New
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.94 }}
+          transition={IOS_SPRING}
           onClick={() => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"))}
-          className="grid min-h-12 w-12 place-items-center rounded-2xl bg-surface shadow-[var(--shadow)]"
+          className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
           aria-label="Flip board"
           aria-keyshortcuts="f"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
             <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-        </button>
+        </motion.button>
         {active && moveCount > 0 && (
-          <button onClick={() => setConfirmResign(true)} className="min-h-12 rounded-2xl px-3 text-sm text-muted">
+          <button onClick={() => setConfirmResign(true)} className="h-11 rounded-full px-2 text-sm text-muted">
             Resign
           </button>
         )}
@@ -400,12 +468,22 @@ export function Dialog({ title, children, onClose }: { title: string; children: 
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={onClose}>
-      <div ref={ref} role="dialog" aria-modal="true" aria-label={title} className="bubble-in w-full max-w-sm rounded-3xl bg-surface p-5 shadow-[var(--shadow)]" onClick={(e) => e.stopPropagation()}>
+    <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+      <motion.div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="w-full max-w-sm rounded-3xl bg-surface p-5 shadow-[var(--shadow)]"
+        onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, y: 48, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={IOS_SPRING}
+      >
         <p className="mb-4 text-lg font-semibold">{title}</p>
         <div className="grid gap-2">{children}</div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -442,23 +520,20 @@ function NewGameDialog({
 }
 
 export function Segmented<T extends string>({ label, value, onChange, options }: { label: string; value: T; onChange: (v: T) => void; options: Array<[T, string]> }) {
+  const group = useId();
   return (
     <div role="radiogroup" aria-label={label}>
-      <p className="mb-1 text-sm text-muted">{label}</p>
-      <div className="grid rounded-2xl bg-surface-2 p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      <p className="mb-1 px-1 text-sm text-muted">{label}</p>
+      <div className="grid rounded-[14px] bg-surface-2 p-[3px]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map(([v, text]) => (
-          <button
-            key={v}
-            role="radio"
-            aria-checked={value === v}
-            onClick={() => onChange(v)}
-            className={`min-h-10 rounded-xl text-sm ${value === v ? "bg-surface font-medium shadow-[var(--shadow)]" : "text-muted"}`}
-          >
-            {text}
+          <button key={v} role="radio" aria-checked={value === v} onClick={() => onChange(v)} className="relative min-h-10 rounded-[11px] text-sm">
+            {value === v && (
+              <motion.span layoutId={`seg-${group}`} className="absolute inset-0 rounded-[11px] bg-surface shadow-[0_3px_8px_rgba(0,0,0,0.12),0_1px_1px_rgba(0,0,0,0.06)]" transition={IOS_SPRING} />
+            )}
+            <span className={`relative ${value === v ? "font-medium" : "text-muted"}`}>{text}</span>
           </button>
         ))}
       </div>
     </div>
   );
 }
-

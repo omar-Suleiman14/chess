@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { FILES, legalMoves, pieceName, piecesOf, type BoardPiece, type Color, type PromotionPiece, type Square } from "@/lib/chess/rules";
+import { useSettings } from "@/lib/client/settings";
 import { Piece } from "./Pieces";
 import { PromotionSheet } from "./PromotionSheet";
 
@@ -55,6 +56,7 @@ export function Board({
   onSelect,
 }: Props) {
   const boardRef = useRef<HTMLDivElement>(null);
+  const { settings } = useSettings();
   const [selected, setSelected] = useState<Square | null>(null);
   const [cursor, setCursor] = useState<Square>(orientation === "w" ? "e2" : "e7");
   const [drag, setDrag] = useState<{ from: Square; x: number; y: number; active: boolean; size: number } | null>(null);
@@ -234,12 +236,12 @@ export function Board({
           {piece && !hidden && (
             <motion.div
               key={anim ? `${lastMove?.key}-${square}` : `${square}-${piece.color}${piece.type}`}
-              className="absolute inset-0 z-10 p-[6%]"
+              className="absolute inset-0 z-10"
               initial={anim ? { x: anim.x, y: anim.y } : false}
               animate={{ x: 0, y: 0, scale: isSelected ? 1.04 : 1 }}
-              transition={{ type: "tween", ease: [0.2, 0.8, 0.2, 1], duration: 0.16 }}
+              transition={{ type: "spring", stiffness: 520, damping: 40, mass: 0.9 }}
             >
-              <Piece type={piece.type} color={piece.color} className="h-full w-full drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />
+              <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="h-full w-full" />
             </motion.div>
           )}
           {target && showLegalDots && !target.capture && (
@@ -276,7 +278,7 @@ export function Board({
           className="pointer-events-none fixed z-50"
           style={{ left: drag.x - size * 0.6, top: drag.y - size * 0.75, width: size * 1.2, height: size * 1.2 }}
         >
-          <Piece type={ghost.type} color={ghost.color} className="h-full w-full drop-shadow-[0_6px_8px_rgba(0,0,0,0.3)]" />
+          <Piece type={ghost.type} color={ghost.color} set={settings.pieceSet} className="h-full w-full drop-shadow-[0_8px_10px_rgba(0,0,0,0.3)]" />
         </div>
       )}
       {promotion && (

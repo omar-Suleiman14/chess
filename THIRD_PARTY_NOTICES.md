@@ -29,14 +29,29 @@ The in-app [/licenses](app/licenses/page.tsx) page links to the licence and sour
 | @convex-dev/rate-limiter 0.4.2 | Apache-2.0 | Per-player MCP rate limits |
 | zod 4.6.7 | MIT | MCP and upgrade-pack schemas |
 | idb 8.0.4 | ISC | IndexedDB offline storage |
+| qrcode 1.5.4 | MIT | QR code on the card back |
 | next, react, react-dom | MIT | App framework |
 | convex | Apache-2.0 | Backend client |
 | @clerk/nextjs | MIT | Authentication |
 
+## Piece sets (from lichess-org/lila `public/piece/`)
+
+| Folder | Set | Author | Licence |
+| --- | --- | --- | --- |
+| `public/pieces/cburnett` | Classic (default) | Colin M.L. Burnett | GPL-2.0-or-later |
+| `public/pieces/merida` | Merida | Armando Hernandez Marroquin | GPL-2.0-or-later |
+| `public/pieces/chessnut` | Chessnut | Alexis Luengas | Apache-2.0 |
+| `public/pieces/mpchess` | MP Chess | Maxime Chupin | GPL-3.0-or-later |
+| `public/pieces/fantasy` | Fantasy | Maurizio Monge | MIT |
+
+Licences as listed in [lila's COPYING.md](https://github.com/lichess-org/lila/blob/master/COPYING.md). Files are unmodified.
+
+## Sounds (from lichess-org/lila `public/sound/standard/`)
+
+`public/sounds/standard/*.mp3` (Move, Capture, GenericNotify, Select, Confirmation, Error, LowTime) are part of lila, © the lila authors, **AGPL-3.0-or-later**. They are combined with this GPL-3.0 project as GPL-3.0 §13 permits, and keep their AGPL terms. Their corresponding source is the files themselves plus [lila](https://github.com/lichess-org/lila). Unmodified.
+
 ## Original assets (GPL-3.0, this repository)
 
-- **Chess pieces** ("Chaos Minimal", `components/chess/Pieces.tsx`): drawn for this project. No third-party piece set is used.
-- **Sounds**: synthesised at runtime with Web Audio (`lib/client/sound.ts`). No sample files.
 - **Board palettes, icon and UI.**
 
 ## Fatma sprite

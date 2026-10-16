@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { FatmaToggle } from "@/components/fatma/FatmaPanel";
 import { FatmaSprite } from "@/components/fatma/FatmaSprite";
-import { CARD_THEMES, ChessCard } from "@/components/profile/ChessCard";
+import { CardDeck } from "@/components/profile/CardDeck";
+import { CARD_THEMES } from "@/components/profile/ChessCard";
+import { SwitchRow } from "@/components/ui/Switch";
 import { PageHeader } from "@/components/shell/AppShell";
 import { useSettings } from "@/lib/client/settings";
 import { store } from "@/lib/client/store";
@@ -51,7 +53,6 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
   const profile = useQuery(api.profiles.mine);
   const ensure = useMutation(api.profiles.ensure);
   const update = useMutation(api.profiles.update);
-  const summary = useQuery(api.progress.summary);
   const packs = useQuery(api.fatma.packs);
   const decide = useMutation(api.fatma.decidePack);
   const grant = useQuery(api.mcp.myGrant);
@@ -77,12 +78,9 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
     }
   };
 
-  const stats = (summary?.ratings ?? []).map((r) => ({
-    label: r.pool === "climb" ? "Climb" : `Timed ${r.pool.slice(6)}`,
-    value: String(r.rating),
-    note: r.provisional ? "provisional" : `±${Math.round(r.rd * 1.96)}`,
-  }));
-  if (summary) stats.push({ label: "Full Power wins", value: String(summary.fullPower.wins), note: `of ${summary.fullPower.games}` });
+  const card = useQuery(api.profiles.myCard);
+  const [hueDraft, setHueDraft] = useState<number | null>(null);
+  const cardUrl = typeof window !== "undefined" && profile ? `${window.location.origin}/u/${profile.alias}` : "";
 
   const scopes = grant?.grant?.scopes ?? [];
   const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/mcp` : "/mcp";
@@ -92,51 +90,58 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
       <PageHeader title="Profile & Fatma" />
       <div className="grid gap-6 px-4">
         {profile && (
-          <section aria-labelledby="card" className="grid gap-3">
+          <section aria-labelledby="card" className="grid gap-4">
             <h2 id="card" className="sr-only">Chess card</h2>
-            <ChessCard alias={profile.alias} seed={profile.avatarSeed} hue={profile.hue} theme={profile.cardTheme} stats={profile.showRatings ? stats : []} reducedMotion={reducedMotion} />
-            <div className="grid gap-3 rounded-2xl bg-surface p-4 shadow-[var(--shadow)]">
-              <label className="grid gap-1 text-sm">
-                <span className="text-muted">Chess alias (separate from your Chaos identity)</span>
-                <span className="flex gap-2">
-                  <input value={aliasDraft} onChange={(e) => setAliasDraft(e.target.value.toLowerCase())} maxLength={20} className="min-h-11 flex-1 rounded-xl bg-surface-2 px-3" />
-                  <button onClick={() => void save({ alias: aliasDraft })} className="rounded-xl bg-accent px-4 text-accent-text">Save</button>
-                </span>
-              </label>
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Card theme">
-                {Object.entries(CARD_THEMES).map(([id, t]) => (
-                  <button key={id} role="radio" aria-checked={profile.cardTheme === id} aria-label={`${id} theme`} onClick={() => void save({ cardTheme: id })} className={`h-10 w-10 rounded-full ${profile.cardTheme === id ? "ring-2 ring-[var(--accent)] ring-offset-2" : ""}`} style={{ background: t.bg }} />
-                ))}
+            {card && <CardDeck data={hueDraft === null ? card : { ...card, hue: hueDraft }} url={cardUrl} reducedMotion={reducedMotion} />}
+            <div className="overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]">
+              <div className="grid gap-2 border-b border-line p-4">
+                <label htmlFor="alias" className="text-sm text-muted">Chess alias (separate from your Chaos identity)</label>
+                <div className="flex gap-2">
+                  <input id="alias" value={aliasDraft} onChange={(e) => setAliasDraft(e.target.value.toLowerCase())} maxLength={20} className="min-h-11 flex-1 rounded-xl bg-surface-2 px-3" />
+                  <button onClick={() => void save({ alias: aliasDraft })} disabled={aliasDraft === profile.alias} className="rounded-xl bg-accent px-4 font-medium text-accent-text disabled:opacity-40">Save</button>
+                </div>
               </div>
-              <label className="grid gap-1 text-sm">
-                <span className="text-muted">Avatar colour</span>
-                <input type="range" min={0} max={359} value={profile.hue} onChange={(e) => void save({ hue: Number(e.target.value) })} aria-label="Avatar hue" />
-              </label>
-              <button onClick={() => void save({ avatarSeed: Math.random().toString(36).slice(2, 10) })} className="justify-self-start rounded-full bg-surface-2 px-4 py-2 text-sm">
-                New avatar
-              </button>
-              <label className="flex items-center justify-between text-sm">
-                <span>Public card at /u/{profile.alias}</span>
-                <input type="checkbox" role="switch" checked={profile.visibility === "public"} onChange={(e) => void save({ visibility: e.target.checked ? "public" : "private" })} />
-              </label>
+              <div className="grid gap-2 border-b border-line p-4">
+                <span className="text-sm text-muted">Card colour</span>
+                <div className="flex flex-wrap gap-3" role="radiogroup" aria-label="Card colour">
+                  {Object.entries(CARD_THEMES).map(([id, t]) => (
+                    <button
+                      key={id}
+                      role="radio"
+                      aria-checked={profile.cardTheme === id}
+                      aria-label={`${id} card`}
+                      onClick={() => void save({ cardTheme: id })}
+                      className={`h-11 w-11 rounded-full transition-transform active:scale-90 ${profile.cardTheme === id ? "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--surface)]" : ""}`}
+                      style={{ background: t.art }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-1 border-b border-line p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Avatar colour</span>
+                  <button onClick={() => void save({ avatarSeed: Math.random().toString(36).slice(2, 10) })} className="text-sm font-medium" style={{ color: "var(--focus)" }}>
+                    New avatar
+                  </button>
+                </div>
+                <input type="range" min={0} max={359} value={hueDraft ?? profile.hue} onChange={(e) => setHueDraft(Number(e.target.value))} onPointerUp={() => hueDraft !== null && void save({ hue: hueDraft }).then(() => setHueDraft(null))} onKeyUp={() => hueDraft !== null && void save({ hue: hueDraft }).then(() => setHueDraft(null))} className="ios-range hue w-full" aria-label="Avatar hue" />
+              </div>
+              <SwitchRow label="Public card" hint={`Anyone with the link can see /u/${profile.alias}`} checked={profile.visibility === "public"} onChange={(v) => void save({ visibility: v ? "public" : "private" })} />
+              <SwitchRow label="Show stats on card" checked={profile.showRatings} onChange={(v) => void save({ showRatings: v })} />
               {profile.visibility === "public" && (
                 <button
                   onClick={async () => {
-                    const url = `${window.location.origin}/u/${profile.alias}`;
-                    if (navigator.share) await navigator.share({ title: "My chess card", url }).catch(() => {});
-                    else await navigator.clipboard?.writeText(url);
+                    if (navigator.share) await navigator.share({ title: "My chess card", url: cardUrl }).catch(() => {});
+                    else await navigator.clipboard?.writeText(cardUrl);
                   }}
-                  className="justify-self-start rounded-full bg-surface-2 px-4 py-2 text-sm"
+                  className="min-h-12 w-full text-center font-medium"
+                  style={{ color: "var(--focus)" }}
                 >
                   Share card
                 </button>
               )}
-              <label className="flex items-center justify-between text-sm">
-                <span>Show ratings on card</span>
-                <input type="checkbox" role="switch" checked={profile.showRatings} onChange={(e) => void save({ showRatings: e.target.checked })} />
-              </label>
-              {error && <p className="text-sm text-danger" role="alert">{error}</p>}
             </div>
+            {error && <p className="text-sm text-danger" role="alert">{error}</p>}
           </section>
         )}
 
@@ -191,26 +196,22 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
           </p>
           <code className="select-all rounded-xl bg-surface-2 px-3 py-2 text-sm">{mcpUrl}</code>
           <p className="text-sm font-medium">What they may do</p>
-          {SCOPES.map((s) => (
-            <label key={s.id} className="flex items-center justify-between gap-3 text-sm">
-              <span>{s.label}</span>
-              <input
-                type="checkbox"
-                role="switch"
-                checked={scopes.includes(s.id)}
-                onChange={(e) =>
+          <div className="-mx-4 border-y border-line">
+            {SCOPES.map((sc) => (
+              <SwitchRow
+                key={sc.id}
+                label={sc.label}
+                checked={scopes.includes(sc.id)}
+                onChange={(on) =>
                   void setGrant({
-                    scopes: e.target.checked ? [...scopes, s.id] : scopes.filter((x) => x !== s.id),
+                    scopes: on ? [...scopes, sc.id] : scopes.filter((x) => x !== sc.id),
                     allowAutoInstall: grant?.grant?.allowAutoInstall ?? false,
                   })
                 }
               />
-            </label>
-          ))}
-          <label className="flex items-center justify-between gap-3 text-sm">
-            <span>Install Fatma upgrades without asking me here</span>
-            <input type="checkbox" role="switch" checked={grant?.grant?.allowAutoInstall ?? false} onChange={(e) => void setGrant({ scopes, allowAutoInstall: e.target.checked })} />
-          </label>
+            ))}
+            <SwitchRow label="Install Fatma upgrades without asking me" checked={grant?.grant?.allowAutoInstall ?? false} onChange={(on) => void setGrant({ scopes, allowAutoInstall: on })} />
+          </div>
           {grant && grant.audits.length > 0 && (
             <details className="text-sm">
               <summary className="cursor-pointer">Recent activity</summary>

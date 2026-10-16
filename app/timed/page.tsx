@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { GameScreen, Segmented } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
+import { Select } from "@/components/ui/Select";
 import { TIME_CONTROLS } from "@/lib/chess/clock";
 import { CLIMB_OPPONENTS, ratingLabel } from "@/lib/chess/engine/opponents";
 
@@ -40,16 +41,10 @@ export default function TimedPage() {
           ))}
         </div>
         <Segmented label="Play as" value={color} onChange={setColor} options={[["w", "White"], ["b", "Black"]]} />
-        <label className="grid gap-1 text-sm">
-          <span className="text-muted">Opponent</span>
-          <select value={opponent} onChange={(e) => setOpponent(e.target.value)} className="min-h-12 rounded-2xl bg-surface px-3 shadow-[var(--shadow)]">
-            {CLIMB_OPPONENTS.slice(0, unlocked + 1).map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name} · {ratingLabel(o)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="grid gap-1 text-sm">
+          <span className="px-1 text-muted">Opponent</span>
+          <Select label="Opponent" value={opponent} onChange={setOpponent} options={CLIMB_OPPONENTS.slice(0, unlocked + 1).map((o) => ({ value: o.id, label: o.name, hint: ratingLabel(o) }))} />
+        </div>
         <button onClick={() => setStarted(`${tc}-${opponent}-${Date.now()}`)} className="min-h-14 rounded-2xl bg-accent font-semibold text-accent-text">
           Start {TIME_CONTROLS.find((t) => t.id === tc)?.label}
         </button>

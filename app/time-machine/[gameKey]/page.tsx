@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { Board, type LastMove } from "@/components/chess/Board";
 import { Dialog, Segmented } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
+import { Select } from "@/components/ui/Select";
 import { ENGINE_BUILD, SearchCancelled } from "@/lib/chess/engine/controller";
 import { CLIMB_OPPONENTS } from "@/lib/chess/engine/opponents";
 import { formatScore, type WhiteScore } from "@/lib/chess/engine/uci";
@@ -289,7 +290,8 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
             }}
             aria-label="Scrub through the game"
             aria-valuetext={node ? moveLabel(node) : "Start"}
-            className="mt-3 w-full accent-[var(--accent)]"
+            className="ios-range mt-3 w-full"
+            style={{ ["--pct" as string]: `${(cursor / Math.max(1, path.length)) * 100}%`, ["--range-fill" as string]: "var(--accent)" }}
           />
           <div className="relative h-2" aria-hidden="true">
             {[...mistakePlies].map((ply) => (
@@ -430,11 +432,7 @@ function ContinueDialog({ node, onClose, onStart }: { node: TreeNode; onClose: (
       {kind === "full" ? (
         <Segmented label="Thinking time" value={think} onChange={setThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
       ) : (
-        <select value={level} onChange={(e) => setLevel(e.target.value)} aria-label="Strength" className="min-h-11 rounded-xl bg-surface-2 px-3">
-          {CLIMB_OPPONENTS.slice(0, -1).map((o) => (
-            <option key={o.id} value={o.id}>{o.name} · ~{o.rating}</option>
-          ))}
-        </select>
+        <Select label="Strength" value={level} onChange={setLevel} options={CLIMB_OPPONENTS.slice(0, -1).map((o) => ({ value: o.id, label: o.name, hint: `~${o.rating}` }))} />
       )}
       <button onClick={() => onStart(kind === "full" ? `full-power-${think}` : level)} className="min-h-12 rounded-2xl bg-accent font-semibold text-accent-text">
         Play from here

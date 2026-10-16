@@ -48,3 +48,42 @@ export function usePrewarmEngine(enabled = true): void {
     else setTimeout(start, 300);
   }, [enabled]);
 }
+
+const WASM_URL = ENGINE_URL.replace(/\.js$/, ".wasm");
+let warmup: Promise<void> | null = null;
+
+/**
+ * Downloads the engine WASM with real byte progress (warming the HTTP cache the
+ * worker then reads from), then completes the UCI handshake. Progress is 0..1.
+ */
+export function preloadEngine(onProgress: (p: number) => void): Promise<void> {
+  if (!supportsEngine()) return Promise.resolve();
+  if (warmup) {
+    void warmup.then(() => onProgress(1));
+    return warmup;
+  }
+  warmup = (async () => {
+    try {
+      const res = await fetch(WASM_URL);
+      const total = Number(res.headers.get("content-length")) || 1_850_000;
+      if (res.body) {
+        const reader = res.body.getReader();
+        let received = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          received += value.byteLength;
+          onProgress(Math.min(0.85, (received / total) * 0.85));
+        }
+      } else {
+        await res.arrayBuffer();
+      }
+    } catch {
+      // Network hiccup: the worker will try again itself.
+    }
+    onProgress(0.9);
+    await getEngine().start().catch(() => {});
+    onProgress(1);
+  })();
+  return warmup;
+}

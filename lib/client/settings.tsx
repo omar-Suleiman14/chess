@@ -2,11 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ThinkPreset } from "../chess/engine/opponents";
+import type { PieceSet } from "@/components/chess/Pieces";
 
 export type Palette = "ivory" | "sage" | "slate" | "blue";
 
 export type Settings = {
   palette: Palette;
+  pieceSet: PieceSet;
   sound: boolean;
   volume: number;
   haptics: boolean;
@@ -22,6 +24,7 @@ export type Settings = {
 
 export const DEFAULT_SETTINGS: Settings = {
   palette: "ivory",
+  pieceSet: "cburnett",
   sound: true,
   volume: 0.7,
   haptics: true,

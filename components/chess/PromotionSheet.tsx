@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { pieceName, type Color, type PromotionPiece } from "@/lib/chess/rules";
+import { useSettings } from "@/lib/client/settings";
 import { Piece } from "./Pieces";
 
 const OPTIONS: PromotionPiece[] = ["q", "r", "b", "n"];
 
 export function PromotionSheet({ color, onPick, onCancel }: { color: Color; onPick: (p: PromotionPiece) => void; onCancel: () => void }) {
   const first = useRef<HTMLButtonElement>(null);
+  const { settings } = useSettings();
   useEffect(() => {
     first.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
@@ -33,7 +35,7 @@ export function PromotionSheet({ color, onPick, onCancel }: { color: Color; onPi
               aria-label={pieceName(p)}
               className="aspect-square rounded-xl bg-surface-2 p-2 transition-transform active:scale-95"
             >
-              <Piece type={p} color={color} className="h-full w-full" />
+              <Piece type={p} color={color} set={settings.pieceSet} className="h-full w-full" />
             </button>
           ))}
         </div>

@@ -1,6 +1,8 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { IOS_SPRING } from "@/components/ui/Switch";
 import type { FatmaApi } from "@/lib/client/useFatma";
 import { FatmaSprite } from "./FatmaSprite";
 
@@ -56,12 +58,15 @@ export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
         Turn Fatma off
       </button>
       {asking && (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setAsking(false)}>
-          <div
+        <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setAsking(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 48, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={IOS_SPRING}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="fatma-plea-title"
-            className="bubble-in w-full max-w-sm rounded-3xl bg-surface p-5 shadow-[var(--shadow)]"
+            className="w-full max-w-sm rounded-3xl bg-surface p-5 shadow-[var(--shadow)]"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.key === "Escape" && setAsking(false)}
           >
@@ -92,8 +97,8 @@ export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
                 Keep her
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
     </>
   );

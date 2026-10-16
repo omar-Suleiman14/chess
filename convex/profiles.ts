@@ -1,9 +1,11 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { cardTitle } from "../lib/chess/cardTitle";
 import { fail, optionalOwner, requireOwner } from "./model/auth";
 
-export const CARD_THEMES = ["paper", "ink", "sage", "dusk", "ember"] as const;
+export const CARD_THEMES = ["sky", "sunset", "mint", "rose", "ink"] as const;
 export const BOARD_PALETTES = ["ivory", "sage", "slate", "blue"] as const;
 
 export const mine = query({
@@ -20,15 +22,19 @@ export const ensure = mutation({
   handler: async (ctx) => {
     const owner = await requireOwner(ctx);
     const existing = await ctx.db.query("chessProfiles").withIndex("by_owner", (q) => q.eq("owner", owner)).unique();
-    if (existing) return existing._id;
-    const identity = await ctx.auth.getUserIdentity();
+    if (existing) {
+      // Older profiles get a card number the first time they're opened.
+      if (existing.memberNumber === undefined) await ctx.db.patch("chessProfiles", existing._id, { memberNumber: await nextMemberNumber(ctx) });
+      return existing._id;
+    }
     const seed = Math.random().toString(36).slice(2, 10);
     return await ctx.db.insert("chessProfiles", {
       owner,
       alias: `player-${seed.slice(0, 5)}`,
-      avatarSeed: identity?.subject ? `${seed}` : seed,
+      avatarSeed: seed,
       hue: Math.floor(Math.random() * 360),
-      cardTheme: "paper",
+      cardTheme: "sky",
+      memberNumber: await nextMemberNumber(ctx),
       boardPalette: "ivory",
       visibility: "private",
       showRatings: true,
@@ -66,21 +72,60 @@ export const update = mutation({
   },
 });
 
+async function nextMemberNumber(ctx: MutationCtx): Promise<number> {
+  const counter = await ctx.db.query("counters").withIndex("by_name", (q) => q.eq("name", "chessCard")).unique();
+  const value = (counter?.value ?? 0) + 1;
+  if (counter) await ctx.db.patch("counters", counter._id, { value });
+  else await ctx.db.insert("counters", { name: "chessCard", value });
+  return value;
+}
+
+/** Everything a Chess card shows. Stats only when the owner allows them. */
+async function cardData(ctx: QueryCtx, profile: Doc<"chessProfiles">, includeStats: boolean) {
+  const fatma = await ctx.db.query("fatmaStates").withIndex("by_owner", (q) => q.eq("owner", profile.owner)).unique();
+  const climbProgress = await ctx.db.query("climbProgress").withIndex("by_owner", (q) => q.eq("owner", profile.owner)).unique();
+  const stats = fatma?.stats ?? { wins: 0, losses: 0, draws: 0, undos: 0, lessons: 0 };
+  let climb: { rating: number; rd: number; games: number; beaten: number } | null = null;
+  if (includeStats) {
+    const r = await ctx.db
+      .query("ratingProfiles")
+      .withIndex("by_owner_and_pool", (q) => q.eq("owner", profile.owner).eq("pool", "climb"))
+      .unique();
+    climb = { rating: r ? Math.round(r.rating) : 0, rd: r ? Math.round(r.rd) : 350, games: r?.games ?? 0, beaten: climbProgress?.beaten.length ?? 0 };
+  }
+  return {
+    alias: profile.alias,
+    avatarSeed: profile.avatarSeed,
+    hue: profile.hue,
+    cardTheme: profile.cardTheme,
+    memberNumber: profile.memberNumber ?? null,
+    memberSince: profile._creationTime,
+    title: cardTitle({ ...stats, climbBeaten: climbProgress?.beaten.length ?? 0 }),
+    climb,
+    rivalry: includeStats ? { wins: stats.wins, losses: stats.losses, draws: stats.draws } : null,
+  };
+}
+
+export type CardData = Awaited<ReturnType<typeof cardData>>;
+
 /** Public card by alias, only when the owner opted in. */
 export const publicCard = query({
   args: { alias: v.string() },
   handler: async (ctx, args) => {
     const profile = await ctx.db.query("chessProfiles").withIndex("by_alias", (q) => q.eq("alias", args.alias)).first();
     if (!profile || profile.visibility !== "public") return null;
-    let climb = null;
-    if (profile.showRatings) {
-      const r = await ctx.db
-        .query("ratingProfiles")
-        .withIndex("by_owner_and_pool", (q) => q.eq("owner", profile.owner).eq("pool", "climb"))
-        .unique();
-      climb = r ? { rating: Math.round(r.rating), rd: Math.round(r.rd), games: r.games } : null;
-    }
-    return { alias: profile.alias, avatarSeed: profile.avatarSeed, hue: profile.hue, cardTheme: profile.cardTheme, climb };
+    return await cardData(ctx, profile, profile.showRatings);
+  },
+});
+
+/** The signed-in player's own card (always with stats). */
+export const myCard = query({
+  args: {},
+  handler: async (ctx) => {
+    const owner = await optionalOwner(ctx);
+    if (!owner) return null;
+    const profile = await ctx.db.query("chessProfiles").withIndex("by_owner", (q) => q.eq("owner", owner)).unique();
+    return profile ? await cardData(ctx, profile, true) : null;
   },
 });
 

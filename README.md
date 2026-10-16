@@ -14,14 +14,14 @@ Open the site, see the board, and play against **Fatma**: Stockfish 19 Lite runn
 
 | Area | What you get |
 | --- | --- |
-| **Full Power** (`/`) | Unhandicapped Stockfish 19 Lite, shown as **Fatma · 3000**. That's a nominal label, not a measured Elo. Fast / Standard / Deep thinking time, unlimited full-turn Undo (old lines are kept as variations), resign, colour choice, eval bar, resume after reload. |
+| **Full Power** (`/`) | Boot screen with real engine-download progress, then unhandicapped Stockfish 19 Lite, shown as **Fatma · 3000**. That's a nominal label, not a measured Elo. Fast / Standard / Deep thinking time, unlimited full-turn Undo (old lines are kept as variations), ‹ › move review without undoing, resign, colour choice, eval bar, resume after reload. |
 | **The Climb** (`/climb`) | 11-level ladder: four scripted beginner bots below Stockfish's weakest setting, then limited Stockfish, then Full Power. Glicko-2 provisional rating, applied exactly once per eligible game. Undo, hints or the eval bar make a game unrated, permanently. |
 | **Timed** (`/timed`) | Clock presets picked before the game (3+2, 5+3, 10+5, 15+10). Monotonic clock, increments, timeout adjudication with insufficient-material draws. The server re-checks rated timeouts. One rating pool per time control. |
 | **Time Machine** (`/time-machine`) | Animated replay, drag scrubber, play/pause/speed, move list, branch switching, on-device analysis with mistake markers, **Continue from here** (a new linked unrated game; the original is untouched), PGN export, and PGN import with variations. |
 | **Learn** (`/learn`) | Fixed micro-path (pieces → special moves → check → mate → tactics → endgames → opening principles), curated topics (Queen's Gambit, Sicilian, Italian, Ruy Lopez, London, French, Caro-Kann, forks, pins), progressive hints, explanations of wrong moves, and spaced-repetition practice built from your own analysed mistakes. |
 | **Fatma** | Pixel-art sprite, short rate-limited lines, playful disable confirmation with an immediate "Turn off", grudges when re-enabled, achievements, and validated data-only upgrade packs. She never chooses moves. |
 | **Profile** (`/profile`) | Separate Chess identity card (alias, blobatar avatar, hue, theme, tilt/flip, optional public `/u/<alias>`), AI-coach permissions with audit log and revocation, JSON export, full data deletion. |
-| **Settings** | Ivory / Sage / Slate / Blue boards, legal dots, coordinates, eval bar, high contrast, synthesised chess sounds and volume, haptics (Android), reduced motion. |
+| **Settings** | Ivory / Sage / Slate / Blue boards, five open-licensed piece sets, recorded move/capture sounds and volume, iOS-style switches and sliders, haptics (Android), reduced motion. |
 
 Offline: games live in IndexedDB first and sync through an idempotent operation queue. Guests can play and their games upload after sign-in. Concurrent edits from two devices become separate branches instead of overwriting each other.
 

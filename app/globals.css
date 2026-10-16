@@ -121,3 +121,45 @@ button {
   to { opacity: 1; transform: none; }
 }
 .bubble-in { animation: fatma-pop 180ms ease-out both; }
+
+/* Quiet, overlay-like scrollbars (iOS feel on desktop). */
+:root { --switch-off: #e3e1dc; --scroll: rgb(0 0 0 / 0.18); }
+@media (prefers-color-scheme: dark) { :root { --switch-off: #3a3935; --scroll: rgb(255 255 255 / 0.18); } }
+* { scrollbar-width: thin; scrollbar-color: var(--scroll) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scroll); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* iOS-style slider. Set --pct on the element for the filled track. */
+.ios-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.ios-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--range-fill, #0a84ff) var(--pct, 50%), var(--switch-off) var(--pct, 50%));
+}
+.ios-range::-moz-range-track { height: 4px; border-radius: 999px; background: var(--switch-off); }
+.ios-range::-moz-range-progress { height: 4px; border-radius: 999px; background: var(--range-fill, #0a84ff); }
+.ios-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -12px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.15), 0 1px 1px rgb(0 0 0 / 0.16), 0 0 0 0.5px rgb(0 0 0 / 0.04);
+}
+.ios-range::-moz-range-thumb { width: 28px; height: 28px; border: none; border-radius: 999px; background: #fff; box-shadow: 0 3px 8px rgb(0 0 0 / 0.15); }
+.ios-range.hue::-webkit-slider-runnable-track {
+  height: 8px;
+  background: linear-gradient(to right, hsl(0 80% 60%), hsl(60 80% 55%), hsl(120 60% 50%), hsl(180 70% 50%), hsl(240 75% 62%), hsl(300 70% 60%), hsl(360 80% 60%));
+}
+.ios-range.hue::-webkit-slider-thumb { margin-top: -10px; }

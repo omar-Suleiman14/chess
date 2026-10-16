@@ -31,7 +31,9 @@ export default function LicensesPage() {
             <li>chess.js (BSD-2-Clause) for legal moves, FEN, SAN and PGN.</li>
             <li>blobatar (MIT) for avatars.</li>
             <li>Motion (MIT), Next.js (MIT), React (MIT), Convex client (Apache-2.0), Clerk SDK (MIT), mcp-handler and MCP SDK (Apache-2.0/MIT), zod (MIT), idb (ISC).</li>
-            <li>Chess pieces and sounds are original to this project (GPL-3.0).</li>
+            <li>Pieces: Classic/cburnett and Merida (GPL-2.0+), Chessnut (Apache-2.0), MP Chess (GPL-3.0+), Fantasy (MIT), from lichess-org/lila.</li>
+            <li>Move and capture sounds: lichess-org/lila standard set, AGPL-3.0-or-later, used unmodified under GPL-3.0 §13.</li>
+            <li>qrcode (MIT) for card QR codes.</li>
             <li>Fatma pixel-art sprite: supplied by the project owner for this project. See THIRD_PARTY_NOTICES.md for provenance.</li>
           </ul>
         </section>

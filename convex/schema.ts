@@ -251,6 +251,8 @@ export default defineSchema({
     boardPalette: v.string(),
     visibility: v.union(v.literal("private"), v.literal("public")),
     showRatings: v.boolean(),
+    /** Sequential card number, assigned once (shown as "No. 0042"). */
+    memberNumber: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_owner", ["owner"])
@@ -293,6 +295,8 @@ export default defineSchema({
   })
     .index("by_owner_and_packId_and_version", ["owner", "packId", "version"])
     .index("by_owner_and_status", ["owner", "status"]),
+
+  counters: defineTable({ name: v.string(), value: v.number() }).index("by_name", ["name"]),
 
   mcpGrants: defineTable({
     owner: v.string(),

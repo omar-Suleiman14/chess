@@ -33,6 +33,8 @@ function contentSecurityPolicy(): string {
 }
 
 const nextConfig: NextConfig = {
+  // The dev badge sits over the bottom-left game controls.
+  devIndicators: false,
   // The build script runs TypeScript 7 before Next.js. Next still needs the
   // older TypeScript compiler API for configuration and editor tooling.
   typescript: {
