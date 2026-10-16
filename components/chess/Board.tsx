@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { FILES, legalMoves, pieceName, piecesOf, type BoardPiece, type Color, type PromotionPiece, type Square } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
+import { haptic, playSound } from "@/lib/client/sound";
 import { Piece } from "./Pieces";
 import { PromotionSheet } from "./PromotionSheet";
 
@@ -90,6 +91,22 @@ export function Board({
     return map;
   }, [moves]);
 
+  // Illegal attempt: shake the piece (and the king, if the move ignored check), buzz, error sound.
+  const [illegal, setIllegal] = useState<{ squares: Square[]; key: number } | null>(null);
+  const flagIllegal = useCallback(
+    (from: Square) => {
+      setIllegal({ squares: checkSquare && checkSquare !== from ? [from, checkSquare] : [from], key: Date.now() });
+      if (settings.haptics) haptic([20, 40, 20]);
+      if (settings.sound) playSound("wrong", settings.volume);
+    },
+    [checkSquare, settings.haptics, settings.sound, settings.volume],
+  );
+  useEffect(() => {
+    if (!illegal) return;
+    const t = setTimeout(() => setIllegal(null), 600);
+    return () => clearTimeout(t);
+  }, [illegal]);
+
   // Drop selection whenever the position changes.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -120,10 +137,14 @@ export function Board({
         setSelected(selected === square ? null : square);
         onSelect?.();
       } else {
+        const ownPiece = !!piece && !!movable && piece.color === movable;
+        // Tried to move the selected piece somewhere it can't go, or picked a piece with no legal moves.
+        if (selected && selected !== square && !ownPiece) flagIllegal(selected);
+        else if (ownPiece) flagIllegal(square);
         setSelected(null);
       }
     },
-    [bySquare, selected, tryMove, movable, targets, onSelect],
+    [bySquare, selected, tryMove, movable, targets, onSelect, flagIllegal],
   );
 
   const squareFromPoint = (clientX: number, clientY: number): Square | null => {
@@ -167,6 +188,7 @@ export function Board({
       setDrag(null);
       dragStart.current = null;
       if (square && square !== from && tryMove(from, square)) return;
+      if (square && square !== from) flagIllegal(from);
       setSelected(from);
       return;
     }
@@ -206,6 +228,7 @@ export function Board({
       const target = selectedTargets?.get(square);
       const isLast = lastMove && (lastMove.from === square || lastMove.to === square);
       const isCheck = checkSquare === square;
+      const shaking = !!illegal?.squares.includes(square);
       const isSelected = selected === square;
       const isHint = hintSquares.includes(square);
       const hidden = drag?.active && drag.from === square;
@@ -241,6 +264,7 @@ export function Board({
           {isLast && <div className="absolute inset-0" style={{ background: "var(--hl-last)" }} />}
           {isSelected && <div className="absolute inset-0" style={{ background: "var(--hl-select)" }} />}
           {isCheck && <div className="absolute inset-0" style={{ background: "radial-gradient(circle, var(--hl-check) 0%, transparent 72%)" }} />}
+          {shaking && <div key={`flash-${illegal!.key}`} className="illegal-flash absolute inset-0" style={{ background: "rgba(220, 60, 50, 0.45)" }} />}
           {isHint && <div className="absolute inset-[6%] rounded-md border-[3px] border-dashed" style={{ borderColor: "var(--hl-target)" }} />}
           {coordinates && col === 0 && (
             <span className={`pointer-events-none absolute left-[3%] top-[2%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[1]}</span>
@@ -267,7 +291,9 @@ export function Board({
                     : { rotate: 0, scale: reducedMotion ? 1 : [1, 1.18, 1], y: 0 }}
                 transition={{ duration: reducedMotion ? 0 : 0.45 }}
               >
-                <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="h-full w-full" />
+                <div key={shaking ? `shake-${illegal!.key}` : "still"} className={`h-full w-full ${shaking && !reducedMotion ? "illegal-shake" : ""}`}>
+                  <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="h-full w-full" />
+                </div>
               </motion.div>
             </motion.div>
           )}

@@ -4,7 +4,6 @@ import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import {
-  BASE_LINES,
   initialMemory,
   pickLine,
   rememberLine,
@@ -14,7 +13,9 @@ import {
   type FatmaMemory,
   type Mood,
 } from "../chess/personality/fatma";
+import { linesFor } from "../chess/personality/lines";
 import { packLines, validatePack } from "../chess/personality/packs";
+import { useSettings } from "./settings";
 
 const LOCAL_KEY = "cbc.fatma.v1";
 const BUBBLE_MS = 2600;
@@ -34,6 +35,8 @@ function loadLocal(): FatmaMemory {
  */
 export function useFatma() {
   const { isAuthenticated } = useConvexAuth();
+  const { settings } = useSettings();
+  const language = settings.fatmaLanguage;
   const remote = useQuery(api.fatma.state, isAuthenticated ? {} : "skip");
   const ensure = useMutation(api.fatma.ensure);
   const setEnabledRemote = useMutation(api.fatma.setEnabled);
@@ -42,6 +45,7 @@ export function useFatma() {
   const [line, setLine] = useState<DialogueLine | null>(null);
   const [expression, setExpression] = useState<Expression>("idle");
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const followTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const memoryRef = useRef<FatmaMemory>(initialMemory());
 
   useEffect(() => {
@@ -73,13 +77,13 @@ export function useFatma() {
   // Re-validate installed packs on the client too (defence in depth).
   const lines = useMemo(
     () => [
-      ...BASE_LINES,
+      ...linesFor(language),
       ...(remote?.packs ?? []).flatMap((p) => {
         const checked = validatePack(p);
         return checked.ok ? (packLines(checked.pack) as DialogueLine[]) : [];
       }),
     ],
-    [remote?.packs],
+    [remote?.packs, language],
   );
 
   const saveLocal = useCallback((next: FatmaMemory) => {
@@ -104,10 +108,23 @@ export function useFatma() {
       saveLocal(next);
       if (isAuthenticated) void recordLine({ lineId: picked.id }).catch(() => {});
       if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => {
+      if (followTimer.current) clearTimeout(followTimer.current);
+      const readMs = (text: string) => BUBBLE_MS + text.length * 25;
+      const hide = () => {
         setLine(null);
         setExpression("idle");
-      }, BUBBLE_MS + picked.text.length * 25);
+      };
+      if (picked.then) {
+        // The follow-up appears once the first bubble has finished typing and been read.
+        const followUp: DialogueLine = { ...picked, id: `${picked.id}:then`, text: picked.then, then: undefined };
+        const firstMs = 900 + picked.text.length * 45;
+        followTimer.current = setTimeout(() => {
+          setLine(followUp);
+          hideTimer.current = setTimeout(hide, readMs(followUp.text));
+        }, firstMs);
+      } else {
+        hideTimer.current = setTimeout(hide, readMs(picked.text));
+      }
     },
     [lines, saveLocal, isAuthenticated, recordLine],
   );
@@ -119,6 +136,7 @@ export function useFatma() {
   }, [pending, say]);
 
   const dismiss = useCallback(() => {
+    if (followTimer.current) clearTimeout(followTimer.current);
     setLine(null);
     setExpression("idle");
   }, []);
@@ -141,10 +159,11 @@ export function useFatma() {
   );
 
   const plead = useCallback(() => {
-    const picked = BASE_LINES.find((l) => l.event === "disable_plea")!;
+    const picked = lines.find((l) => l.event === "disable_plea");
+    if (!picked) return;
     setLine(picked);
     setExpression("plea");
-  }, []);
+  }, [lines]);
 
   return { memory, line, expression, setExpression, say, dismiss, setEnabled, plead, enabled: memory.enabled };
 }

@@ -122,6 +122,18 @@ button {
 }
 .bubble-in { animation: fatma-pop 180ms ease-out both; }
 
+/* Illegal move: a quick head-shake on the piece and a red flash on its square. */
+@keyframes illegal-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-9%); }
+  40% { transform: translateX(8%); }
+  60% { transform: translateX(-5%); }
+  80% { transform: translateX(3%); }
+}
+@keyframes illegal-flash { from { opacity: 1; } to { opacity: 0; } }
+.illegal-shake { animation: illegal-shake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+.illegal-flash { animation: illegal-flash 600ms ease-out both; pointer-events: none; }
+
 /* Quiet, overlay-like scrollbars (iOS feel on desktop). */
 :root { --switch-off: #e3e1dc; --scroll: rgb(0 0 0 / 0.18); }
 @media (prefers-color-scheme: dark) { :root { --switch-off: #3a3935; --scroll: rgb(255 255 255 / 0.18); } }

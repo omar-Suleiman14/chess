@@ -1,6 +1,7 @@
 "use client";
 
 import { SignInButton, UserButton } from "@clerk/nextjs";
+import { ChallengeBanner } from "@/components/online/ChallengeBanner";
 import { useConvexAuth } from "convex/react";
 import { animate, motion, useDragControls, useMotionValue, useTransform } from "motion/react";
 import Link from "next/link";
@@ -25,6 +26,7 @@ const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: strin
       { href: "/", label: "Full Power", hint: "Fatma · 3000" },
       { href: "/climb", label: "The Climb", hint: "Rated ladder" },
       { href: "/timed", label: "Timed", hint: "Clock presets" },
+      { href: "/play", label: "Play a friend", hint: "Link · QR · PIN" },
     ],
   },
   {
@@ -39,6 +41,7 @@ const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: strin
     title: "You",
     items: [
       { href: "/profile", label: "Profile & Fatma" },
+      { href: "/friends", label: "Friends", hint: "Requests · invites" },
       { href: "/u", label: "Players" },
       { href: "/settings", label: "Settings" },
     ],
@@ -162,6 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         {children}
       </motion.div>
+      <ChallengeBanner />
       {open && (
         <motion.div className="fixed inset-0 z-[60] bg-black" style={{ opacity: dim }} onClick={closeMenu} aria-hidden="true" />
       )}

@@ -31,9 +31,9 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, c
     return (
       <div className="pointer-events-none flex h-14 w-full min-w-0 items-center gap-2">
         {fatma.enabled && (
-          <div className="shrink-0">
+          <button onClick={() => fatma.say("poke")} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label="Talk to Fatma" title="Talk to Fatma">
             <FatmaSprite expression={expression} size={48} reducedMotion={reducedMotion} />
-          </div>
+          </button>
         )}
         <div className="min-w-0 max-w-[50%] shrink-0">
           <span className="block text-sm font-semibold">Fatma</span>
@@ -79,7 +79,7 @@ function StreamedText({ text, instant }: { text: string; instant: boolean }) {
     return () => clearInterval(id);
   }, [text, instant]);
   return (
-    <span className="grid" aria-hidden="true">
+    <span className="grid" dir="auto" aria-hidden="true">
       <span className="invisible col-start-1 row-start-1 line-clamp-2">{text}</span>
       <span className="col-start-1 row-start-1 line-clamp-2">{text.slice(0, shown)}</span>
     </span>

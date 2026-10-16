@@ -1,0 +1,163 @@
+"use client";
+
+import { SignInButton } from "@clerk/nextjs";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { api } from "@/convex/_generated/api";
+import { ChallengeDialog } from "@/components/online/ChallengeDialog";
+import { errorText } from "@/components/online/OnlineShared";
+import { Avatar } from "@/components/profile/ChessCard";
+import { PageHeader } from "@/components/shell/AppShell";
+
+type Person = { alias: string; avatarSeed: string; hue: number };
+
+function PersonRow({ person, children }: { person: Person; children?: React.ReactNode }) {
+  return (
+    <li className="flex items-center gap-3 py-2.5">
+      <Link href={`/u/${person.alias}`} className="flex min-w-0 flex-1 items-center gap-3">
+        <span className="shrink-0 overflow-hidden rounded-xl"><Avatar seed={person.avatarSeed} hue={person.hue} size={40} /></span>
+        <span className="truncate font-medium">@{person.alias}</span>
+      </Link>
+      <div className="flex shrink-0 items-center gap-1.5">{children}</div>
+    </li>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-3xl bg-surface px-4 py-3 shadow-[var(--shadow)]">
+      <h2 className="pb-1 text-sm font-semibold text-muted">{title}</h2>
+      <ul className="divide-y divide-line">{children}</ul>
+    </section>
+  );
+}
+
+const pill = "min-h-9 rounded-full px-3.5 text-sm font-medium";
+
+export default function FriendsPage() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const [mountedAt] = useState(() => Date.now());
+  const data = useQuery(api.friends.overview, isAuthenticated ? { now: mountedAt } : "skip");
+  const ensure = useMutation(api.profiles.ensure);
+  const request = useMutation(api.friends.request);
+  const respond = useMutation(api.friends.respond);
+  const remove = useMutation(api.friends.remove);
+  const dismiss = useMutation(api.friends.dismissChallenge);
+  const [alias, setAlias] = useState("");
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [challenging, setChallenging] = useState<string | null>(null);
+
+  // Friends need a card (alias) to find each other.
+  useEffect(() => {
+    if (isAuthenticated && data && !data.me) void ensure({});
+  }, [isAuthenticated, data, ensure]);
+
+  const add = async () => {
+    const target = alias.trim().replace(/^@/, "").toLowerCase();
+    if (!target) return;
+    setMessage(null);
+    try {
+      await request({ alias: target });
+      setAlias("");
+      setMessage({ ok: true, text: `Request sent to @${target}.` });
+    } catch (e) {
+      setMessage({ ok: false, text: errorText(e) });
+    }
+  };
+
+  if (!isLoading && !isAuthenticated) {
+    return (
+      <main className="mx-auto min-h-dvh max-w-xl pb-10">
+        <PageHeader title="Friends" />
+        <div className="grid gap-4 px-4 text-center">
+          <p className="text-sm text-muted">Sign in to add friends, see their cards and challenge them. You can still play anyone with a link or PIN without an account.</p>
+          <SignInButton mode="modal">
+            <button className="min-h-12 rounded-2xl bg-accent font-semibold text-accent-text">Sign in</button>
+          </SignInButton>
+          <Link href="/play" className="text-sm underline">Play a friend without an account</Link>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto min-h-dvh max-w-xl pb-10">
+      <PageHeader title="Friends" />
+      <div className="grid gap-4 px-4">
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void add();
+          }}
+        >
+          <input
+            value={alias}
+            onChange={(e) => setAlias(e.target.value)}
+            placeholder="Add by username, e.g. @omar"
+            aria-label="Friend's username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            className="min-h-12 min-w-0 flex-1 rounded-2xl bg-surface px-4 shadow-[var(--shadow)] outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          />
+          <button type="submit" disabled={!alias.trim()} className="min-h-12 shrink-0 rounded-2xl bg-accent px-5 font-semibold text-accent-text disabled:opacity-40">
+            Add
+          </button>
+        </form>
+        {message && <p role="status" className={`text-sm ${message.ok ? "text-ok" : "text-danger"}`}>{message.text}</p>}
+        {data?.me && (
+          <p className="text-xs text-muted">
+            Your username is <Link href={`/u/${data.me.alias}`} className="font-medium text-ink underline">@{data.me.alias}</Link>. Friends can also scan the QR on the back of your card in <Link href="/profile" className="underline">Profile</Link>.
+          </p>
+        )}
+
+        {data === undefined && <p className="text-sm text-muted" role="status">Loading…</p>}
+
+        {data && data.challenges.length > 0 && (
+          <Section title="Game invites">
+            {data.challenges.map((c) => (
+              <PersonRow key={c.id} person={c.from}>
+                <Link href={`/play/${c.code}`} className={`${pill} grid place-items-center bg-accent text-accent-text`}>Play</Link>
+                <button onClick={() => void dismiss({ id: c.id })} className={`${pill} bg-surface-2`} aria-label={`Dismiss invite from @${c.from.alias}`}>✕</button>
+              </PersonRow>
+            ))}
+          </Section>
+        )}
+
+        {data && data.incoming.length > 0 && (
+          <Section title="Friend requests">
+            {data.incoming.map((p) => (
+              <PersonRow key={p.alias} person={p}>
+                <button onClick={() => void respond({ alias: p.alias, accept: true })} className={`${pill} bg-accent text-accent-text`}>Accept</button>
+                <button onClick={() => void respond({ alias: p.alias, accept: false })} className={`${pill} bg-surface-2`}>Decline</button>
+              </PersonRow>
+            ))}
+          </Section>
+        )}
+
+        {data && (
+          <Section title={`Friends${data.friends.length ? ` · ${data.friends.length}` : ""}`}>
+            {data.friends.length === 0 && <li className="py-3 text-sm text-muted">No friends yet. Add someone by username, or scan their card.</li>}
+            {data.friends.map((p) => (
+              <PersonRow key={p.alias} person={p}>
+                <button onClick={() => setChallenging(p.alias)} className={`${pill} bg-accent text-accent-text`}>Challenge</button>
+              </PersonRow>
+            ))}
+          </Section>
+        )}
+
+        {data && data.outgoing.length > 0 && (
+          <Section title="Sent requests">
+            {data.outgoing.map((p) => (
+              <PersonRow key={p.alias} person={p}>
+                <button onClick={() => void remove({ alias: p.alias })} className={`${pill} bg-surface-2`}>Cancel</button>
+              </PersonRow>
+            ))}
+          </Section>
+        )}
+      </div>
+      {challenging && <ChallengeDialog alias={challenging} myName={data?.me?.alias ?? ""} onClose={() => setChallenging(null)} />}
+    </main>
+  );
+}

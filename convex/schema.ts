@@ -299,6 +299,68 @@ export default defineSchema({
 
   counters: defineTable({ name: v.string(), value: v.number() }).index("by_name", ["name"]),
 
+  /**
+   * Play-a-friend rooms. Works for guests: each seat is claimed by a random
+   * client secret (`hostToken` / `guestToken`) that queries never return.
+   */
+  onlineRooms: defineTable({
+    code: v.string(),
+    status: v.union(v.literal("waiting"), v.literal("active"), v.literal("finished"), v.literal("cancelled")),
+    hostToken: v.string(),
+    guestToken: v.optional(v.string()),
+    hostName: v.string(),
+    guestName: v.optional(v.string()),
+    hostColor: colorValidator,
+    /** Absent = untimed. */
+    initialMs: v.optional(v.number()),
+    incrementMs: v.optional(v.number()),
+    fen: v.string(),
+    ply: v.number(),
+    lastUci: v.optional(v.string()),
+    clockW: v.optional(v.number()),
+    clockB: v.optional(v.number()),
+    /** Server time the side to move started thinking; null until White's first move. */
+    turnStartedAt: v.union(v.number(), v.null()),
+    result: v.optional(outcomeValidator),
+    resultReason: v.optional(v.string()),
+    drawOfferBy: v.optional(colorValidator),
+    rematchBy: v.optional(colorValidator),
+    rematchCode: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_code_and_status", ["code", "status"]),
+
+  /** One row per pair of players. `requester` asked `addressee`; accepted rows are friends. */
+  friendships: defineTable({
+    requester: v.string(),
+    addressee: v.string(),
+    status: v.union(v.literal("pending"), v.literal("accepted")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_requester_and_addressee", ["requester", "addressee"])
+    .index("by_requester_and_status", ["requester", "status"])
+    .index("by_addressee_and_status", ["addressee", "status"]),
+
+  /** "Play me": a friend sent you an online room PIN. */
+  friendChallenges: defineTable({
+    from: v.string(),
+    to: v.string(),
+    code: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_to_and_createdAt", ["to", "createdAt"])
+    .index("by_from_and_to", ["from", "to"]),
+
+  onlineMoves: defineTable({
+    roomId: v.id("onlineRooms"),
+    ply: v.number(),
+    uci: v.string(),
+    san: v.string(),
+    fen: v.string(),
+    createdAt: v.number(),
+  }).index("by_roomId_and_ply", ["roomId", "ply"]),
+
   mcpGrants: defineTable({
     owner: v.string(),
     scopes: v.array(mcpScopeValidator),

@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ThinkPreset } from "../chess/engine/opponents";
 import type { PieceSet } from "@/components/chess/Pieces";
+import type { FatmaLanguage } from "../chess/personality/lines";
 
 export type Palette = "ivory" | "sage" | "slate" | "blue";
 
@@ -19,6 +20,8 @@ export type Settings = {
   coordinates: boolean;
   think: ThinkPreset;
   fatmaSound: boolean;
+  /** English, Franco (Egyptian Arabic in Latin letters) or Egyptian Arabic. */
+  fatmaLanguage: FatmaLanguage;
   highContrast: boolean;
 };
 
@@ -34,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   coordinates: true,
   think: "standard",
   fatmaSound: false,
+  fatmaLanguage: "en",
   highContrast: false,
 };
 

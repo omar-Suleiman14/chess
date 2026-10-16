@@ -15,17 +15,21 @@ type Props = {
   reducedMotion: boolean;
   onRematch: () => void;
   reviewUrl?: string;
+  /** Who "they" are in the title (default Fatma). */
+  opponentName?: string;
+  rematchLabel?: string;
+  rematchDisabled?: boolean;
 };
 
 /** A finite end-of-game celebration; dismiss it to inspect the final board. */
-export function GameResult({ result, reason, human, description, reducedMotion, onRematch, reviewUrl }: Props) {
+export function GameResult({ result, reason, human, description, reducedMotion, onRematch, reviewUrl, opponentName = "Fatma", rematchLabel = "Rematch", rematchDisabled = false }: Props) {
   const [dismissed, setDismissed] = useState(false);
   const { settings } = useSettings();
   if (dismissed) return null;
   const draw = result === "1/2-1/2";
   const won = !!result && !draw && (result === "1-0") === (human === "w");
   const resigned = reason === "resign";
-  const title = !result ? "Game ended" : draw ? "Draw" : won ? "You win!" : resigned ? "You resigned" : "Fatma wins";
+  const title = !result ? "Game ended" : draw ? "Draw" : won ? "You win!" : resigned ? "You resigned" : `${opponentName} wins`;
   const score = result === "1-0" ? "1 – 0" : result === "0-1" ? "0 – 1" : draw ? "½ – ½" : "—";
   const accent = won ? "#a3c96b" : draw ? "#d5c5a1" : "#b0b8ca";
 
@@ -61,7 +65,7 @@ export function GameResult({ result, reason, human, description, reducedMotion, 
         <p className="mt-1 text-sm text-muted">{description}</p>
         <p className="my-3 font-mono text-xl font-semibold tabular-nums" aria-label={`Final score ${score}`}>{score}</p>
         <div className="grid gap-2">
-          <button onClick={onRematch} className="min-h-11 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-text">Rematch</button>
+          <button onClick={onRematch} disabled={rematchDisabled} className="min-h-11 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-text disabled:opacity-60">{rematchLabel}</button>
           {reviewUrl && <Link href={reviewUrl} prefetch={false} className="grid min-h-11 place-items-center rounded-full bg-surface-2 px-3 py-2 text-sm">Review in Time Machine</Link>}
           <button onClick={() => setDismissed(true)} className="min-h-11 rounded-full px-3 py-2 text-sm text-muted">View board</button>
         </div>

@@ -1,5 +1,6 @@
 // Fatma: a deterministic, rate-limited event -> dialogue state machine.
 // She is presentation only and never chooses chess moves.
+import { linesFor } from "./lines";
 
 export type FatmaEvent =
   | "game_start"
@@ -19,7 +20,11 @@ export type FatmaEvent =
   | "reenabled"
   | "upgrade_installed"
   | "lesson_complete"
-  | "achievement";
+  | "achievement"
+  | "opening"
+  | "human_castle"
+  | "human_promote"
+  | "poke";
 
 export type Expression = "idle" | "thinking" | "smug" | "amused" | "annoyed" | "impressed" | "plea" | "angry" | "victory" | "defeat" | "grateful";
 
@@ -36,44 +41,14 @@ export type DialogueLine = {
   minReenables?: number;
   /** Requires this unlock id. */
   unlock?: string;
+  /** Follow-up bubble shown right after, so she can hold a short conversation. */
+  then?: string;
 };
 
 export const BASE_PACK_ID = "fatma-base";
 export const BASE_PACK_VERSION = 1;
 
-export const BASE_LINES: DialogueLine[] = [
-  { id: "start-1", event: "game_start", text: "Again? Brave.", expression: "smug" },
-  { id: "start-2", event: "game_start", text: "I'll go easy. Kidding.", expression: "amused" },
-  { id: "start-3", event: "game_start", text: "Let's see what you learned. Probably nothing.", expression: "smug", mood: "smug" },
-  { id: "start-soft", event: "game_start", text: "Okay. I'll try to be nice. For a bit.", expression: "grateful", mood: "soft" },
-  { id: "blunder-1", event: "human_blunder", text: "Oh no. Oh yes.", expression: "amused" },
-  { id: "blunder-2", event: "human_blunder", text: "Was that a gift? Thank you.", expression: "smug" },
-  { id: "blunder-3", event: "human_blunder", text: "I saw that. Everyone saw that.", expression: "amused" },
-  { id: "blunder-soft", event: "human_blunder", text: "Hmm. Maybe look again?", expression: "idle", mood: "soft" },
-  { id: "good-1", event: "human_good_move", text: "Fine. That was decent.", expression: "impressed" },
-  { id: "good-2", event: "human_good_move", text: "Who taught you that?", expression: "impressed" },
-  { id: "fcap-1", event: "fatma_capture", text: "Mine now.", expression: "smug" },
-  { id: "fcap-2", event: "fatma_capture", text: "You weren't using that.", expression: "amused" },
-  { id: "hcap-1", event: "human_capture", text: "Rude.", expression: "annoyed" },
-  { id: "hcap-2", event: "human_capture", text: "I meant to do that.", expression: "annoyed" },
-  { id: "check-given-1", event: "check_given", text: "Check. Sweat a little.", expression: "smug" },
-  { id: "check-recv-1", event: "check_received", text: "Calm down.", expression: "annoyed" },
-  { id: "win-human-1", event: "human_win", text: "...Rematch. Now.", expression: "defeat" },
-  { id: "win-human-2", event: "human_win", text: "The board was tilted.", expression: "defeat" },
-  { id: "loss-human-1", event: "human_loss", text: "As expected.", expression: "victory" },
-  { id: "loss-human-2", event: "human_loss", text: "Undo exists, you know.", expression: "victory" },
-  { id: "draw-1", event: "draw", text: "A draw. How diplomatic.", expression: "idle" },
-  { id: "undo-1", event: "undo", text: "Taking it back? Sure. I remember everything.", expression: "amused" },
-  { id: "undo-2", event: "undo", text: "Time travel. Cute.", expression: "smug" },
-  { id: "plea-1", event: "disable_plea", text: "Wait! Don't. I'll be cool. Promise.", expression: "plea" },
-  { id: "kept-1", event: "kept_on", text: "Thank you. Really. ...Your move, genius.", expression: "grateful" },
-  { id: "reenable-1", event: "reenabled", text: "Oh, NOW you need me?", expression: "angry" },
-  { id: "reenable-2", event: "reenabled", text: "Twice. You turned me off twice.", expression: "angry", minReenables: 2 },
-  { id: "reenable-3", event: "reenabled", text: "I'm keeping a list, you know.", expression: "angry", minReenables: 3 },
-  { id: "upgrade-1", event: "upgrade_installed", text: "New lines? For me? ...Thanks.", expression: "grateful" },
-  { id: "lesson-1", event: "lesson_complete", text: "Learning. Finally.", expression: "impressed" },
-  { id: "achievement-1", event: "achievement", text: "Okay, that one was impressive.", expression: "impressed" },
-];
+export const BASE_LINES: DialogueLine[] = linesFor("en");
 
 export type FatmaMemory = {
   enabled: boolean;
@@ -117,7 +92,9 @@ export function pickLine(
   seed: number,
 ): DialogueLine | null {
   if (!memory.enabled && event !== "disable_plea" && event !== "reenabled") return null;
-  if (!PRIORITY_EVENTS.has(event) && now - memory.lastSpokeAt < GLOBAL_COOLDOWN_MS) return null;
+  // A poke is the player talking to her: she always answers, without repeating herself if she can help it.
+  const chatty = event === "poke";
+  if (!PRIORITY_EVENTS.has(event) && !chatty && now - memory.lastSpokeAt < GLOBAL_COOLDOWN_MS) return null;
   const mood = currentMood(memory, now);
   const eligible = lines.filter(
     (l) =>
@@ -127,7 +104,11 @@ export function pickLine(
       (!l.unlock || memory.unlocks.includes(l.unlock)) &&
       (PRIORITY_EVENTS.has(event) || memory.seen[l.id] === undefined || now - memory.seen[l.id] >= LINE_COOLDOWN_MS),
   );
-  if (eligible.length === 0) return null;
+  if (eligible.length === 0) {
+    if (!chatty) return null;
+    const any = lines.filter((l) => l.event === event);
+    return any.length ? any[Math.abs(seed) % any.length] : null;
+  }
   // Prefer mood-specific and grudge lines, then rotate by seed.
   const specific = eligible.filter((l) => l.mood === mood || l.minReenables);
   const pool = specific.length > 0 ? specific.sort((a, b) => (b.minReenables ?? 0) - (a.minReenables ?? 0)) : eligible;

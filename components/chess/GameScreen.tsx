@@ -2,6 +2,7 @@
 
 import { capturesAlongLine } from "@/lib/chess/captures";
 import { motion } from "motion/react";
+import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FatmaPanel } from "@/components/fatma/FatmaPanel";
 import { IOS_SPRING } from "@/components/ui/Switch";
@@ -22,6 +23,7 @@ import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
 import { GameResult } from "./GameResult";
 import { MoveList, MoveStrip } from "./MoveStrip";
+import { FOOTER_BUTTON_SIZE, ReviewArrows } from "./ReviewArrows";
 import { PlayerIdentity } from "./PlayerIdentity";
 
 type Props = {
@@ -66,8 +68,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         playSound(applied.checkmate ? "mate" : applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : "move", settings.volume);
       }
       if (settings.haptics && by === "human") haptic(applied.captured ? [8, 30, 8] : 8);
+      if (by === "human") {
+        if (castle) fatma.say("human_castle");
+        else if (applied.promotion) fatma.say("human_promote");
+        else if (node.ply <= 2) fatma.say("opening");
+      }
     },
-    [settings.sound, settings.volume, settings.haptics],
+    [settings.sound, settings.volume, settings.haptics, fatma],
   );
 
   // Warm up audio on the first touch so the opening move is never silent.
@@ -211,6 +218,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     lowTimeWarned.current = game.meta.gameKey;
     if (settings.sound) playSound("lowtime", settings.volume);
   }, [humanMs, game, settings.sound, settings.volume]);
+
+  // She gets chatty if you think for a long time.
+  useEffect(() => {
+    if (!active || turn !== human || reviewing) return;
+    const t = setTimeout(() => fatma.say("idle"), 40_000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [head?.key, active, turn, human, reviewing]);
 
   const evaluation = useEvaluation(fen, viewNode?.key ?? "root", evalAllowed && !status.over, onFinalEval);
 
@@ -409,22 +424,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           transition={IOS_SPRING}
           onClick={() => setConfirmUndo(true)}
           disabled={!game || moveCount === 0}
-          className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-accent px-4 lg:flex-1 text-base font-semibold text-accent-text disabled:opacity-40"
+          className={`flex ${FOOTER_BUTTON_SIZE} shrink-0 items-center justify-center gap-2 rounded-full bg-accent text-base font-semibold text-accent-text transition-opacity enabled:hover:opacity-90 disabled:opacity-40`}
           aria-keyshortcuts="u"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
         </motion.button>
-        <div className="flex-1 lg:hidden" />
-        <div className="flex h-14 shrink-0 overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
-          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-14 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
-            <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-          <span className="my-2.5 w-px bg-line" aria-hidden="true" />
-          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-14 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
-            <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-        </div>
+        <div className="flex-1" />
+        <ReviewArrows onBack={() => step(-1)} onForward={() => step(1)} backDisabled={moveCount === 0 || viewPly === 0} forwardDisabled={!reviewing} />
 
       </footer>
       </div>
@@ -570,6 +577,9 @@ function NewGameDialog({
       <button onClick={start} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text">
         Start
       </button>
+      <Link href="/play" className="grid min-h-12 w-full place-items-center rounded-2xl bg-surface-2 text-sm font-medium">
+        Play a friend online instead
+      </Link>
     </Dialog>
   );
 }

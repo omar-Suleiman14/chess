@@ -5,6 +5,7 @@ import { Piece, PIECE_SETS } from "@/components/chess/Pieces";
 import { PageHeader } from "@/components/shell/AppShell";
 import { ScrollRow } from "@/components/ui/ScrollRow";
 import { SwitchRow } from "@/components/ui/Switch";
+import { FATMA_LANGUAGES } from "@/lib/chess/personality/lines";
 import { useSettings, type Palette } from "@/lib/client/settings";
 import { haptic, playSound, unlockAudio } from "@/lib/client/sound";
 
@@ -134,6 +135,11 @@ export default function SettingsPage() {
           <div className="mt-3">
             <Segmented label="Motion" value={settings.motion} onChange={(motion) => update({ motion })} options={[["system", "System"], ["full", "Full"], ["reduced", "Reduced"]]} />
           </div>
+        </Group>
+
+        <Group title="Fatma">
+          <Segmented label="Fatma speaks" value={settings.fatmaLanguage} onChange={(fatmaLanguage) => update({ fatmaLanguage })} options={FATMA_LANGUAGES} />
+          <p className="mt-2 px-1 text-xs text-muted">Franco is Egyptian Arabic in Latin letters (3 = ع, 7 = ح, 2 = ء). Tap Fatma during a game to talk to her.</p>
         </Group>
 
         <Group title="Fatma (Full Power)">

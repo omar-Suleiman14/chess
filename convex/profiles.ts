@@ -4,6 +4,7 @@ import type { Doc } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { cardTitle } from "../lib/chess/cardTitle";
 import { fail, optionalOwner, requireOwner } from "./model/auth";
+import { areFriends } from "./friends";
 
 export const CARD_THEMES = ["sky", "sunset", "mint", "rose", "ink"] as const;
 export const BOARD_PALETTES = ["ivory", "sage", "slate", "blue"] as const;
@@ -108,12 +109,17 @@ async function cardData(ctx: QueryCtx, profile: Doc<"chessProfiles">, includeSta
 
 export type CardData = Awaited<ReturnType<typeof cardData>>;
 
-/** Public card by alias, only when the owner opted in. */
+/** Card by alias: public cards for everyone, private ones for the owner and friends. */
 export const publicCard = query({
   args: { alias: v.string() },
   handler: async (ctx, args) => {
     const profile = await ctx.db.query("chessProfiles").withIndex("by_alias", (q) => q.eq("alias", args.alias)).first();
-    if (!profile || profile.visibility !== "public") return null;
+    if (!profile) return null;
+    if (profile.visibility !== "public") {
+      // Private cards are still visible to their owner and to accepted friends.
+      const viewer = await optionalOwner(ctx);
+      if (!viewer || (viewer !== profile.owner && !(await areFriends(ctx, viewer, profile.owner)))) return null;
+    }
     return await cardData(ctx, profile, profile.showRatings);
   },
 });
@@ -157,6 +163,8 @@ const TABLES = [
   "fatmaPacks",
   "mcpGrants",
   "mcpAudits",
+  "friendships",
+  "friendChallenges",
 ] as const;
 
 /** Deletes every chess record the caller owns (in batches). */
@@ -216,6 +224,14 @@ async function queryOwned(ctx: MutationCtx, name: Exclude<(typeof TABLES)[number
     case "fatmaPacks": return await ctx.db.query("fatmaPacks").withIndex("by_owner_and_status", (q) => q.eq("owner", owner)).take(200);
     case "mcpGrants": return await ctx.db.query("mcpGrants").withIndex("by_owner", (q) => q.eq("owner", owner)).take(200);
     case "mcpAudits": return await ctx.db.query("mcpAudits").withIndex("by_owner_and_createdAt", (q) => q.eq("owner", owner)).take(200);
+    case "friendships": return [
+      ...(await ctx.db.query("friendships").withIndex("by_requester_and_addressee", (q) => q.eq("requester", owner)).take(100)),
+      ...(await ctx.db.query("friendships").withIndex("by_addressee_and_status", (q) => q.eq("addressee", owner)).take(100)),
+    ];
+    case "friendChallenges": return [
+      ...(await ctx.db.query("friendChallenges").withIndex("by_from_and_to", (q) => q.eq("from", owner)).take(100)),
+      ...(await ctx.db.query("friendChallenges").withIndex("by_to_and_createdAt", (q) => q.eq("to", owner)).take(100)),
+    ];
   }
 }
 
