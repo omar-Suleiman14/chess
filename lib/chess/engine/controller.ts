@@ -7,7 +7,7 @@ import { legalUcis, sideToMove } from "../rules";
 import { parseBestMove, parseInfo, toWhiteScore, type UciInfo, type WhiteScore } from "./uci";
 
 export const ENGINE_BUILD = "stockfish-19.0.1-lite-single";
-export const ENGINE_URL = "/engine/stockfish-19-lite-single.js";
+export const ENGINE_URL = "/engine/19.0.1/stockfish-19-lite-single.js";
 
 export type SearchKind = "move" | "eval" | "review";
 export type EngineState = "idle" | "loading" | "ready" | "thinking" | "error" | "terminated";

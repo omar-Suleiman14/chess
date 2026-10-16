@@ -8,7 +8,9 @@
     "build": "npm run typecheck && next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "calibrate": "esbuild scripts/calibrate.ts --bundle --platform=node --format=esm --packages=external --outfile=.cache/calibrate.mjs --log-level=warning && node .cache/calibrate.mjs",
+    "slice-fatma": "node scripts/slice-fatma.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
@@ -36,6 +38,7 @@
     "@types/react-dom": "^19.2.4",
     "@typescript/native": "npm:typescript@^7.0.2",
     "convex-test": "^0.0.62",
+    "esbuild": "0.27.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.0",
     "fake-indexeddb": "^6.2.5",

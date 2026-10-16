@@ -1,6 +1,6 @@
 # Contributing to Chess by Chaos
 
-Thanks for considering contributions. This is a small open-source *personal chess learning* project and is currently in the **planning** stage. Please check [ROADMAP](docs/ROADMAP.md) and existing [issues](https://github.com/omar-Suleiman14/chess/issues) before starting work.
+Thanks for considering contributions. This is a small open-source *personal chess learning* project. It is **playable and pre-release**. Please check [ROADMAP](docs/ROADMAP.md) and existing [issues](https://github.com/omar-Suleiman14/chess/issues) before starting work.
 
 ## Start here
 
@@ -24,7 +24,7 @@ Thanks for considering contributions. This is a small open-source *personal ches
 
 The repository has an existing GPL-3.0 [LICENSE](LICENSE). Contributions are accepted under that license unless a documented exception applies. Third-party libraries/assets retain their own licenses and require notices. Stockfish/Stockfish.js are GPL v3; ensure matching build source is offered with bundled assets.
 
-Chaos source is AGPL-3.0-or-later. Do not blindly copy its components into this repository; maintain attribution and handle AGPL/GPL obligations after an explicit compatibility review. The avatar library may have additional upstream license terms. Add `THIRD_PARTY_NOTICES.md` once dependencies are selected.
+Chaos source is AGPL-3.0-or-later. Do not blindly copy its components into this repository; maintain attribution and handle AGPL/GPL obligations after an explicit compatibility review. The avatar library may have additional upstream license terms. Record every new dependency or asset in `THIRD_PARTY_NOTICES.md`.
 
 ## Review checklist
 
@@ -35,4 +35,4 @@ Chaos source is AGPL-3.0-or-later. Do not blindly copy its components into this 
 - [ ] Network/offline/worker failure mode is recoverable
 - [ ] Contains adequate documentation and third-party attributions
 
-The README currently lists no working local dev commands because the app hasn't been scaffolded. The first setup PR should add verified commands and environment template.
+Run `pnpm test`, `pnpm lint` and `pnpm typecheck` before opening a PR. Setup commands are in the README; the environment template is `.env.example`.

@@ -1,26 +1,123 @@
 @import "tailwindcss";
 
+/* Warm neutral, minimal. No glass. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --bg: #f6f4ef;
+  --surface: #ffffff;
+  --surface-2: #efece5;
+  --text: #1d1c1a;
+  --muted: #6d6a64;
+  --line: #e2ded5;
+  --accent: #1d1c1a;
+  --accent-text: #ffffff;
+  --danger: #b42318;
+  --ok: #1b7a4b;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.06);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --sq-light: #efe6d5;
+  --sq-dark: #c3a982;
+  --sq-coord-light: #9a8462;
+  --sq-coord-dark: #f6efe2;
+  --hl-last: rgb(255 214 102 / 0.45);
+  --hl-select: rgb(29 28 26 / 0.22);
+  --hl-target: rgb(29 28 26 / 0.28);
+  --hl-check: rgb(214 48 49 / 0.55);
+  --focus: #2563eb;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #141412;
+    --surface: #1d1c1a;
+    --surface-2: #262522;
+    --text: #f3f1ec;
+    --muted: #a19d95;
+    --line: #34322e;
+    --accent: #f3f1ec;
+    --accent-text: #141412;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+    --hl-select: rgb(255 255 255 / 0.18);
+    --focus: #60a5fa;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+:root[data-palette="sage"] { --sq-light: #e8ecdf; --sq-dark: #93a57f; --sq-coord-light: #6f8159; --sq-coord-dark: #f0f3ea; }
+:root[data-palette="slate"] { --sq-light: #e3e6ea; --sq-dark: #8a96a3; --sq-coord-light: #66717d; --sq-coord-dark: #eef0f3; }
+:root[data-palette="blue"] { --sq-light: #e4ebf3; --sq-dark: #7d9bbd; --sq-coord-light: #587896; --sq-coord-dark: #eef3f8; }
+:root[data-contrast="high"] {
+  --sq-light: #ffffff;
+  --sq-dark: #6b6b6b;
+  --hl-last: rgb(255 200 0 / 0.65);
+  --hl-target: rgb(0 0 0 / 0.55);
+  --line: #8a8a8a;
+  --muted: #3d3d3d;
 }
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+.safe-bottom { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.safe-top { padding-top: max(8px, env(safe-area-inset-top)); }
+
+/* Board */
+.board {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.sq-light { background: var(--sq-light); }
+.sq-dark { background: var(--sq-dark); }
+.coord-on-light { color: var(--sq-coord-light); }
+.coord-on-dark { color: var(--sq-coord-dark); }
+
+@keyframes fatma-pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.bubble-in { animation: fatma-pop 180ms ease-out both; }

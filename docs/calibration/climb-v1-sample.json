@@ -1,0 +1,66 @@
+{
+  "pool": "climb-v1",
+  "engine": "stockfish-19.0.1-lite-single (node)",
+  "date": "2026-10-16T04:56:34.889Z",
+  "machine": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.23.2"
+  },
+  "maxPlies": 240,
+  "note": "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
+  "pairs": [
+    {
+      "upper": "climb-02",
+      "lower": "climb-01",
+      "games": 6,
+      "upperScore": 1,
+      "score95": [
+        1,
+        1
+      ],
+      "impliedGap": 798,
+      "nominalGap": 200,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-03",
+      "lower": "climb-02",
+      "games": 6,
+      "upperScore": 0.917,
+      "score95": [
+        0.753,
+        1
+      ],
+      "impliedGap": 417,
+      "nominalGap": 200,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-04",
+      "lower": "climb-03",
+      "games": 6,
+      "upperScore": 0.583,
+      "score95": [
+        0.282,
+        0.885
+      ],
+      "impliedGap": 58,
+      "nominalGap": 200,
+      "monotonic": true
+    },
+    {
+      "upper": "climb-05",
+      "lower": "climb-04",
+      "games": 6,
+      "upperScore": 0.917,
+      "score95": [
+        0.753,
+        1
+      ],
+      "impliedGap": 417,
+      "nominalGap": 200,
+      "monotonic": true
+    }
+  ]
+}

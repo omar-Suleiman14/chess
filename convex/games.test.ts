@@ -48,6 +48,8 @@ async function play(t: ReturnType<typeof setup>, ctx: { user: ReturnType<ReturnT
 }
 
 beforeEach(() => {
+  // Tests stand in for the deployment environment.
+  // eslint-disable-next-line @convex-dev/no-process-env
   process.env.MCP_SERVICE_SECRET = SECRET;
 });
 

@@ -1,0 +1,295 @@
+"use client";
+
+import { motion } from "motion/react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { FILES, legalMoves, pieceName, piecesOf, type BoardPiece, type Color, type PromotionPiece, type Square } from "@/lib/chess/rules";
+import { Piece } from "./Pieces";
+import { PromotionSheet } from "./PromotionSheet";
+
+export type LastMove = { from: Square; to: Square; rookFrom?: Square; rookTo?: Square; key: string } | null;
+
+type Props = {
+  fen: string;
+  orientation: Color;
+  /** Side the user may move (null = view only). */
+  movable: Color | null;
+  onMove: (uci: string) => void | boolean | Promise<boolean | void>;
+  lastMove?: LastMove;
+  checkSquare?: Square | null;
+  showLegalDots?: boolean;
+  coordinates?: boolean;
+  reducedMotion?: boolean;
+  /** Extra squares to outline (lesson hints). */
+  hintSquares?: Square[];
+  label?: string;
+  onSelect?: () => void;
+};
+
+const SQUARE_RE = /^[a-h][1-8]$/;
+
+function squareAt(col: number, row: number, orientation: Color): Square {
+  // row 0 is the top of the board on screen.
+  const file = orientation === "w" ? col : 7 - col;
+  const rank = orientation === "w" ? 7 - row : row;
+  return `${FILES[file]}${rank + 1}` as Square;
+}
+
+function coordsOf(square: Square, orientation: Color): { col: number; row: number } {
+  const file = square.charCodeAt(0) - 97;
+  const rank = Number(square[1]) - 1;
+  return orientation === "w" ? { col: file, row: 7 - rank } : { col: 7 - file, row: rank };
+}
+
+export function Board({
+  fen,
+  orientation,
+  movable,
+  onMove,
+  lastMove,
+  checkSquare,
+  showLegalDots = true,
+  coordinates = true,
+  reducedMotion = false,
+  hintSquares = [],
+  label = "Chess board",
+  onSelect,
+}: Props) {
+  const boardRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<Square | null>(null);
+  const [cursor, setCursor] = useState<Square>(orientation === "w" ? "e2" : "e7");
+  const [drag, setDrag] = useState<{ from: Square; x: number; y: number; active: boolean; size: number } | null>(null);
+  const [promotion, setPromotion] = useState<{ from: Square; to: Square; color: Color } | null>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+
+  const pieces = useMemo(() => piecesOf(fen), [fen]);
+  const bySquare = useMemo(() => new Map<Square, BoardPiece>(pieces.map((p) => [p.square, p])), [pieces]);
+  const moves = useMemo(() => (movable ? legalMoves(fen).filter((m) => m.color === movable) : []), [fen, movable]);
+  const targets = useMemo(() => {
+    const map = new Map<Square, Map<Square, { capture: boolean; promotion: boolean }>>();
+    for (const m of moves) {
+      if (!map.has(m.from)) map.set(m.from, new Map());
+      map.get(m.from)!.set(m.to, { capture: Boolean(m.captured), promotion: Boolean(m.promotion) });
+    }
+    return map;
+  }, [moves]);
+
+  // Drop selection whenever the position changes.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelected(null);
+    setPromotion(null);
+  }, [fen]);
+
+  const tryMove = useCallback(
+    (from: Square, to: Square) => {
+      const info = targets.get(from)?.get(to);
+      if (!info) return false;
+      setSelected(null);
+      if (info.promotion) {
+        setPromotion({ from, to, color: bySquare.get(from)!.color });
+        return true;
+      }
+      void onMove(`${from}${to}`);
+      return true;
+    },
+    [targets, bySquare, onMove],
+  );
+
+  const activate = useCallback(
+    (square: Square) => {
+      const piece = bySquare.get(square);
+      if (selected && selected !== square && tryMove(selected, square)) return;
+      if (piece && movable && piece.color === movable && targets.has(square)) {
+        setSelected(selected === square ? null : square);
+        onSelect?.();
+      } else {
+        setSelected(null);
+      }
+    },
+    [bySquare, selected, tryMove, movable, targets, onSelect],
+  );
+
+  const squareFromPoint = (clientX: number, clientY: number): Square | null => {
+    const rect = boardRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const col = Math.floor(((clientX - rect.left) / rect.width) * 8);
+    const row = Math.floor(((clientY - rect.top) / rect.height) * 8);
+    if (col < 0 || col > 7 || row < 0 || row > 7) return null;
+    return squareAt(col, row, orientation);
+  };
+
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || promotion) return;
+    const square = squareFromPoint(e.clientX, e.clientY);
+    if (!square) return;
+    const piece = bySquare.get(square);
+    if (piece && movable && piece.color === movable && targets.has(square)) {
+      (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+      dragStart.current = { x: e.clientX, y: e.clientY };
+      const size = (boardRef.current?.getBoundingClientRect().width ?? 0) / 8;
+      setDrag({ from: square, x: e.clientX, y: e.clientY, active: false, size });
+    }
+  };
+
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!drag || !dragStart.current) return;
+    const moved = Math.hypot(e.clientX - dragStart.current.x, e.clientY - dragStart.current.y) > 6;
+    if (moved || drag.active) {
+      if (!drag.active) {
+        setSelected(drag.from);
+        onSelect?.();
+      }
+      setDrag({ ...drag, x: e.clientX, y: e.clientY, active: true });
+    }
+  };
+
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    const square = squareFromPoint(e.clientX, e.clientY);
+    if (drag?.active) {
+      const from = drag.from;
+      setDrag(null);
+      dragStart.current = null;
+      if (square && square !== from && tryMove(from, square)) return;
+      setSelected(from);
+      return;
+    }
+    setDrag(null);
+    dragStart.current = null;
+    if (square) {
+      setCursor(square);
+      activate(square);
+    }
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const { col, row } = coordsOf(cursor, orientation);
+    const delta: Record<string, [number, number]> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+    if (delta[e.key]) {
+      e.preventDefault();
+      const [dc, dr] = delta[e.key];
+      const next = squareAt(Math.min(7, Math.max(0, col + dc)), Math.min(7, Math.max(0, row + dr)), orientation);
+      setCursor(next);
+      document.getElementById(`sq-${next}`)?.focus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      activate(cursor);
+    } else if (e.key === "Escape") {
+      setSelected(null);
+    }
+  };
+
+  const selectedTargets = selected ? targets.get(selected) : undefined;
+
+  const cells = [];
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = squareAt(col, row, orientation);
+      const light = (square.charCodeAt(0) - 97 + Number(square[1])) % 2 === 1;
+      const piece = bySquare.get(square);
+      const target = selectedTargets?.get(square);
+      const isLast = lastMove && (lastMove.from === square || lastMove.to === square);
+      const isCheck = checkSquare === square;
+      const isSelected = selected === square;
+      const isHint = hintSquares.includes(square);
+      const hidden = drag?.active && drag.from === square;
+      const description = [
+        square,
+        piece ? `${piece.color === "w" ? "white" : "black"} ${pieceName(piece.type)}` : "empty",
+        isSelected ? "selected" : "",
+        target ? (target.capture ? "capture available" : "legal move") : "",
+        isCheck ? "king in check" : "",
+        isLast ? "last move" : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+      let anim: { x: string; y: string } | null = null;
+      if (!reducedMotion && lastMove && piece) {
+        const from = lastMove.to === square ? lastMove.from : lastMove.rookTo === square ? lastMove.rookFrom : undefined;
+        if (from && SQUARE_RE.test(from)) {
+          const a = coordsOf(from, orientation);
+          anim = { x: `${(a.col - col) * 100}%`, y: `${(a.row - row) * 100}%` };
+        }
+      }
+      cells.push(
+        <div
+          key={square}
+          id={`sq-${square}`}
+          role="gridcell"
+          tabIndex={cursor === square ? 0 : -1}
+          aria-label={description}
+          aria-selected={isSelected}
+          onFocus={() => setCursor(square)}
+          className={`relative ${light ? "sq-light" : "sq-dark"}`}
+        >
+          {isLast && <div className="absolute inset-0" style={{ background: "var(--hl-last)" }} />}
+          {isSelected && <div className="absolute inset-0" style={{ background: "var(--hl-select)" }} />}
+          {isCheck && <div className="absolute inset-0" style={{ background: "radial-gradient(circle, var(--hl-check) 0%, transparent 72%)" }} />}
+          {isHint && <div className="absolute inset-[6%] rounded-md border-[3px] border-dashed" style={{ borderColor: "var(--hl-target)" }} />}
+          {coordinates && col === 0 && (
+            <span className={`pointer-events-none absolute left-[3%] top-[2%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[1]}</span>
+          )}
+          {coordinates && row === 7 && (
+            <span className={`pointer-events-none absolute bottom-[1%] right-[4%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[0]}</span>
+          )}
+          {piece && !hidden && (
+            <motion.div
+              key={anim ? `${lastMove?.key}-${square}` : `${square}-${piece.color}${piece.type}`}
+              className="absolute inset-0 z-10 p-[6%]"
+              initial={anim ? { x: anim.x, y: anim.y } : false}
+              animate={{ x: 0, y: 0, scale: isSelected ? 1.04 : 1 }}
+              transition={{ type: "tween", ease: [0.2, 0.8, 0.2, 1], duration: 0.16 }}
+            >
+              <Piece type={piece.type} color={piece.color} className="h-full w-full drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />
+            </motion.div>
+          )}
+          {target && showLegalDots && !target.capture && (
+            <div className="absolute left-1/2 top-1/2 z-20 h-[28%] w-[28%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: "var(--hl-target)" }} />
+          )}
+          {target && showLegalDots && target.capture && (
+            <div className="absolute inset-[4%] z-20 rounded-full border-[5px]" style={{ borderColor: "var(--hl-target)" }} />
+          )}
+        </div>,
+      );
+    }
+  }
+
+  const ghost = drag?.active ? bySquare.get(drag.from) : undefined;
+  const size = drag?.size ?? 0;
+
+  return (
+    <div className="relative w-full">
+      <div
+        ref={boardRef}
+        role="grid"
+        aria-label={label}
+        className="board relative grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[10px] shadow-[var(--shadow)]"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => setDrag(null)}
+        onKeyDown={onKeyDown}
+      >
+        {cells}
+      </div>
+      {ghost && drag && size > 0 && (
+        <div
+          className="pointer-events-none fixed z-50"
+          style={{ left: drag.x - size * 0.6, top: drag.y - size * 0.75, width: size * 1.2, height: size * 1.2 }}
+        >
+          <Piece type={ghost.type} color={ghost.color} className="h-full w-full drop-shadow-[0_6px_8px_rgba(0,0,0,0.3)]" />
+        </div>
+      )}
+      {promotion && (
+        <PromotionSheet
+          color={promotion.color}
+          onPick={(piece: PromotionPiece) => {
+            const { from, to } = promotion;
+            setPromotion(null);
+            void onMove(`${from}${to}${piece}`);
+          }}
+          onCancel={() => setPromotion(null)}
+        />
+      )}
+    </div>
+  );
+}

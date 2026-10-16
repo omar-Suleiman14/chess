@@ -2,7 +2,7 @@
 
 **Read first:** [SPECIFICATION](SPECIFICATION.md), [ARCHITECTURE](ARCHITECTURE.md), [UI/UX](UI_UX.md), [MCP](MCP.md). Tracker: [issues](https://github.com/omar-Suleiman14/chess/issues).
 
-No feature code is implemented yet. Phase and blocker labels describe planning, not progress.
+**Implementation status (2026-10-16):** every work package below has code and tests on `main`. Items marked *open* still need evidence that can't come from code alone: real devices, live OAuth clients, large calibration runs, or deployment. Issues stay the source of truth for sign-off.
 
 ## Delivery gates
 
@@ -18,31 +18,31 @@ No feature code is implemented yet. Phase and blocker labels describe planning, 
 
 ## Ordered implementation work packages
 
-| Order | Work package | Dependencies | Risk/owner gate |
-| --- | --- | --- | --- |
-| [P00](https://github.com/omar-Suleiman14/chess/issues/1) | Dev setup (Next, TS, Convex, Clerk, lint/CI/testing) | none | blocker for everything |
-| [P01](https://github.com/omar-Suleiman14/chess/issues/2) | License/third-party assets audit | none | blocker for code reuse/public bundles |
-| [P02](https://github.com/omar-Suleiman14/chess/issues/3) | iPhone Stockfish Lite benchmark spike | none | blocker for engine UX assumptions |
-| [P03](https://github.com/omar-Suleiman14/chess/issues/4) | Chess schema, immutable nodes and branch rules | P00 | blocker for saving/Undo/Time Machine |
-| [P04](https://github.com/omar-Suleiman14/chess/issues/5) | Chess.js legality + interactive board | P00 | blocker for playable flow |
-| [P05](https://github.com/omar-Suleiman14/chess/issues/6) | Engine worker, UCI manager, scheduling/failover | P02,P04 | blocker for Fatma play |
-| [P06](https://github.com/omar-Suleiman14/chess/issues/7) | Full Power game + unrestricted Lite + Undo | P03,P04,P05 | first playable |
-| [P07](https://github.com/omar-Suleiman14/chess/issues/8) | Convex sync/offline resilience and PGN | P03,P06 | persisted history |
-| [P08](https://github.com/omar-Suleiman14/chess/issues/9) | Evaluation bar + fast/high-quality analysis | P05,P06 | no stale scores |
-| [P09](https://github.com/omar-Suleiman14/chess/issues/10) | iOS UI system/navigation sheet/prefetch | P04 | fine after first playable |
-| [P10](https://github.com/omar-Suleiman14/chess/issues/11) | Board themes, sounds, haptics, accessibility | P04,P09 | must not delay responsiveness |
-| [P11](https://github.com/omar-Suleiman14/chess/issues/12) | Fatma sprite/dialogue baseline + disable flow | P01,P06 | character opt-in/out |
-| [P12](https://github.com/omar-Suleiman14/chess/issues/13) | Chess-specific Chaos Card/Blobatar adaptation | P01,P00 | isolated Chess identity |
-| [P13](https://github.com/omar-Suleiman14/chess/issues/14) | Opponent calibration, Elo policy, anti-assistance | P05,P07 | blocker for rated Climb |
-| [P14](https://github.com/omar-Suleiman14/chess/issues/15) | Climb ladder and separate timed mode | P13,P06 | game modes |
-| [P15](https://github.com/omar-Suleiman14/chess/issues/16) | Time Machine replay and nested saved branches | P03,P07,P08 | deep history |
-| [P16](https://github.com/omar-Suleiman14/chess/issues/17) | Fixed interactive micro-curriculum | P04,P07 | core learning |
-| [P17](https://github.com/omar-Suleiman14/chess/issues/18) | Adaptive + on-demand openings and lessons | P08,P16 | built from real positions |
-| [P18](https://github.com/omar-Suleiman14/chess/issues/19) | MCP authenticated foundation and read tools | P07,P01 | OAuth and authorization |
-| [P19](https://github.com/omar-Suleiman14/chess/issues/20) | MCP branch/lesson write operations | P15,P17,P18 | domain validation/audit |
-| [P20](https://github.com/omar-Suleiman14/chess/issues/21) | Natural Fatma progression + scripted upgrades | P11,P07 | persistence, pack schemas |
-| [P21](https://github.com/omar-Suleiman14/chess/issues/22) | MCP-proposed/approved Fatma upgrades | P18,P20 | explicit scopes |
-| [P22](https://github.com/omar-Suleiman14/chess/issues/23) | End-to-end hardening, offline, performance, release | all relevant | final gate |
+| Order | Work package | Dependencies | Risk/owner gate | Status |
+| --- | --- | --- | --- | --- |
+| [P00](https://github.com/omar-Suleiman14/chess/issues/1) | Dev setup (Next, TS, Convex, Clerk, lint/CI/testing) | none | blocker for everything | done (Vercel domain: open) |
+| [P01](https://github.com/omar-Suleiman14/chess/issues/2) | License/third-party assets audit | none | blocker for code reuse/public bundles | done; Fatma art rights: owner to confirm |
+| [P02](https://github.com/omar-Suleiman14/chess/issues/3) | iPhone Stockfish Lite benchmark spike | none | blocker for engine UX assumptions | /bench tool + desktop numbers; iPhone run: open |
+| [P03](https://github.com/omar-Suleiman14/chess/issues/4) | Chess schema, immutable nodes and branch rules | P00 | blocker for saving/Undo/Time Machine | done |
+| [P04](https://github.com/omar-Suleiman14/chess/issues/5) | Chess.js legality + interactive board | P00 | blocker for playable flow | done |
+| [P05](https://github.com/omar-Suleiman14/chess/issues/6) | Engine worker, UCI manager, scheduling/failover | P02,P04 | blocker for Fatma play | done |
+| [P06](https://github.com/omar-Suleiman14/chess/issues/7) | Full Power game + unrestricted Lite + Undo | P03,P04,P05 | first playable | done |
+| [P07](https://github.com/omar-Suleiman14/chess/issues/8) | Convex sync/offline resilience and PGN | P03,P06 | persisted history | done |
+| [P08](https://github.com/omar-Suleiman14/chess/issues/9) | Evaluation bar + fast/high-quality analysis | P05,P06 | no stale scores | done |
+| [P09](https://github.com/omar-Suleiman14/chess/issues/10) | iOS UI system/navigation sheet/prefetch | P04 | fine after first playable | done |
+| [P10](https://github.com/omar-Suleiman14/chess/issues/11) | Board themes, sounds, haptics, accessibility | P04,P09 | must not delay responsiveness | done (haptics Android-only) |
+| [P11](https://github.com/omar-Suleiman14/chess/issues/12) | Fatma sprite/dialogue baseline + disable flow | P01,P06 | character opt-in/out | done |
+| [P12](https://github.com/omar-Suleiman14/chess/issues/13) | Chess-specific Chaos Card/Blobatar adaptation | P01,P00 | isolated Chess identity | done (independent card, no Chaos code) |
+| [P13](https://github.com/omar-Suleiman14/chess/issues/14) | Opponent calibration, Elo policy, anti-assistance | P05,P07 | blocker for rated Climb | Glicko-2 + policy done; large calibration run: open |
+| [P14](https://github.com/omar-Suleiman14/chess/issues/15) | Climb ladder and separate timed mode | P13,P06 | game modes | done |
+| [P15](https://github.com/omar-Suleiman14/chess/issues/16) | Time Machine replay and nested saved branches | P03,P07,P08 | deep history | done |
+| [P16](https://github.com/omar-Suleiman14/chess/issues/17) | Fixed interactive micro-curriculum | P04,P07 | core learning | done |
+| [P17](https://github.com/omar-Suleiman14/chess/issues/18) | Adaptive + on-demand openings and lessons | P08,P16 | built from real positions | done |
+| [P18](https://github.com/omar-Suleiman14/chess/issues/19) | MCP authenticated foundation and read tools | P07,P01 | OAuth and authorization | done; live ChatGPT/Claude OAuth: open |
+| [P19](https://github.com/omar-Suleiman14/chess/issues/20) | MCP branch/lesson write operations | P15,P17,P18 | domain validation/audit | done |
+| [P20](https://github.com/omar-Suleiman14/chess/issues/21) | Natural Fatma progression + scripted upgrades | P11,P07 | persistence, pack schemas | done |
+| [P21](https://github.com/omar-Suleiman14/chess/issues/22) | MCP-proposed/approved Fatma upgrades | P18,P20 | explicit scopes | done |
+| [P22](https://github.com/omar-Suleiman14/chess/issues/23) | End-to-end hardening, offline, performance, release | all relevant | final gate | CSP/HSTS, export/delete, notices done; device matrix + deployment: open |
 
 These IDs are specification work-package identifiers. GitHub issues give them exact titles/numbers and acceptance checklists; use [Issues](https://github.com/omar-Suleiman14/chess/issues) as execution source of truth. Work packages can be split into smaller PRs, but preserve dependency order. Browse [all implementation issues](https://github.com/omar-Suleiman14/chess/issues?q=is%3Aissue+is%3Aopen) and filter by **phase:G0–G6**, **priority:P0–P2**, or **area:** labels.
 
