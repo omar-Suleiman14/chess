@@ -3,6 +3,7 @@
 import { Segmented } from "@/components/chess/GameScreen";
 import { Piece, PIECE_SETS } from "@/components/chess/Pieces";
 import { PageHeader } from "@/components/shell/AppShell";
+import { ScrollRow } from "@/components/ui/ScrollRow";
 import { SwitchRow } from "@/components/ui/Switch";
 import { useSettings, type Palette } from "@/lib/client/settings";
 import { haptic, playSound, unlockAudio } from "@/lib/client/sound";
@@ -31,7 +32,7 @@ export default function SettingsPage() {
       <PageHeader title="Settings" />
       <div className="grid grid-cols-1 gap-7 px-4">
         <Group title="Board">
-          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Board colours">
+          <div className="grid grid-cols-4 gap-2 p-1" role="radiogroup" aria-label="Board colours">
             {PALETTES.map(([id, name, light, dark]) => (
               <button
                 key={id}
@@ -53,13 +54,14 @@ export default function SettingsPage() {
         </Group>
 
         <Group title="Pieces">
-          <div className="no-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1" role="radiogroup" aria-label="Piece style">
+          <ScrollRow role="radiogroup" label="Piece style" selectedIndex={PIECE_SETS.findIndex((p) => p.id === settings.pieceSet)}>
             {PIECE_SETS.map((set) => (
               <button
                 key={set.id}
                 role="radio"
                 aria-checked={settings.pieceSet === set.id}
                 onClick={() => update({ pieceSet: set.id })}
+                data-scroll-item
                 className={`shrink-0 snap-start rounded-2xl bg-surface p-2 shadow-[var(--shadow)] transition-transform active:scale-95 ${settings.pieceSet === set.id ? "ring-2 ring-[var(--accent)]" : ""}`}
               >
                 <span className="grid w-36 grid-cols-3 overflow-hidden rounded-lg" aria-hidden="true">
@@ -77,7 +79,7 @@ export default function SettingsPage() {
                 <span className="mt-1 block text-xs">{set.name}</span>
               </button>
             ))}
-          </div>
+          </ScrollRow>
         </Group>
 
         <Group title="Display">
