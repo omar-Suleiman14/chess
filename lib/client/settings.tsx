@@ -25,6 +25,8 @@ export type Settings = {
   highContrast: boolean;
   /** Experimental Liquid Glass controls. "auto" follows the device default (see glassDefault). */
   glass: "auto" | "on" | "off";
+  /** Faint drifting characters behind the app that ripple when you tap empty space. */
+  livingBackground: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fatmaLanguage: "en",
   highContrast: false,
   glass: "auto",
+  livingBackground: false,
 };
 
 const KEY = "cbc.settings.v1";

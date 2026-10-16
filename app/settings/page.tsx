@@ -110,6 +110,12 @@ export default function SettingsPage() {
                 Reset Liquid Glass to this device&apos;s default ({glassOffReason ? "off" : "on"})
               </button>
             )}
+            <SwitchRow
+              label="Living background"
+              hint="Faint drifting characters behind the app. Tap empty space to send a ripple through them."
+              checked={settings.livingBackground}
+              onChange={(v) => update({ livingBackground: v })}
+            />
           </div>
         </Group>
 
