@@ -118,6 +118,19 @@ export const publicCard = query({
   },
 });
 
+/** Every public card (newest first, bounded) for the /u deck. */
+export const publicCards = query({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db
+      .query("chessProfiles")
+      .withIndex("by_visibility", (q) => q.eq("visibility", "public"))
+      .order("desc")
+      .take(60);
+    return await Promise.all(profiles.map((p) => cardData(ctx, p, false)));
+  },
+});
+
 /** The signed-in player's own card (always with stats). */
 export const myCard = query({
   args: {},

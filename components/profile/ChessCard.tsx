@@ -35,6 +35,21 @@ export type CardData = {
   title: string;
   climb: { rating: number; rd: number; games: number; beaten: number } | null;
   rivalry: { wins: number; losses: number; draws: number } | null;
+  /** Fatma's own card in the player deck. */
+  fatma?: boolean;
+};
+
+export const FATMA_CARD: CardData = {
+  alias: "fatma",
+  avatarSeed: "fatma",
+  hue: 330,
+  cardTheme: "rose",
+  memberNumber: 0,
+  memberSince: Date.UTC(2026, 9, 16),
+  title: "Your rival · nominal 3000",
+  climb: null,
+  rivalry: null,
+  fatma: true,
 };
 
 export type CardFace = "identity" | "climb" | "rivalry";
@@ -59,7 +74,7 @@ function ArtPanel({ face, data, theme }: { face: CardFace; data: CardData; theme
       <div className="absolute left-1/2 top-1/2 aspect-square w-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/25" />
       <Arc />
       <div className="absolute inset-0 grid place-items-center">
-        {face === "identity" && <Avatar seed={data.avatarSeed} hue={data.hue} size={100} />}
+        {face === "identity" && (data.fatma ? <FatmaSprite expression="smug" size={110} /> : <Avatar seed={data.avatarSeed} hue={data.hue} size={100} />)}
         {face === "climb" && (
           <span className="absolute inset-x-0 top-[12%] text-center font-mono font-bold leading-none text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)]">
             <span className="block text-[34px] tabular-nums">{data.climb && data.climb.games > 0 ? data.climb.rating : "—"}</span>
@@ -77,7 +92,9 @@ function CardFront({ face, data }: { face: CardFace; data: CardData }) {
   const since = new Date(data.memberSince).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/(\w{3})\w*/, "$1");
   const headline =
     face === "identity"
-      ? { name: `@${data.alias}`, line: data.title, mono: "chess by chaos" }
+      ? data.fatma
+        ? { name: "Fatma", line: data.title, mono: "stockfish 19 lite · on your device" }
+        : { name: `@${data.alias}`, line: data.title, mono: "chess by chaos" }
       : face === "climb"
         ? { name: "The Climb", line: data.climb ? `${data.climb.beaten} of 11 levels beaten` : "Stats hidden", mono: data.climb ? `${data.climb.games} rated games` : `@${data.alias}` }
         : { name: "vs Fatma", line: data.rivalry ? `${data.rivalry.wins}W · ${data.rivalry.draws}D · ${data.rivalry.losses}L` : "Stats hidden", mono: "nominal 3000 · full power" };
@@ -134,7 +151,7 @@ function CardBack({ data, url }: { data: CardData; url: string }) {
           {url.replace(/^https?:\/\//, "")}
         </p>
         <div className="mt-2">
-          <Avatar seed={data.avatarSeed} hue={data.hue} size={44} />
+          {data.fatma ? <FatmaSprite expression="idle" size={48} /> : <Avatar seed={data.avatarSeed} hue={data.hue} size={44} />}
         </div>
       </div>
     </div>
@@ -147,7 +164,7 @@ export function ChessCard({ face, data, url, flipped, onFlip, interactive = true
     <motion.div
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : -1}
-      aria-label={interactive ? `${face === "identity" ? `Chess card for @${data.alias}` : face === "climb" ? "Climb card" : "Fatma rivalry card"}. ${flipped ? "Showing QR code" : "Activate to show QR code"}.` : undefined}
+      aria-label={interactive ? `${face === "identity" ? (data.fatma ? "Fatma's card" : `Chess card for @${data.alias}`) : face === "climb" ? "Climb card" : "Fatma rivalry card"}. ${flipped ? "Showing QR code" : "Activate to show QR code"}.` : undefined}
       onClick={interactive ? onFlip : undefined}
       onKeyDown={(e) => interactive && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onFlip?.())}
       className="relative aspect-[1.586] w-full cursor-pointer rounded-[22px] shadow-[0_18px_50px_rgba(0,0,0,0.28)] [transform-style:preserve-3d]"

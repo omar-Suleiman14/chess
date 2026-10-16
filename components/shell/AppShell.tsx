@@ -39,6 +39,7 @@ const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: strin
     title: "You",
     items: [
       { href: "/profile", label: "Profile & Fatma" },
+      { href: "/u", label: "Players" },
       { href: "/settings", label: "Settings" },
     ],
   },

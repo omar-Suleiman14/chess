@@ -65,9 +65,11 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState("");
 
+  // Creates the profile, or assigns a card number to an older one.
+  const needsEnsure = profile === null || (profile !== undefined && profile.memberNumber === undefined);
   useEffect(() => {
-    if (profile === null) void ensure({});
-  }, [profile, ensure]);
+    if (needsEnsure) void ensure({});
+  }, [needsEnsure, ensure]);
 
   const save = async (patch: Parameters<typeof update>[0]) => {
     setError(null);
@@ -92,7 +94,12 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
         {profile && (
           <section aria-labelledby="card" className="grid gap-4">
             <h2 id="card" className="sr-only">Chess card</h2>
-            {card && <CardDeck data={hueDraft === null ? card : { ...card, hue: hueDraft }} url={cardUrl} reducedMotion={reducedMotion} />}
+            {card && (
+              <CardDeck
+                cards={[{ id: "me", face: "identity", data: hueDraft === null ? card : { ...card, hue: hueDraft }, url: cardUrl, label: `@${card.alias}` }]}
+                reducedMotion={reducedMotion}
+              />
+            )}
             <div className="overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]">
               <div className="grid gap-2 border-b border-line p-4">
                 <label htmlFor="alias" className="text-sm text-muted">Chess alias (separate from your Chaos identity)</label>

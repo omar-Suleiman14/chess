@@ -269,7 +269,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </header>
 
       <section className="flex flex-1 flex-col items-center justify-center">
-        <div className="flex w-full max-w-[min(92vw,calc(100dvh-230px),760px)] items-stretch gap-2">
+        <div className="flex w-full max-w-[min(92vw,calc(100dvh-290px),760px)] items-stretch gap-2">
           {settings.evalBar && (evalAllowed ? (
             <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} />
           ) : (
@@ -297,13 +297,15 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : "Fatma to move.") : "Game over."}`}
               onSelect={() => settings.sound && playSound("select", settings.volume)}
             />
-            <div className="pointer-events-none absolute -bottom-2 left-1 z-30 translate-y-full sm:left-2">
-              <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} />
-            </div>
           </div>
         </div>
 
-        <div className="mt-2 flex h-6 w-full max-w-[760px] items-center justify-end gap-2 text-xs text-muted" aria-live="polite">
+        {/* Fatma lives in her own row so she never covers the board or result card. */}
+        <div className="mt-2 flex min-h-[56px] w-full max-w-[min(92vw,calc(100dvh-290px),760px)] items-end">
+          <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} />
+        </div>
+
+        <div className="mt-1 flex h-6 w-full max-w-[760px] items-center justify-end gap-2 text-xs text-muted" aria-live="polite">
           {reviewing && viewNode && (
             <button onClick={() => setViewPly(null)} className="mr-auto rounded-full bg-surface px-3 py-1 font-medium text-ink shadow-[var(--shadow)]">
               Viewing {viewNode.ply === 0 ? "start" : moveLabel(viewNode)} · Back to game

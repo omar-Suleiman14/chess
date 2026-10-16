@@ -256,7 +256,8 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_owner", ["owner"])
-    .index("by_alias", ["alias"]),
+    .index("by_alias", ["alias"])
+    .index("by_visibility", ["visibility"]),
 
   fatmaStates: defineTable({
     owner: v.string(),

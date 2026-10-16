@@ -1,31 +1,32 @@
 "use client";
 
 import { motion, type PanInfo } from "motion/react";
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChessCard, type CardData, type CardFace } from "./ChessCard";
 
-const FACES: CardFace[] = ["identity", "climb", "rivalry"];
+export type DeckCard = { id: string; face: CardFace; data: CardData; url: string; label: string };
+
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.9 };
 
 /**
- * A fanned deck of Chess cards like Chaos: swipe or drag the front card, or
- * use the arrow keys. Tap the front card to flip it to its QR code.
+ * A fanned deck of cards like Chaos: swipe or drag the front card, or use the
+ * arrow keys. Tap the front card to flip it to its QR code.
  */
-export function CardDeck({ data, url, reducedMotion }: { data: CardData; url: string; reducedMotion?: boolean }) {
-  const faces = data.climb || data.rivalry ? FACES : (["identity"] as CardFace[]);
-  const [index, setIndex] = useState(0);
+export function CardDeck({ cards, reducedMotion, startIndex = 0 }: { cards: DeckCard[]; reducedMotion?: boolean; startIndex?: number }) {
+  const n = cards.length;
+  const [index, setIndex] = useState(Math.min(startIndex, Math.max(0, n - 1)));
   const [flipped, setFlipped] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
   const go = useCallback(
     (delta: number) => {
+      if (n < 2) return;
       setFlipped(false);
-      setIndex((i) => (i + delta + faces.length) % faces.length);
+      setIndex((i) => (i + delta + n) % n);
     },
-    [faces.length],
+    [n],
   );
 
   useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === "ArrowLeft") go(-1);
       if (e.key === "ArrowRight") go(1);
@@ -39,60 +40,55 @@ export function CardDeck({ data, url, reducedMotion }: { data: CardData; url: st
     else if (info.offset.x > 70 || info.velocity.x > 500) go(-1);
   };
 
+  if (n === 0) return null;
+  const current = cards[index];
+
   return (
     <div className="grid gap-4">
-      <div
-        ref={root}
-        className="relative mx-auto aspect-[1.586] w-full max-w-[520px] [perspective:1200px]"
-        role="region"
-        aria-roledescription="carousel"
-        aria-label="Chess cards"
-        onKeyDown={(e: KeyboardEvent) => e.stopPropagation()}
-      >
-        {faces.map((face, i) => {
-          const offset = ((i - index + faces.length) % faces.length);
-          // 0 = front, 1 = peeking right, last = peeking left.
-          const pos = offset === 0 ? 0 : offset === 1 ? 1 : -1;
+      <div className="relative mx-auto aspect-[1.586] w-full max-w-[520px] [perspective:1200px]" role="region" aria-roledescription="carousel" aria-label="Chess cards">
+        {cards.map((card, i) => {
+          const offset = (i - index + n) % n;
+          // 0 = front, 1 = peeking right, n-1 = peeking left, others tucked away.
+          const pos = offset === 0 ? 0 : offset === 1 ? 1 : offset === n - 1 ? -1 : 2;
           const front = pos === 0;
+          const hidden = pos === 2;
           return (
             <motion.div
-              key={face}
+              key={card.id}
               className="absolute inset-0"
-              style={{ zIndex: front ? 3 : 1 }}
+              style={{ zIndex: front ? 3 : hidden ? 0 : 1, pointerEvents: front ? "auto" : "none" }}
               initial={false}
               animate={
                 reducedMotion
-                  ? { x: `${pos * 8}%`, scale: front ? 1 : 0.9, opacity: front ? 1 : 0.6 }
-                  : { x: `${pos * 26}%`, rotate: pos * 7, scale: front ? 1 : 0.86, y: front ? 0 : 14, opacity: front ? 1 : 0.85 }
+                  ? { x: `${(hidden ? 0 : pos) * 8}%`, scale: front ? 1 : 0.9, opacity: front ? 1 : hidden ? 0 : 0.6 }
+                  : { x: `${(hidden ? 0 : pos) * 26}%`, rotate: hidden ? 0 : pos * 7, scale: front ? 1 : 0.86, y: front ? 0 : 14, opacity: front ? 1 : hidden ? 0 : 0.85 }
               }
               transition={SPRING}
-              drag={front ? "x" : false}
+              drag={front && n > 1 ? "x" : false}
               dragSnapToOrigin
               dragElastic={0.35}
               onDragEnd={front ? onDragEnd : undefined}
               aria-hidden={!front}
             >
-              <ChessCard face={face} data={data} url={url} flipped={front && flipped} onFlip={() => setFlipped((f) => !f)} interactive={front} />
+              <ChessCard face={card.face} data={card.data} url={card.url} flipped={front && flipped} onFlip={() => setFlipped((f) => !f)} interactive={front} />
             </motion.div>
           );
         })}
       </div>
-      {faces.length > 1 && (
+      {n > 1 && (
         <div className="flex items-center justify-center gap-3">
           <button onClick={() => go(-1)} aria-label="Previous card" className="grid h-10 w-10 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">
             <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
-          <div className="flex gap-1.5" aria-hidden="true">
-            {faces.map((f, i) => (
-              <span key={f} className={`h-1.5 rounded-full transition-all ${i === index ? "w-5 bg-ink" : "w-1.5 bg-line"}`} />
-            ))}
-          </div>
+          <span className="min-w-28 text-center text-sm tabular-nums text-muted" aria-live="polite">
+            {current.label} · {index + 1} / {n}
+          </span>
           <button onClick={() => go(1)} aria-label="Next card" className="grid h-10 w-10 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">
             <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         </div>
       )}
-      <p className="text-center text-sm text-muted">Swipe or drag the card, or use the arrow keys. Tap to flip.</p>
+      <p className="text-center text-sm text-muted">{n > 1 ? "Swipe or drag the card, or use the arrow keys. Tap to flip." : "Tap the card to flip it."}</p>
     </div>
   );
 }
