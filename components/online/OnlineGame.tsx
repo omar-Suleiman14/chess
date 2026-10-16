@@ -22,6 +22,7 @@ import { haptic, installAudioUnlock, playSound, resultSound, unlockAudio } from 
 import { avatarFromName, timeControlLabel, useServerOffset } from "@/lib/client/online";
 import { canSubmitMove, livePendingMove, type PendingMove } from "@/lib/client/onlineMoves";
 import { PLAY_STAGE } from "@/lib/client/viewTransition";
+import { usePremove } from "@/lib/client/usePremove";
 import { errorText } from "./OnlineShared";
 import type { RoomView } from "./OnlineRoom";
 
@@ -240,6 +241,10 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const avatarOf = (c: Color) => (c === "w" ? room.whiteAvatar : room.blackAvatar) ?? avatarFromName(nameOf(c));
   const opponentName = you ? nameOf(other(you)) : "White";
   const myTurn = !!you && active && toMove === you && !livePending;
+  const premove = usePremove({
+    context: String(room.roomId), fen: room.fen, ply: room.ply, player: you,
+    active: playing && active && !reviewing, ready: myTurn && !reviewing,
+  }, onMove);
   const finished = room.status === "finished";
   const theyOfferDraw = !!you && active && room.drawOfferBy === other(you);
   const iOfferedDraw = !!you && active && room.drawOfferBy === you;
@@ -346,6 +351,9 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
               orientation={orientation}
               movable={myTurn && !reviewing ? you : null}
               onMove={onMove}
+              premovable={playing && active && !myTurn && !livePending && !reviewing ? you : null}
+              premove={premove.uci}
+              onPremove={premove.queue}
               lastMove={lastMove}
               checkSquare={checkSq}
               showLegalDots={settings.legalDots}
@@ -359,6 +367,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         </section>
 
         <div className="flex min-h-6 w-full flex-wrap items-center justify-end gap-2 text-xs text-muted [grid-area:status] lg:justify-start" aria-live="polite">
+          {premove.uci && <button onClick={premove.cancel} className="underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
           {theyOfferDraw ? (
             <span className="flex items-center gap-2 rounded-full bg-surface px-3 py-1 text-ink shadow-[var(--shadow)]">
               {opponentName} offers a draw

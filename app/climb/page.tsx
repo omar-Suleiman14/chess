@@ -51,8 +51,8 @@ export default function ClimbPage() {
                     <span className="mr-3 text-sm tabular-nums text-muted">{String(i + 1).padStart(2, "0")}</span>
                     <span className="font-medium">{o.name}</span>
                   </span>
-                  <span className="text-sm text-muted">
-                    {beaten ? "✓ " : locked ? "🔒 " : ""}
+                  <span className="flex shrink-0 items-center gap-1.5 text-sm text-muted">
+                    {beaten ? <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg> : locked ? <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.7" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg> : null}
                     {ratingLabel(o)}
                   </span>
                 </button>

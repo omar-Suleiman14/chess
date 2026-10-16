@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { FILES, legalMoves, pieceName, piecesOf, type BoardPiece, type Color, type PromotionPiece, type Square } from "@/lib/chess/rules";
+import { premoveMoves } from "@/lib/chess/premove";
 import { useSettings } from "@/lib/client/settings";
 import { haptic, playSound } from "@/lib/client/sound";
 import { Piece } from "./Pieces";
@@ -18,6 +19,10 @@ type Props = {
   /** Side the user may move (null = view only). */
   movable: Color | null;
   onMove: (uci: string) => void | boolean | Promise<boolean | void>;
+  /** Side allowed to queue a move while the opponent is playing. */
+  premovable?: Color | null;
+  premove?: string | null;
+  onPremove?: (uci: string | null) => void;
   lastMove?: LastMove;
   checkSquare?: Square | null;
   showLegalDots?: boolean;
@@ -55,6 +60,9 @@ export function Board({
   orientation,
   movable,
   onMove,
+  premovable = null,
+  premove = null,
+  onPremove,
   lastMove,
   checkSquare,
   showLegalDots = true,
@@ -76,12 +84,14 @@ export function Board({
   const [selected, setSelected] = useState<Square | null>(null);
   const [cursor, setCursor] = useState<Square>(orientation === "w" ? "e2" : "e7");
   const [drag, setDrag] = useState<{ from: Square; x: number; y: number; active: boolean; size: number } | null>(null);
-  const [promotion, setPromotion] = useState<{ from: Square; to: Square; color: Color } | null>(null);
+  const [promotion, setPromotion] = useState<{ from: Square; to: Square; color: Color; queued: boolean } | null>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
 
   const pieces = useMemo(() => piecesOf(fen), [fen]);
   const bySquare = useMemo(() => new Map<Square, BoardPiece>(pieces.map((p) => [p.square, p])), [pieces]);
-  const moves = useMemo(() => (movable ? legalMoves(fen).filter((m) => m.color === movable) : []), [fen, movable]);
+  const selectableColor = movable ?? premovable;
+  const queuing = !movable && !!premovable && !!onPremove;
+  const moves = useMemo(() => queuing && premovable ? premoveMoves(fen, premovable) : movable ? legalMoves(fen).filter((m) => m.color === movable) : [], [fen, movable, premovable, queuing]);
   const targets = useMemo(() => {
     const map = new Map<Square, Map<Square, { capture: boolean; promotion: boolean }>>();
     for (const m of moves) {
@@ -120,31 +130,32 @@ export function Board({
       if (!info) return false;
       setSelected(null);
       if (info.promotion) {
-        setPromotion({ from, to, color: bySquare.get(from)!.color });
+        setPromotion({ from, to, color: bySquare.get(from)!.color, queued: queuing });
         return true;
       }
-      void onMove(`${from}${to}`);
+      if (queuing) onPremove?.(`${from}${to}`);
+      else void onMove(`${from}${to}`);
       return true;
     },
-    [targets, bySquare, onMove],
+    [targets, bySquare, onMove, queuing, onPremove],
   );
 
   const activate = useCallback(
     (square: Square) => {
       const piece = bySquare.get(square);
       if (selected && selected !== square && tryMove(selected, square)) return;
-      if (piece && movable && piece.color === movable && targets.has(square)) {
+      if (piece && selectableColor && piece.color === selectableColor && targets.has(square)) {
         setSelected(selected === square ? null : square);
         onSelect?.();
       } else {
-        const ownPiece = !!piece && !!movable && piece.color === movable;
+        const ownPiece = !!piece && !!selectableColor && piece.color === selectableColor;
         // Tried to move the selected piece somewhere it can't go, or picked a piece with no legal moves.
         if (selected && selected !== square && !ownPiece) flagIllegal(selected);
         else if (ownPiece) flagIllegal(square);
         setSelected(null);
       }
     },
-    [bySquare, selected, tryMove, movable, targets, onSelect, flagIllegal],
+    [bySquare, selected, tryMove, selectableColor, targets, onSelect, flagIllegal],
   );
 
   const squareFromPoint = (clientX: number, clientY: number): Square | null => {
@@ -161,7 +172,7 @@ export function Board({
     const square = squareFromPoint(e.clientX, e.clientY);
     if (!square) return;
     const piece = bySquare.get(square);
-    if (piece && movable && piece.color === movable && targets.has(square)) {
+    if (piece && selectableColor && piece.color === selectableColor && targets.has(square)) {
       (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
       dragStart.current = { x: e.clientX, y: e.clientY };
       const size = (boardRef.current?.getBoundingClientRect().width ?? 0) / 8;
@@ -214,6 +225,7 @@ export function Board({
       activate(cursor);
     } else if (e.key === "Escape") {
       setSelected(null);
+      onPremove?.(null);
     }
   };
 
@@ -227,6 +239,7 @@ export function Board({
       const piece = bySquare.get(square);
       const target = selectedTargets?.get(square);
       const isLast = lastMove && (lastMove.from === square || lastMove.to === square);
+      const isPremove = premove && (premove.slice(0, 2) === square || premove.slice(2, 4) === square);
       const isCheck = checkSquare === square;
       const shaking = !!illegal?.squares.includes(square);
       const isSelected = selected === square;
@@ -236,7 +249,8 @@ export function Board({
         square,
         piece ? `${piece.color === "w" ? "white" : "black"} ${pieceName(piece.type)}` : "empty",
         isSelected ? "selected" : "",
-        target ? (target.capture ? "capture available" : "legal move") : "",
+        target ? (queuing ? "premove target" : target.capture ? "capture available" : "legal move") : "",
+        isPremove ? "queued premove" : "",
         isCheck ? "king in check" : "",
         isLast ? "last move" : "",
       ]
@@ -259,9 +273,10 @@ export function Board({
           aria-label={description}
           aria-selected={isSelected}
           onFocus={() => setCursor(square)}
-          className={`relative ${light ? "sq-light" : "sq-dark"} ${piece && movable && piece.color === movable ? "cursor-grab" : target ? "cursor-pointer" : ""}`}
+          className={`relative ${light ? "sq-light" : "sq-dark"} ${piece && selectableColor && piece.color === selectableColor ? "cursor-grab" : target ? "cursor-pointer" : ""}`}
         >
           {isLast && <div className="absolute inset-0" style={{ background: "var(--hl-last)" }} />}
+          {isPremove && <div className="pointer-events-none absolute inset-0 bg-[#4277b7]/35 ring-2 ring-inset ring-[#4277b7]/80" />}
           {isSelected && <div className="absolute inset-0" style={{ background: "var(--hl-select)" }} />}
           {isCheck && <div className="absolute inset-0" style={{ background: "radial-gradient(circle, var(--hl-check) 0%, transparent 72%)" }} />}
           {shaking && <div key={`flash-${illegal!.key}`} className="illegal-flash absolute inset-0" style={{ background: "rgba(220, 60, 50, 0.45)" }} />}
@@ -338,9 +353,11 @@ export function Board({
         onPointerUp={onPointerUp}
         onPointerCancel={() => setDrag(null)}
         onKeyDown={onKeyDown}
+        onContextMenu={(event) => { event.preventDefault(); setSelected(null); onPremove?.(null); }}
       >
         {cells}
       </div>
+      <span className="sr-only" aria-live="polite">{premove ? `Premove queued: ${premove.slice(0, 2)} to ${premove.slice(2, 4)}. Press Escape to cancel.` : ""}</span>
       {ghost && drag && size > 0 && (
         <div
           className="pointer-events-none fixed z-50"
@@ -355,7 +372,8 @@ export function Board({
           onPick={(piece: PromotionPiece) => {
             const { from, to } = promotion;
             setPromotion(null);
-            void onMove(`${from}${to}${piece}`);
+            if (promotion.queued) onPremove?.(`${from}${to}${piece}`);
+            else void onMove(`${from}${to}${piece}`);
           }}
           onCancel={() => setPromotion(null)}
         />

@@ -21,6 +21,7 @@ import { useSync } from "@/lib/client/sync";
 import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from "@/lib/client/useChessGame";
 import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
 import { useFatma } from "@/lib/client/useFatma";
+import { usePremove } from "@/lib/client/usePremove";
 import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
 import { GameResult } from "./GameResult";
@@ -252,6 +253,12 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     [chess],
   );
 
+  const premove = usePremove({
+    context: `${game?.meta.gameKey}:${tree?.activeBranchKey}`,
+    fen: liveFen, ply: head?.ply ?? 0, player: human,
+    active: !!active && !reviewing, ready: !!active && turn === human && !reviewing,
+  }, handleMove);
+
   const onUndo = useCallback(async () => {
     unlockAudio();
     if (game?.meta.status === "finished" && (game.meta.mode === "climb" || game.meta.mode === "timed")) {
@@ -388,6 +395,9 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               orientation={orientation}
               movable={active && turn === human && !reviewing ? human : null}
               onMove={handleMove}
+              premovable={active && turn !== human && !reviewing ? human : null}
+              premove={premove.uci}
+              onPremove={premove.queue}
               lastMove={reviewing ? viewLastMove : lastMove}
               checkSquare={checkSq}
               showLegalDots={settings.legalDots}
@@ -416,6 +426,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
         <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted [grid-area:status] lg:justify-start" aria-live="polite">
+          {premove.uci && <button onClick={premove.cancel} className="shrink-0 underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
           {engineWaking && <span>Sherine is waking up…</span>}
           {chess.thinking && !engineWaking && <span>Sherine is thinking…</span>}
           {chess.engineError && (
