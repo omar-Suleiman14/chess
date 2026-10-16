@@ -1,6 +1,7 @@
 "use client";
 
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -98,6 +99,15 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
   const node = cursor === 0 ? tree.nodes.root : path[cursor - 1];
   const fen = node?.fen ?? tree.originFen;
   const lastMove: LastMove = node && node.ply > 0 ? { from: node.uci.slice(0, 2) as Square, to: node.uci.slice(2, 4) as Square, key: `${node.key}-${cursor}` } : null;
+  // Animate one-step moves (forward, or in reverse when stepping back); jumps snap.
+  const [shown, setShown] = useState<{ cursor: number; motion: LastMove }>({ cursor, motion: null });
+  if (shown.cursor !== cursor) {
+    let motionMove: LastMove = null;
+    if (cursor === shown.cursor + 1 && path[cursor - 1]) motionMove = moveMotion(path[cursor - 1], false, cursor);
+    else if (cursor === shown.cursor - 1 && path[shown.cursor - 1]) motionMove = moveMotion(path[shown.cursor - 1], true, cursor);
+    setShown({ cursor, motion: motionMove });
+  }
+
   const status = positionStatus(fen);
 
   useEffect(() => {
@@ -263,6 +273,8 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
             movable={null}
             onMove={() => false}
             lastMove={lastMove}
+            motionMove={shown.motion}
+            fast
             checkSquare={status.check ? kingSquare(fen, sideToMove(fen)) ?? null : null}
             coordinates={settings.coordinates}
             reducedMotion={reducedMotion}
@@ -334,10 +346,13 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
                     setCursor(i + 1);
                   }}
                   aria-current={cursor === i + 1 ? "step" : undefined}
-                  className={`m-0.5 rounded-lg px-2 py-1 ${cursor === i + 1 ? "bg-accent text-accent-text" : ""} ${mistakePlies.has(n.ply) ? "underline decoration-danger decoration-2" : ""}`}
+                  className={`relative m-0.5 rounded-lg px-2 py-1 transition-colors duration-150 ${cursor === i + 1 ? "text-accent-text" : ""} ${mistakePlies.has(n.ply) ? "underline decoration-danger decoration-2" : ""}`}
                 >
-                  {n.ply % 2 === 1 ? `${Math.ceil(n.ply / 2)}. ` : ""}
-                  {n.san}
+                  {cursor === i + 1 && <motion.span layoutId="tm-active-move" className="absolute inset-0 rounded-lg bg-accent" transition={{ type: "spring", stiffness: 600, damping: 45 }} />}
+                  <span className="relative">
+                    {n.ply % 2 === 1 ? `${Math.ceil(n.ply / 2)}. ` : ""}
+                    {n.san}
+                  </span>
                 </button>
               </li>
             ))}
@@ -439,4 +454,21 @@ function ContinueDialog({ node, onClose, onStart }: { node: TreeNode; onClose: (
       </button>
     </Dialog>
   );
+}
+
+/** The board motion for one move, forward or reversed (castling rook included). */
+function moveMotion(node: TreeNode, reverse: boolean, cursor: number): LastMove {
+  const from = node.uci.slice(0, 2) as Square;
+  const to = node.uci.slice(2, 4) as Square;
+  let rookFrom: Square | undefined;
+  let rookTo: Square | undefined;
+  if (node.san.startsWith("O-O")) {
+    const rank = to[1];
+    const long = node.san.startsWith("O-O-O");
+    rookFrom = (long ? `a${rank}` : `h${rank}`) as Square;
+    rookTo = (long ? `d${rank}` : `f${rank}`) as Square;
+  }
+  return reverse
+    ? { from: to, to: from, rookFrom: rookTo, rookTo: rookFrom, key: `rev-${node.key}-${cursor}` }
+    : { from, to, rookFrom, rookTo, key: `fwd-${node.key}-${cursor}` };
 }

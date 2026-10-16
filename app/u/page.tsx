@@ -25,9 +25,9 @@ export default function PlayersPage() {
     [cards, origin],
   );
   return (
-    <main className="mx-auto min-h-dvh max-w-2xl overflow-x-hidden pb-12">
+    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col">
       <PageHeader title="Players" />
-      <div className="px-6 pt-6">
+      <div className="flex flex-1 flex-col justify-center px-6 pb-16">
         {cards === undefined ? <p className="text-muted" role="status">Loading…</p> : <CardDeck cards={deck} reducedMotion={reducedMotion} />}
         {cards && cards.length === 0 && <p className="mt-6 text-center text-sm text-muted">No public players yet. Turn on “Public card” in Profile to join.</p>}
       </div>

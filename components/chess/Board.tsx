@@ -23,6 +23,10 @@ type Props = {
   /** Extra squares to outline (lesson hints). */
   hintSquares?: Square[];
   label?: string;
+  /** Animate this move instead of lastMove (e.g. a move played in reverse). null = no animation. */
+  motionMove?: LastMove;
+  /** Short, non-bouncy glide for replay/scrubbing. */
+  fast?: boolean;
   onSelect?: () => void;
 };
 
@@ -54,7 +58,10 @@ export function Board({
   hintSquares = [],
   label = "Chess board",
   onSelect,
+  motionMove,
+  fast = false,
 }: Props) {
+  const animMove = motionMove === undefined ? lastMove : motionMove;
   const boardRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettings();
   const [selected, setSelected] = useState<Square | null>(null);
@@ -205,8 +212,8 @@ export function Board({
         .filter(Boolean)
         .join(", ");
       let anim: { x: string; y: string } | null = null;
-      if (!reducedMotion && lastMove && piece) {
-        const from = lastMove.to === square ? lastMove.from : lastMove.rookTo === square ? lastMove.rookFrom : undefined;
+      if (!reducedMotion && animMove && piece) {
+        const from = animMove.to === square ? animMove.from : animMove.rookTo === square ? animMove.rookFrom : undefined;
         if (from && SQUARE_RE.test(from)) {
           const a = coordsOf(from, orientation);
           anim = { x: `${(a.col - col) * 100}%`, y: `${(a.row - row) * 100}%` };
@@ -235,11 +242,11 @@ export function Board({
           )}
           {piece && !hidden && (
             <motion.div
-              key={anim ? `${lastMove?.key}-${square}` : `${square}-${piece.color}${piece.type}`}
+              key={anim ? `${animMove?.key}-${square}` : `${square}-${piece.color}${piece.type}`}
               className="absolute inset-0 z-10"
               initial={anim ? { x: anim.x, y: anim.y } : false}
               animate={{ x: 0, y: 0, scale: isSelected ? 1.04 : 1 }}
-              transition={{ type: "spring", stiffness: 520, damping: 40, mass: 0.9 }}
+              transition={fast ? { type: "tween", ease: [0.25, 0.1, 0.25, 1], duration: 0.14 } : { type: "spring", stiffness: 520, damping: 40, mass: 0.9 }}
             >
               <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="h-full w-full" />
             </motion.div>

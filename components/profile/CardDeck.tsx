@@ -49,9 +49,11 @@ export function CardDeck({ cards, reducedMotion, startIndex = 0 }: { cards: Deck
         {cards.map((card, i) => {
           const offset = (i - index + n) % n;
           // 0 = front, 1 = peeking right, n-1 = peeking left, others tucked away.
-          const pos = offset === 0 ? 0 : offset === 1 ? 1 : offset === n - 1 ? -1 : 2;
+          // With only two cards the back one sits centred behind the front.
+          const pos = offset === 0 ? 0 : n === 2 ? 3 : offset === 1 ? 1 : offset === n - 1 ? -1 : 2;
           const front = pos === 0;
           const hidden = pos === 2;
+          const behind = pos === 3;
           return (
             <motion.div
               key={card.id}
@@ -59,9 +61,11 @@ export function CardDeck({ cards, reducedMotion, startIndex = 0 }: { cards: Deck
               style={{ zIndex: front ? 3 : hidden ? 0 : 1, pointerEvents: front ? "auto" : "none" }}
               initial={false}
               animate={
-                reducedMotion
-                  ? { x: `${(hidden ? 0 : pos) * 8}%`, scale: front ? 1 : 0.9, opacity: front ? 1 : hidden ? 0 : 0.6 }
-                  : { x: `${(hidden ? 0 : pos) * 26}%`, rotate: hidden ? 0 : pos * 7, scale: front ? 1 : 0.86, y: front ? 0 : 14, opacity: front ? 1 : hidden ? 0 : 0.85 }
+                behind
+                  ? { x: "0%", rotate: reducedMotion ? 0 : 4, scale: 0.94, y: -14, opacity: 0.7 }
+                  : reducedMotion
+                    ? { x: `${(hidden ? 0 : pos) * 8}%`, scale: front ? 1 : 0.9, opacity: front ? 1 : hidden ? 0 : 0.6 }
+                    : { x: `${(hidden ? 0 : pos) * 18}%`, rotate: hidden ? 0 : pos * 6, scale: front ? 1 : 0.88, y: front ? 0 : 12, opacity: front ? 1 : hidden ? 0 : 0.85 }
               }
               transition={SPRING}
               drag={front && n > 1 ? "x" : false}

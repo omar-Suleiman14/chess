@@ -81,7 +81,6 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
   };
 
   const card = useQuery(api.profiles.myCard);
-  const [hueDraft, setHueDraft] = useState<number | null>(null);
   const cardUrl = typeof window !== "undefined" && profile ? `${window.location.origin}/u/${profile.alias}` : "";
 
   const scopes = grant?.grant?.scopes ?? [];
@@ -92,11 +91,11 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
       <PageHeader title="Profile & Fatma" />
       <div className="grid gap-6 px-4">
         {profile && (
-          <section aria-labelledby="card" className="grid gap-4">
+          <section aria-labelledby="card" className="grid gap-4 pt-4">
             <h2 id="card" className="sr-only">Chess card</h2>
             {card && (
               <CardDeck
-                cards={[{ id: "me", face: "identity", data: hueDraft === null ? card : { ...card, hue: hueDraft }, url: cardUrl, label: `@${card.alias}` }]}
+                cards={[{ id: "me", face: "identity", data: card, url: cardUrl, label: `@${card.alias}` }]}
                 reducedMotion={reducedMotion}
               />
             )}
@@ -124,14 +123,11 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
                   ))}
                 </div>
               </div>
-              <div className="grid gap-1 border-b border-line p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted">Avatar colour</span>
-                  <button onClick={() => void save({ avatarSeed: Math.random().toString(36).slice(2, 10) })} className="text-sm font-medium" style={{ color: "var(--focus)" }}>
-                    New avatar
-                  </button>
-                </div>
-                <input type="range" min={0} max={359} value={hueDraft ?? profile.hue} onChange={(e) => setHueDraft(Number(e.target.value))} onPointerUp={() => hueDraft !== null && void save({ hue: hueDraft }).then(() => setHueDraft(null))} onKeyUp={() => hueDraft !== null && void save({ hue: hueDraft }).then(() => setHueDraft(null))} className="ios-range hue w-full" aria-label="Avatar hue" />
+              <div className="flex items-center justify-between border-b border-line p-4">
+                <span className="text-sm text-muted">Avatar</span>
+                <button onClick={() => void save({ avatarSeed: Math.random().toString(36).slice(2, 10) })} className="text-sm font-medium" style={{ color: "var(--focus)" }}>
+                  New avatar
+                </button>
               </div>
               <SwitchRow label="Public card" hint={`Anyone with the link can see /u/${profile.alias}`} checked={profile.visibility === "public"} onChange={(v) => void save({ visibility: v ? "public" : "private" })} />
               <SwitchRow label="Show stats on card" checked={profile.showRatings} onChange={(v) => void save({ showRatings: v })} />

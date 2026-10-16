@@ -244,8 +244,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[min(100vw,820px)] flex-col px-3 sm:px-6">
+    <main className="flex min-h-dvh w-full flex-col items-center justify-center px-3 py-2 sm:px-6">
       <LoadingScreen />
+      {/* One column, exactly as wide as the board: everything groups around it. */}
+      <div className="flex w-full max-w-[min(100%,calc(100dvh-250px),790px)] flex-col">
       <header className="safe-top flex items-center justify-between gap-2 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
@@ -268,8 +270,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
       </header>
 
-      <section className="flex flex-1 flex-col items-center justify-center">
-        <div className="flex w-full max-w-[min(92vw,calc(100dvh-290px),760px)] items-stretch gap-2">
+      <section className="flex flex-col items-center">
+        <div className="flex w-full items-stretch gap-2">
           {settings.evalBar && (evalAllowed ? (
             <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} />
           ) : (
@@ -278,7 +280,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
                 setEvalOptIn(true);
                 chess.markAssisted("eval_bar");
               }}
-              className="w-[22px] shrink-0 rounded-[7px] bg-surface-2"
+              className="w-[28px] shrink-0 rounded-[5px] bg-surface-2"
               aria-label="Show evaluation bar. This makes the current rated game unrated."
               title="Show evaluation (makes this game unrated)"
             />
@@ -300,14 +302,12 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           </div>
         </div>
 
-        {/* Fatma lives in her own row so she never covers the board or result card. */}
-        <div className="mt-2 flex min-h-[56px] w-full max-w-[min(92vw,calc(100dvh-290px),760px)] items-end">
+        {/* Fatma and game status share one row under the board. */}
+        <div className="mt-2 flex min-h-[56px] w-full items-end justify-between gap-3">
           <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} />
-        </div>
-
-        <div className="mt-1 flex h-6 w-full max-w-[760px] items-center justify-end gap-2 text-xs text-muted" aria-live="polite">
+        <div className="mb-1 flex flex-wrap items-center justify-end gap-2 text-right text-xs text-muted" aria-live="polite">
           {reviewing && viewNode && (
-            <button onClick={() => setViewPly(null)} className="mr-auto rounded-full bg-surface px-3 py-1 font-medium text-ink shadow-[var(--shadow)]">
+            <button onClick={() => setViewPly(null)} className="rounded-full bg-surface px-3 py-1 font-medium text-ink shadow-[var(--shadow)]">
               Viewing {viewNode.ply === 0 ? "start" : moveLabel(viewNode)} · Back to game
             </button>
           )}
@@ -326,6 +326,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           )}
           {sync.status.error && <span className="text-danger">{sync.status.error}</span>}
         </div>
+        </div>
       </section>
 
       <p className="sr-only" aria-live="assertive">
@@ -333,7 +334,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </p>
 
       {resultText && (
-        <div className="bubble-in mx-auto mb-3 w-full max-w-[760px] rounded-2xl bg-surface p-4 shadow-[var(--shadow)]" role="status">
+        <div className="bubble-in mb-3 mt-1 w-full rounded-2xl bg-surface p-4 shadow-[var(--shadow)]" role="status">
           <p className="text-lg font-semibold">{resultText}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button onClick={() => void chess.newGame({ ...defaults, opponentId: game?.meta.opponentId ?? defaults.opponentId })} className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-text">
@@ -348,7 +349,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
       )}
 
-      <footer className="safe-bottom mx-auto flex w-full max-w-[760px] items-center gap-2 pt-1">
+      <footer className="safe-bottom flex w-full items-center gap-2 pt-2">
         {tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}
         <div className="flex overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
           <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-11 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
@@ -392,6 +393,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           </button>
         )}
       </footer>
+      </div>
 
       {confirmResign && (
         <Dialog title="Resign this game?" onClose={() => setConfirmResign(false)}>

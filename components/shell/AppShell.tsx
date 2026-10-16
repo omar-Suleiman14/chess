@@ -96,6 +96,26 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [reducedMotion, sheetY, height]);
 
+  // Going back to the page the menu was opened from re-opens the menu.
+  // (Opened after the router has settled, so the close-on-navigate below can't undo it.)
+  const openRef = useRef(openMenu);
+  useEffect(() => {
+    openRef.current = openMenu;
+  });
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onPop = () => {
+      if (readMenuReturn() !== window.location.pathname) return;
+      writeMenuReturn(null);
+      timer = setTimeout(() => openRef.current(), 150);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
   // Close on navigation.
   useEffect(() => {
     if (open) closeMenu();
@@ -183,6 +203,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <Link
                       href={item.href}
                       prefetch={false}
+                      onClick={() => item.href !== pathname && writeMenuReturn(pathname)}
                       onPointerEnter={() => router.prefetch(item.href)}
                       onFocus={() => router.prefetch(item.href)}
                       onTouchStart={() => router.prefetch(item.href)}
@@ -253,16 +274,48 @@ export function PageHeader({ title, back = true }: { title: string; back?: boole
   return (
     <header className="safe-top sticky top-0 z-30 flex items-center justify-between gap-3 bg-bg/95 px-4 pb-2">
       <div className="flex items-center gap-2">
-        {back && (
-          <Link href="/" prefetch={false} aria-label="Back to the board" className="grid h-11 w-11 place-items-center rounded-full">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-              <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-        )}
+        {back && <BackButton />}
         <h1 className="text-xl font-semibold">{title}</h1>
       </div>
       <MenuButton />
     </header>
+  );
+}
+
+const MENU_RETURN_KEY = "cbc.menuReturn";
+
+function readMenuReturn(): string | null {
+  try {
+    return sessionStorage.getItem(MENU_RETURN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeMenuReturn(path: string | null): void {
+  try {
+    if (path) sessionStorage.setItem(MENU_RETURN_KEY, path);
+    else sessionStorage.removeItem(MENU_RETURN_KEY);
+  } catch {
+    // Storage unavailable: back simply goes to the board.
+  }
+}
+
+/** Back: returns to where the menu was opened (with the menu open), else to the board. */
+function BackButton() {
+  const router = useRouter();
+  return (
+    <button
+      onClick={() => {
+        if (readMenuReturn() !== null && window.history.length > 1) router.back();
+        else router.push("/");
+      }}
+      aria-label="Back"
+      className="grid h-11 w-11 place-items-center rounded-full"
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+        <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
   );
 }
