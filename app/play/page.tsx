@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Segmented } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
 import { errorText, NameField, useDefaultName } from "@/components/online/OnlineShared";
-import { ONLINE_TIME_CONTROLS, playerToken, saveName } from "@/lib/client/online";
+import { ONLINE_TIME_CONTROLS, playerToken, saveName, useOnlineAvatar } from "@/lib/client/online";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -20,6 +20,7 @@ export default function PlayPage() {
   const [error, setError] = useState<string | null>(null);
   const create = useMutation(api.online.create);
   const join = useMutation(api.online.join);
+  const avatar = useOnlineAvatar();
 
   const onCreate = async () => {
     setBusy(true);
@@ -27,7 +28,7 @@ export default function PlayPage() {
     saveName(name);
     const control = ONLINE_TIME_CONTROLS.find((t) => t.id === tc)!;
     try {
-      const { code } = await create({ token: playerToken(), name, color, initialMs: control.initialMs, incrementMs: control.incrementMs });
+      const { code } = await create({ token: playerToken(), name, avatar, color, initialMs: control.initialMs, incrementMs: control.incrementMs });
       router.push(`/play/${code}`);
     } catch (e) {
       setError(errorText(e));
@@ -40,7 +41,7 @@ export default function PlayPage() {
     setError(null);
     saveName(name);
     try {
-      await join({ code: pin, token: playerToken(), name });
+      await join({ code: pin, token: playerToken(), name, avatar });
       router.push(`/play/${pin}`);
     } catch (e) {
       setError(errorText(e));

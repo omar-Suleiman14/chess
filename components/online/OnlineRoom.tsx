@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { PageHeader } from "@/components/shell/AppShell";
 import { CopyField } from "@/components/ui/CopyField";
-import { inviteUrl, playerToken, saveName, timeControlLabel, usePlayerToken } from "@/lib/client/online";
+import { inviteUrl, playerToken, saveName, timeControlLabel, useOnlineAvatar, usePlayerToken } from "@/lib/client/online";
 import { errorText, NameField, useDefaultName } from "./OnlineShared";
 import { OnlineGame } from "./OnlineGame";
 
@@ -149,6 +149,7 @@ function Waiting({ room }: { room: RoomView }) {
 
 function JoinCard({ room }: { room: RoomView }) {
   const join = useMutation(api.online.join);
+  const avatar = useOnlineAvatar();
   const [name, setName] = useDefaultName();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,7 +161,7 @@ function JoinCard({ room }: { room: RoomView }) {
     setError(null);
     saveName(name);
     try {
-      await join({ code: room.code, token: playerToken(), name });
+      await join({ code: room.code, token: playerToken(), name, avatar });
       // The room query updates to "active" and the game appears.
     } catch (e) {
       setError(errorText(e));

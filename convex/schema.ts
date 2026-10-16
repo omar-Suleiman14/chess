@@ -5,6 +5,8 @@ import { v } from "convex/values";
 // derived server-side, never accepted from clients.
 
 export const colorValidator = v.union(v.literal("w"), v.literal("b"));
+/** A player's avatar in an online room: the same seed/hue pair as a chess profile. */
+export const onlineAvatarValidator = v.object({ seed: v.string(), hue: v.number() });
 export const modeValidator = v.union(
   v.literal("full_power"),
   v.literal("climb"),
@@ -310,6 +312,9 @@ export default defineSchema({
     guestToken: v.optional(v.string()),
     hostName: v.string(),
     guestName: v.optional(v.string()),
+    /** Blobatar shown next to each player; absent on rooms made before avatars. */
+    hostAvatar: v.optional(onlineAvatarValidator),
+    guestAvatar: v.optional(onlineAvatarValidator),
     hostColor: colorValidator,
     /** Absent = untimed. */
     initialMs: v.optional(v.number()),

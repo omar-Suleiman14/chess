@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
 
@@ -9,6 +9,9 @@ import { api } from "@/convex/_generated/api";
 // device except in calls to our own backend.
 const TOKEN_KEY = "cbc.online.token";
 const NAME_KEY = "cbc.online.name";
+const AVATAR_KEY = "cbc.online.avatar";
+
+export type OnlineAvatar = { seed: string; hue: number };
 
 let memoryToken: string | null = null;
 
@@ -46,6 +49,44 @@ export function saveName(name: string): void {
   } catch {
     // ignore
   }
+}
+
+/** A guest's avatar: random once, then remembered on this device. */
+function guestAvatar(): OnlineAvatar {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AVATAR_KEY) ?? "null") as OnlineAvatar | null;
+    if (stored && /^[A-Za-z0-9_-]{1,32}$/.test(stored.seed) && Number.isInteger(stored.hue) && stored.hue >= 0 && stored.hue < 360) return stored;
+  } catch {
+    // Fall through to a fresh one.
+  }
+  const fresh = { seed: randomToken().slice(0, 16), hue: Math.floor(Math.random() * 360) };
+  try {
+    localStorage.setItem(AVATAR_KEY, JSON.stringify(fresh));
+  } catch {
+    // Private mode: it lasts for this visit.
+  }
+  return fresh;
+}
+
+/** The avatar this player shows in online games: their card's when signed in, else a guest one. */
+export function useOnlineAvatar(): OnlineAvatar | undefined {
+  const { isAuthenticated } = useConvexAuth();
+  const profile = useQuery(api.profiles.mine, isAuthenticated ? {} : "skip");
+  const [guest, setGuest] = useState<OnlineAvatar | undefined>(undefined);
+  useEffect(() => {
+    // Read after mount so server and client renders match.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGuest(guestAvatar());
+  }, []);
+  if (profile?.avatarSeed && profile.hue !== undefined) return { seed: profile.avatarSeed, hue: profile.hue };
+  return guest;
+}
+
+/** Stable stand-in for rooms made before avatars existed. */
+export function avatarFromName(name: string): OnlineAvatar {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return { seed: `n${h.toString(36)}`, hue: h % 360 };
 }
 
 /** Token, read after mount so server and client renders match. */

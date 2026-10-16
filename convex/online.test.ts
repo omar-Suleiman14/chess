@@ -51,6 +51,28 @@ describe("online rooms", () => {
     expect(room?.moves.map((m) => m.san)).toEqual(["e4", "e5"]);
   });
 
+  it("keeps going well past the first move pair, timed", async () => {
+    const t = setup();
+    const { roomId, code } = await startGame(t, { initialMs: 600_000 });
+    const line = ["d2d4", "d7d5", "c2c4", "e7e6", "b1c3", "g8f6", "c1g5", "f8e7"];
+    for (const [ply, uci] of line.entries()) {
+      await t.mutation(api.online.move, { roomId, token: ply % 2 === 0 ? HOST : GUEST, uci, ply });
+    }
+    const room = await view(t, code, HOST);
+    expect(room?.ply).toBe(8);
+    expect(room?.moves.map((m) => m.san)).toEqual(["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7"]);
+  });
+
+  it("shows each player's avatar and drops malformed ones", async () => {
+    const t = setup();
+    const { code } = await t.mutation(api.online.create, { token: HOST, name: "Omar", color: "w", avatar: { seed: "omarSeed1", hue: 210 } });
+    await t.mutation(api.online.join, { code, token: GUEST, name: "Guest", avatar: { seed: "<script>", hue: 999 } });
+    const room = await view(t, code, GUEST);
+    expect(room?.whiteAvatar).toEqual({ seed: "omarSeed1", hue: 210 });
+    // Invalid input is not stored; the client falls back to a name-based avatar.
+    expect(room?.blackAvatar).toBeNull();
+  });
+
   it("refuses a third player", async () => {
     const t = setup();
     const { code } = await startGame(t);

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { motion } from "motion/react";
 import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
@@ -12,13 +11,15 @@ import { GameResult } from "@/components/chess/GameResult";
 import { MoveList, MoveStrip } from "@/components/chess/MoveStrip";
 import { ReviewArrows } from "@/components/chess/ReviewArrows";
 import { MenuButton } from "@/components/shell/AppShell";
-import { IOS_SPRING } from "@/components/ui/Switch";
+import { Avatar } from "@/components/profile/ChessCard";
+import { GlassButton } from "@/components/ui/Glass";
 import { capturesAlongLine } from "@/lib/chess/captures";
 import { formatClock } from "@/lib/chess/clock";
 import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
 import { haptic, installAudioUnlock, playSound, unlockAudio } from "@/lib/client/sound";
-import { timeControlLabel, useServerOffset } from "@/lib/client/online";
+import { avatarFromName, timeControlLabel, useServerOffset } from "@/lib/client/online";
+import { canSubmitMove, livePendingMove, type PendingMove } from "@/lib/client/onlineMoves";
 import { errorText } from "./OnlineShared";
 import type { RoomView } from "./OnlineRoom";
 
@@ -72,9 +73,9 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
 
   useEffect(() => installAudioUnlock(), []);
 
-  // Optimistic move: show it instantly, drop it once the server has caught up or refused.
-  const [pending, setPending] = useState<{ ply: number; fen: string; uci: string } | null>(null);
-  const livePending = pending && pending.ply === room.ply ? pending : null;
+  // Optimistic move: show it instantly until the server catches up or refuses.
+  const [pending, setPending] = useState<PendingMove | null>(null);
+  const livePending = livePendingMove(pending, room.ply);
   const liveFen = livePending?.fen ?? room.fen;
   const livePly = room.ply + (livePending ? 1 : 0);
 
@@ -146,7 +147,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const onMove = useCallback(
     async (uci: string) => {
       unlockAudio();
-      if (!you || !active || sideToMove(room.fen) !== you || pending) return false;
+      if (!canSubmitMove({ you, active, fen: room.fen, serverPly: room.ply, pending })) return false;
       const applied = applyUci(room.fen, uci);
       if (!applied) return false;
       setPending({ ply: room.ply, fen: applied.fen, uci });
@@ -229,6 +230,8 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const top: Color = orientation === "w" ? "b" : "w";
   const bottom: Color = orientation;
   const nameOf = (c: Color) => (c === "w" ? room.white : room.black) ?? "Waiting…";
+  // Rooms from before avatars fall back to one derived from the name, so both screens agree.
+  const avatarOf = (c: Color) => (c === "w" ? room.whiteAvatar : room.blackAvatar) ?? avatarFromName(nameOf(c));
   const opponentName = you ? nameOf(other(you)) : "White";
   const myTurn = !!you && active && toMove === you && !livePending;
   const finished = room.status === "finished";
@@ -247,8 +250,8 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const row = (c: Color) => (
     <div className="flex h-14 w-full min-w-0 items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2.5">
-        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-bold ${c === "w" ? "bg-[#f3f1ec] text-[#1d1c1a]" : "bg-[#1d1c1a] text-[#f3f1ec] ring-1 ring-line"}`} aria-hidden="true">
-          {nameOf(c).slice(0, 1).toUpperCase()}
+        <span className="shrink-0 overflow-hidden rounded-xl bg-surface">
+          <Avatar {...avatarOf(c)} size={40} />
         </span>
         <div className="min-w-0">
           <span className="block truncate text-sm font-semibold">
@@ -268,67 +271,59 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         className="mx-auto grid min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-300px),790px)] grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_1fr_auto_auto] [grid-template-areas:'header'_'moves'_'board'_'status'_'footer'] lg:h-dvh lg:min-h-0 lg:w-fit lg:max-w-none lg:grid-cols-[var(--board-col)_300px] lg:grid-rows-[auto_minmax(0,1fr)_auto_auto] lg:gap-x-8 lg:py-4 lg:[grid-template-areas:'board_header'_'board_moves'_'board_status'_'board_footer']"
         style={{ ["--board-col" as string]: "min(calc(100dvh - 130px), calc(100vw - 400px), 1060px)" }}
       >
-        <header className="safe-top flex items-center justify-between gap-2 pb-2 [grid-area:header] lg:pt-0">
-          <p className="min-w-0 truncate text-xs text-muted">
-            {timeControlLabel(room.initialMs, room.incrementMs)} · PIN {room.code}
-            {!playing && " · watching"}
-          </p>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {playing && (
-              <motion.button
-                whileTap={{ scale: 0.94 }}
-                transition={IOS_SPRING}
-                disabled={!active || room.ply < 2 || iOfferedDraw}
-                onClick={() => void offerDraw({ roomId: room.roomId, token })}
-                className="h-11 shrink-0 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)] disabled:opacity-40"
-                aria-label={iOfferedDraw ? "Draw offered" : "Offer a draw"}
-              >
-                ½
-              </motion.button>
-            )}
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              transition={IOS_SPRING}
-              onClick={() => setOrientationOverride((o) => ((o ?? you ?? "w") === "w" ? "b" : "w"))}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
-              aria-label="Flip board"
-              aria-keyshortcuts="f"
+        <header className="safe-top flex items-center justify-end gap-1.5 pb-2 [grid-area:header] lg:pt-0">
+          {playing && (
+            <GlassButton
+              disabled={!active || room.ply < 2 || iOfferedDraw}
+              onClick={() => void offerDraw({ roomId: room.roomId, token })}
+              className="h-11 shrink-0 rounded-full px-3.5 text-sm font-medium"
+              aria-label={iOfferedDraw ? "Draw offered" : "Offer a draw"}
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-                <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.94 }}
-              transition={IOS_SPRING}
-              onClick={() => {
-                unlockAudio();
-                update({ sound: !settings.sound });
-                if (!settings.sound) playSound("move", settings.volume);
-              }}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
-              aria-label={settings.sound ? "Mute sounds" : "Turn sounds on"}
-              aria-pressed={settings.sound}
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-                <path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinejoin="round" />
-                {settings.sound ? (
-                  <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-                ) : (
-                  <path d="M16 9.5l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-                )}
-              </svg>
-            </motion.button>
-            {playing && (
-              <button disabled={!active} onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)] disabled:opacity-40" aria-label={room.ply < 2 ? "Abort game" : "Resign"} title={room.ply < 2 ? "Abort" : "Resign"}>
-                <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-            )}
-            <MenuButton />
-          </div>
+              {iOfferedDraw ? "Offered" : "Draw"}
+            </GlassButton>
+          )}
+          <GlassButton
+            onClick={() => setOrientationOverride((o) => ((o ?? you ?? "w") === "w" ? "b" : "w"))}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full"
+            aria-label="Flip board"
+            aria-keyshortcuts="f"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </GlassButton>
+          <GlassButton
+            onClick={() => {
+              unlockAudio();
+              update({ sound: !settings.sound });
+              if (!settings.sound) playSound("move", settings.volume);
+            }}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full"
+            aria-label={settings.sound ? "Mute sounds" : "Turn sounds on"}
+            aria-pressed={settings.sound}
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinejoin="round" />
+              {settings.sound ? (
+                <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              ) : (
+                <path d="M16 9.5l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              )}
+            </svg>
+          </GlassButton>
+          {playing && (
+            <GlassButton disabled={!active} onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full" aria-label={room.ply < 2 ? "Abort game" : "Resign"} title={room.ply < 2 ? "Abort" : "Resign"}>
+              <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </GlassButton>
+          )}
+          <MenuButton />
         </header>
 
         <div className="min-h-0 [grid-area:moves] lg:flex lg:flex-col lg:pb-2">
+          <p className="px-1 pb-1.5 text-xs text-muted">
+            {timeControlLabel(room.initialMs, room.incrementMs)} · PIN <span className="tabular-nums">{room.code}</span>
+            {!playing && " · watching"}
+          </p>
           <div className="lg:hidden">
             <MoveStrip line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
           </div>
