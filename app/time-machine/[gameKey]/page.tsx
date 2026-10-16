@@ -332,11 +332,6 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
         </div>
 
         <aside className="grid content-start gap-3">
-          {node && scores[node.key] && (
-            <p className="rounded-2xl bg-surface p-3 text-sm shadow-[var(--shadow)]">
-              Eval {formatScore(scores[node.key].score)} <span className="text-muted">· depth {scores[node.key].depth ?? "?"} · Stockfish on this device</span>
-            </p>
-          )}
           <ol className="max-h-[40dvh] overflow-y-auto rounded-2xl bg-surface p-2 text-sm shadow-[var(--shadow)]" aria-label="Moves">
             {path.map((n, i) => (
               <li key={n.key} className="inline-block">
@@ -358,6 +353,16 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
             ))}
             {path.length === 0 && <li className="p-2 text-muted">No moves yet.</li>}
           </ol>
+          {/* Always occupies its line, so the layout never jumps while scrubbing. */}
+          <p className="min-h-11 rounded-2xl bg-surface px-3 py-3 text-sm tabular-nums shadow-[var(--shadow)]" aria-live="polite">
+            {node && scores[node.key] ? (
+              <>
+                Eval {formatScore(scores[node.key].score)} <span className="text-muted">· depth {scores[node.key].depth ?? "?"} · Stockfish on this device</span>
+              </>
+            ) : (
+              <span className="text-muted">No evaluation yet · tap Analyse</span>
+            )}
+          </p>
           {alternatives.length > 0 && (
             <div className="rounded-2xl bg-surface p-3 text-sm shadow-[var(--shadow)]">
               <p className="mb-1 text-muted">Other moves tried here</p>

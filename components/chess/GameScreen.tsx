@@ -244,10 +244,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
 
   return (
-    <main className="flex min-h-dvh w-full flex-col items-center justify-center px-3 py-2 sm:px-6">
+    <main className="flex min-h-dvh w-full flex-col items-center px-3 sm:px-6">
       <LoadingScreen />
       {/* One column, exactly as wide as the board: everything groups around it. */}
-      <div className="flex w-full max-w-[min(100%,calc(100dvh-250px),790px)] flex-col">
+      <div className="flex min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-210px),790px)] flex-col">
       <header className="safe-top flex items-center justify-between gap-2 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
@@ -270,7 +270,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
       </header>
 
-      <section className="flex flex-col items-center">
+      <section className="flex flex-1 flex-col items-center justify-center">
         <div className="flex w-full items-stretch gap-2">
           {settings.evalBar && (evalAllowed ? (
             <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} />
@@ -349,14 +349,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
       )}
 
-      <footer className="safe-bottom flex w-full items-center gap-2 pt-2">
+      <footer className="safe-bottom flex w-full items-center gap-1.5 pt-2">
         {tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}
         <div className="flex overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
-          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-11 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
+          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-9 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
           <span className="my-2.5 w-px bg-line" aria-hidden="true" />
-          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-11 w-11 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
+          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-11 w-9 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         </div>
@@ -366,13 +366,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           transition={IOS_SPRING}
           onClick={() => void onUndo()}
           disabled={!game || moveCount === 0}
-          className="flex h-11 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-text disabled:opacity-40"
+          className="flex h-11 items-center gap-1.5 rounded-full bg-accent px-3.5 text-sm font-semibold text-accent-text disabled:opacity-40"
           aria-keyshortcuts="u"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
         </motion.button>
-        <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 rounded-full bg-surface px-4 text-sm font-medium shadow-[var(--shadow)]" aria-keyshortcuts="n">
+        <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)]" aria-keyshortcuts="n">
           New
         </motion.button>
         <motion.button
@@ -388,8 +388,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           </svg>
         </motion.button>
         {active && moveCount > 0 && (
-          <button onClick={() => setConfirmResign(true)} className="h-11 rounded-full px-2 text-sm text-muted">
-            Resign
+          <button onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-muted shadow-[var(--shadow)]" aria-label="Resign" title="Resign">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         )}
       </footer>
