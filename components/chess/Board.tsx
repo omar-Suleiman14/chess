@@ -7,6 +7,8 @@ import { useSettings } from "@/lib/client/settings";
 import { Piece } from "./Pieces";
 import { PromotionSheet } from "./PromotionSheet";
 
+export type BoardResult = { result?: string; reason?: string };
+
 export type LastMove = { from: Square; to: Square; rookFrom?: Square; rookTo?: Square; key: string } | null;
 
 type Props = {
@@ -28,6 +30,8 @@ type Props = {
   /** Short, non-bouncy glide for replay/scrubbing. */
   fast?: boolean;
   onSelect?: () => void;
+  result?: BoardResult;
+  moveBadge?: { square: Square; symbol: string; label: string; color: string };
 };
 
 const SQUARE_RE = /^[a-h][1-8]$/;
@@ -60,7 +64,11 @@ export function Board({
   onSelect,
   motionMove,
   fast = false,
+  result,
+  moveBadge,
 }: Props) {
+  const winner: Color | null = result?.result === "1-0" ? "w" : result?.result === "0-1" ? "b" : null;
+  const drawn = result?.result === "1/2-1/2";
   const animMove = motionMove === undefined ? lastMove : motionMove;
   const boardRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettings();
@@ -248,8 +256,34 @@ export function Board({
               animate={{ x: 0, y: 0, scale: isSelected ? 1.04 : 1 }}
               transition={fast ? { type: "tween", ease: [0.25, 0.1, 0.25, 1], duration: 0.14 } : { type: "spring", stiffness: 520, damping: 40, mass: 0.9 }}
             >
-              <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="h-full w-full" />
+              <motion.div
+                key={`${piece.color}${piece.type}:${result?.result ?? "live"}:${result?.reason ?? ""}`}
+                className="h-full w-full origin-center"
+                initial={false}
+                animate={piece.type !== "k" || !result?.result ? { rotate: 0, scale: 1, y: 0 } : drawn
+                  ? { rotate: 0, scale: reducedMotion ? 1 : [1, 1.08, 1], y: 0 }
+                  : winner && piece.color !== winner
+                    ? { rotate: reducedMotion ? 65 : [0, -8, 72, 65], scale: 0.78, y: 0 }
+                    : { rotate: 0, scale: reducedMotion ? 1 : [1, 1.18, 1], y: 0 }}
+                transition={{ duration: reducedMotion ? 0 : 1.1, delay: reducedMotion ? 0 : 0.15 }}
+              >
+                <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="h-full w-full" />
+              </motion.div>
             </motion.div>
+          )}
+          {piece?.type === "k" && result && (winner || drawn) && (
+            <>
+              <motion.div className="pointer-events-none absolute inset-[5%] z-[5] rounded-full border-[3px]" style={{ borderColor: drawn ? "#d5c5a1" : piece.color === winner ? "#81b64c" : "#e87865" }}
+                initial={reducedMotion ? false : { opacity: 0, scale: 0.6 }} animate={{ opacity: 0.8, scale: 1 }} transition={{ duration: reducedMotion ? 0 : 0.6 }} />
+              <motion.span className="pointer-events-none absolute right-0 top-0 z-30 grid h-[40%] w-[40%] place-items-center rounded-full text-[clamp(10px,3vw,22px)] font-bold text-white shadow-md" style={{ backgroundColor: drawn ? "#99876a" : piece.color === winner ? "#81b64c" : "#c45140" }}
+                role="img" aria-label={`${piece.color === "w" ? "White" : "Black"}: ${drawn ? "draw" : piece.color === winner ? "winner" : result.reason === "resign" ? "resigned" : "lost"}`}
+                initial={reducedMotion ? false : { scale: 0 }} animate={{ scale: 1 }} transition={{ duration: reducedMotion ? 0 : 0.4, delay: reducedMotion ? 0 : 0.75 }}>
+                {drawn ? "½" : piece.color === winner ? "♛" : result.reason === "resign" ? "⚑" : "×"}
+              </motion.span>
+            </>
+          )}
+          {moveBadge?.square === square && (
+            <span role="img" aria-label={moveBadge.label} className="pointer-events-none absolute right-0 top-0 z-30 grid h-[42%] min-w-[42%] place-items-center rounded-full px-0.5 text-[clamp(10px,3vw,20px)] font-bold text-white shadow-md" style={{ backgroundColor: moveBadge.color }}>{moveBadge.symbol}</span>
           )}
           {target && showLegalDots && !target.capture && (
             <div className="absolute left-1/2 top-1/2 z-20 h-[28%] w-[28%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: "var(--hl-target)" }} />

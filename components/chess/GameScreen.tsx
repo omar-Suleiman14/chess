@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "motion/react";
-import Link from "next/link";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FatmaPanel } from "@/components/fatma/FatmaPanel";
 import { IOS_SPRING } from "@/components/ui/Switch";
@@ -20,6 +19,8 @@ import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useEvaluation, type Evaluation } from
 import { useFatma } from "@/lib/client/useFatma";
 import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
+import { GameResult } from "./GameResult";
+import { PlayerIdentity } from "./PlayerIdentity";
 
 type Props = {
   /** Default options for "New game" on this screen. */
@@ -247,16 +248,15 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       <LoadingScreen />
       {/* One column, exactly as wide as the board: everything groups around it. */}
       <div className="flex min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-210px),790px)] flex-col">
-      <header className="safe-top flex items-center justify-between gap-2 pb-2">
+      <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
-            <p className="truncate text-base font-semibold leading-tight">
-              Fatma
+            <p className="sr-only">
+              Chess
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
+        <div className="ml-auto flex items-center gap-1.5">
           <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 shrink-0 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)]" aria-label="New game" aria-keyshortcuts="n">
             New
           </motion.button>
@@ -272,11 +272,20 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </motion.button>
+          {active && moveCount > 0 && (
+            <button onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-muted shadow-[var(--shadow)]" aria-label="Resign" title="Resign">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+          )}
           <MenuButton />
         </div>
       </header>
 
       <section className="flex flex-1 flex-col items-center justify-center">
+        <div className="mb-2 flex w-full items-center gap-2">
+          <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName />
+          {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
+        </div>
         <div className="flex w-full items-stretch gap-2">
           {settings.evalBar && (evalAllowed ? (
             <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} />
@@ -293,6 +302,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           ))}
           <div className="relative min-w-0 flex-1">
             <Board
+              result={resultText && game && !reviewing ? { result: game.meta.result, reason: game.meta.resultReason } : undefined}
               fen={fen}
               orientation={orientation}
               movable={active && turn === human && !reviewing ? human : null}
@@ -305,23 +315,22 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : "Fatma to move.") : "Game over."}`}
               onSelect={() => settings.sound && playSound("select", settings.volume)}
             />
-            {resultText && (
-              <div className="bubble-in absolute inset-x-3 bottom-3 z-40 rounded-2xl bg-surface/95 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.35)]" role="status">
-          <p className="text-lg font-semibold">{resultText}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={() => void chess.newGame({ ...defaults, opponentId: game?.meta.opponentId ?? defaults.opponentId })} className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-text">
-              Rematch
-            </button>
-            {game?.meta.synced && (
-              <Link href={`/time-machine/${game.meta.gameKey}`} prefetch={false} className="rounded-full bg-surface-2 px-4 py-2 text-sm">
-                Review in Time Machine
-              </Link>
+            {resultText && game && !reviewing && (
+              <GameResult
+                key={`${game.meta.gameKey}:${head?.key}:${game.meta.result ?? "aborted"}`}
+                result={game.meta.result}
+                reason={game.meta.resultReason}
+                human={human}
+                description={resultText}
+                reducedMotion={reducedMotion}
+                onRematch={() => void chess.newGame({ ...defaults, opponentId: game.meta.opponentId })}
+                reviewUrl={`/time-machine/${game.meta.gameKey}`}
+              />
             )}
           </div>
         </div>
-      )}
-          </div>
-        </div>
+
+        <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}</div>
 
         {/* Fixed-height status line, then Fatma's fixed-size corner: nothing here can resize the layout. */}
         <div className="mt-1.5 flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted" aria-live="polite">
@@ -345,7 +354,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           )}
           {sync.status.error && <span className="truncate text-danger">{sync.status.error}</span>}
         </div>
-        <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} />
       </section>
 
       <p className="sr-only" aria-live="assertive">
@@ -354,8 +362,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
 
 
-      <footer className="safe-bottom flex w-full items-center gap-1.5 pt-2">
-        {tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}
+      <footer className="safe-bottom flex w-full items-center gap-3 pt-2">
         <div className="flex-1" />
         <motion.button
           whileTap={{ scale: 0.94 }}
@@ -368,20 +375,16 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
         </motion.button>
-        <div className="flex overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
-          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-9 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
+        <div className="flex h-11 shrink-0 overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
+          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-14 shrink-0 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
           <span className="my-2.5 w-px bg-line" aria-hidden="true" />
-          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-11 w-9 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
+          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-11 w-14 shrink-0 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         </div>
-        {active && moveCount > 0 && (
-          <button onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-muted shadow-[var(--shadow)]" aria-label="Resign" title="Resign">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-        )}
+
       </footer>
       </div>
 
