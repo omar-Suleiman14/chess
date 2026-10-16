@@ -76,17 +76,18 @@ export function playSound(name: SoundName, volume = 0.7): void {
   if (!entry || !c || volume <= 0) return;
   if (c.state !== "running") void c.resume();
   const [file, level] = entry;
-  const buffer = buffers.get(file);
-  if (!buffer) {
-    void load();
-    return;
-  }
-  const source = c.createBufferSource();
-  source.buffer = buffer;
-  const gain = c.createGain();
-  gain.gain.value = Math.min(1, volume * level);
-  source.connect(gain).connect(c.destination);
-  source.start();
+  const start = () => {
+    const buffer = buffers.get(file);
+    if (!buffer || c.state !== "running") return;
+    const source = c.createBufferSource();
+    source.buffer = buffer;
+    const gain = c.createGain();
+    gain.gain.value = Math.min(1, volume * level);
+    source.connect(gain).connect(c.destination);
+    source.start();
+  };
+  if (buffers.has(file)) start();
+  else void load().then(start);
 }
 
 export function haptic(pattern: number | number[]): void {

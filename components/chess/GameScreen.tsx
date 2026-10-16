@@ -8,7 +8,7 @@ import { IOS_SPRING } from "@/components/ui/Switch";
 import { MenuButton } from "@/components/shell/AppShell";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, formatClock, remaining } from "@/lib/chess/clock";
-import { findOpponent, FULL_POWER_LABEL, ratingLabel } from "@/lib/chess/engine/opponents";
+import { findOpponent } from "@/lib/chess/engine/opponents";
 import { headNode, moveLabel, pathTo } from "@/lib/chess/history/tree";
 import { describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useEngineState, usePrewarmEngine } from "@/lib/client/engine";
@@ -20,14 +20,6 @@ import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useEvaluation, type Evaluation } from
 import { useFatma } from "@/lib/client/useFatma";
 import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
-
-const MODE_LABEL: Record<string, string> = {
-  full_power: "Full Power",
-  climb: "The Climb",
-  timed: "Timed",
-  practice: "Practice branch",
-  import: "Imported",
-};
 
 type Props = {
   /** Default options for "New game" on this screen. */
@@ -112,15 +104,20 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setViewPly(null);
   }, [head?.key]);
+  const navigationFeedback = useCallback(() => {
+    unlockAudio();
+    if (settings.sound) playSound("move", settings.volume);
+    if (settings.haptics) haptic(8);
+  }, [settings.sound, settings.volume, settings.haptics]);
   const step = useCallback(
     (delta: number) => {
-      setViewPly((v) => {
-        const at = v ?? line.length;
-        const next = Math.max(0, Math.min(line.length, at + delta));
-        return next >= line.length ? null : next;
-      });
+      const at = viewPly ?? line.length;
+      const next = Math.max(0, Math.min(line.length, at + delta));
+      if (next === at) return;
+      navigationFeedback();
+      setViewPly(next >= line.length ? null : next);
     },
-    [line.length],
+    [line.length, viewPly, navigationFeedback],
   );
   const human: Color = game?.meta.humanColor ?? "w";
   const orientation = orientationOverride ?? human;
@@ -216,8 +213,11 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       return;
     }
     const ok = await chess.undo();
-    if (ok) setLastMove(null);
-  }, [chess, game]);
+    if (ok) {
+      setLastMove(null);
+      navigationFeedback();
+    }
+  }, [chess, game, navigationFeedback]);
 
   // Keyboard shortcuts: U = undo, F = flip, N = new game.
   useEffect(() => {
@@ -238,7 +238,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const now = monotonicNow();
   const clockFor = (c: Color) => (game?.clock ? remaining(game.clock, c, now) : null);
   const fatmaColor: Color = human === "w" ? "b" : "w";
-  const isFullPowerLabel = !!opponent && opponent.rating === FULL_POWER_LABEL;
   const moveCount = head?.ply ?? 0;
   const resultText = game?.meta.status === "finished" ? resultLine(game.meta.result, game.meta.resultReason, human) : null;
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
@@ -252,21 +251,16 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
             <p className="truncate text-base font-semibold leading-tight">
-              {opponent?.name ?? "Fatma"}{" "}
-              <span className="font-normal text-muted" title={isFullPowerLabel ? "Nominal label for full-strength Stockfish 19 Lite, not a measured Elo." : opponent?.calibrated ? "Calibrated estimate" : "Provisional estimate"}>
-                · {opponent ? ratingLabel(opponent) : FULL_POWER_LABEL}
-              </span>
-            </p>
-            <p className="truncate text-xs text-muted">
-              {MODE_LABEL[game?.meta.mode ?? defaults.mode]}
-              {tc ? ` · ${tc.label}` : ""}
-              {isFullPowerLabel && " · nominal rating"}
+              Fatma
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
-          <MenuButton />
+          <MenuButton actions={[
+            { label: "New game", onSelect: () => setShowNew(true) },
+            { label: "Flip board", onSelect: () => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w")) },
+          ]} />
         </div>
       </header>
 
@@ -350,15 +344,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
       <footer className="safe-bottom flex w-full items-center gap-1.5 pt-2">
         {tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}
-        <div className="flex overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
-          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-9 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-          <span className="my-2.5 w-px bg-line" aria-hidden="true" />
-          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-11 w-9 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
-        </div>
         <div className="flex-1" />
         <motion.button
           whileTap={{ scale: 0.94 }}
@@ -371,21 +356,15 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
         </motion.button>
-        <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)]" aria-keyshortcuts="n">
-          New
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.94 }}
-          transition={IOS_SPRING}
-          onClick={() => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"))}
-          className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
-          aria-label="Flip board"
-          aria-keyshortcuts="f"
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-            <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </motion.button>
+        <div className="flex overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
+          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-11 w-9 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <span className="my-2.5 w-px bg-line" aria-hidden="true" />
+          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-11 w-9 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+        </div>
         {active && moveCount > 0 && (
           <button onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-muted shadow-[var(--shadow)]" aria-label="Resign" title="Resign">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
