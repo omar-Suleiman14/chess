@@ -21,7 +21,7 @@ import { useFatma } from "@/lib/client/useFatma";
 import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
 import { GameResult } from "./GameResult";
-import { MoveStrip } from "./MoveStrip";
+import { MoveList, MoveStrip } from "./MoveStrip";
 import { PlayerIdentity } from "./PlayerIdentity";
 
 type Props = {
@@ -258,11 +258,15 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
 
   return (
-    <main className="flex min-h-dvh w-full flex-col items-center px-3 sm:px-6">
+    <main className="min-h-dvh w-full px-3 sm:px-6">
       <LoadingScreen />
-      {/* One column, exactly as wide as the board: everything groups around it. */}
-      <div className="flex min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-260px),790px)] flex-col">
-      <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2">
+      {/* Phones: one column exactly as wide as the board, sized so everything fits on screen.
+          Wide screens: the board as large as the window allows, controls and moves in a side panel. */}
+      <div
+        className="mx-auto grid min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-300px),790px)] grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_1fr_auto_auto] [grid-template-areas:'header'_'moves'_'board'_'status'_'footer'] lg:h-dvh lg:min-h-0 lg:w-fit lg:max-w-none lg:grid-cols-[var(--board-col)_300px] lg:grid-rows-[auto_minmax(0,1fr)_auto_auto] lg:gap-x-8 lg:py-4 lg:[grid-template-areas:'board_header'_'board_moves'_'board_status'_'board_footer']"
+        style={{ ["--board-col" as string]: "min(calc(100dvh - 130px), calc(100vw - 400px), 1100px)" }}
+      >
+      <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2 [grid-area:header] lg:pt-0">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
             <p className="sr-only">
@@ -315,8 +319,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
       </header>
 
-      <section className="flex flex-1 flex-col items-center justify-center">
-        <MoveStrip line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
+      <div className="min-h-0 [grid-area:moves] lg:flex lg:flex-col lg:pb-2">
+        <div className="lg:hidden">
+          <MoveStrip line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
+        </div>
+        <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="hidden flex-1 lg:flex" />
+      </div>
+
+      <section className="flex min-w-0 flex-col items-center justify-center [grid-area:board]">
         <div className="mb-2 flex w-full items-center gap-2">
           <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName captures={captures.captured[fatmaColor]} capturedColor={human} advantage={captures.advantage[fatmaColor]} />
           {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
@@ -366,9 +376,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
 
         <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}</div>
+      </section>
 
-        {/* Fixed-height status line, then Fatma's fixed-size corner: nothing here can resize the layout. */}
-        <div className="mt-1.5 flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted" aria-live="polite">
+        {/* Fixed-height status line: nothing here can resize the layout. */}
+        <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted [grid-area:status] lg:justify-start" aria-live="polite">
           {engineWaking && <span>Fatma is waking up…</span>}
           {chess.thinking && !engineWaking && <span>Fatma is thinking…</span>}
           {chess.engineError && (
@@ -384,7 +395,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           )}
           {sync.status.error && <span className="truncate text-danger">{sync.status.error}</span>}
         </div>
-      </section>
 
       <p className="sr-only" aria-live="assertive">
         {announcement}
@@ -392,25 +402,25 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
 
 
-      <footer className="safe-bottom flex w-full items-center gap-3 pt-2">
-        <div className="flex-1" />
+      <footer className="safe-bottom flex w-full items-center gap-3 pt-2 [grid-area:footer] lg:pb-0">
+        <div className="flex-1 lg:hidden" />
         <motion.button
           whileTap={{ scale: 0.94 }}
           transition={IOS_SPRING}
           onClick={() => void onUndo()}
           disabled={!game || moveCount === 0}
-          className="flex h-16 shrink-0 items-center gap-2 rounded-full bg-accent px-4 text-base font-semibold text-accent-text disabled:opacity-40"
+          className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-accent px-4 lg:flex-1 text-base font-semibold text-accent-text disabled:opacity-40"
           aria-keyshortcuts="u"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
         </motion.button>
-        <div className="flex h-16 shrink-0 overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
-          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-16 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
+        <div className="flex h-14 shrink-0 overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves">
+          <button onClick={() => step(-1)} disabled={moveCount === 0 || viewPly === 0} className="grid h-14 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Previous move" aria-keyshortcuts="ArrowLeft">
             <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
           <span className="my-2.5 w-px bg-line" aria-hidden="true" />
-          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-16 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
+          <button onClick={() => step(1)} disabled={!reviewing} className="grid h-14 w-16 shrink-0 place-items-center disabled:opacity-30" aria-label="Next move" aria-keyshortcuts="ArrowRight">
             <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         </div>

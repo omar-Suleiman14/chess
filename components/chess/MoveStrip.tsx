@@ -52,3 +52,53 @@ export function MoveStrip({ line, cursor, onSelect }: { line: Pick<TreeNode, "ke
     </nav>
   );
 }
+
+/** Desktop side-panel version: numbered rows, White and Black side by side. */
+export function MoveList({ line, cursor, onSelect, className = "" }: { line: Pick<TreeNode, "key" | "ply" | "san">[]; cursor: number; onSelect: (ply: number) => void; className?: string }) {
+  const ref = useRef<HTMLOListElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    const active = el?.querySelector<HTMLElement>("[aria-current=true]");
+    if (!el) return;
+    const top = active ? active.offsetTop - el.clientHeight / 2 + active.offsetHeight / 2 : el.scrollHeight;
+    el.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  }, [cursor, line.length]);
+
+  const rows: Pick<TreeNode, "key" | "ply" | "san">[][] = [];
+  for (const node of line) {
+    if (node.ply % 2 === 1 || rows.length === 0) rows.push([]);
+    rows[rows.length - 1].push(node);
+  }
+
+  const cell = (node: Pick<TreeNode, "key" | "ply" | "san"> | undefined) =>
+    node ? (
+      <button
+        onClick={() => onSelect(node.ply)}
+        aria-current={node.ply === cursor}
+        aria-label={`${node.ply % 2 === 1 ? "White" : "Black"} move ${Math.ceil(node.ply / 2)}: ${node.san}`}
+        className={`rounded-md px-2 py-1 text-left font-semibold ${node.ply === cursor ? "bg-accent text-accent-text" : "text-ink hover:bg-surface-2"}`}
+      >
+        {node.san}
+      </button>
+    ) : (
+      <span />
+    );
+
+  return (
+    <nav aria-label="Moves" className={`min-h-0 flex-col overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)] ${className}`}>
+      {line.length === 0 ? (
+        <p className="p-4 text-sm text-muted">Moves will appear here</p>
+      ) : (
+        <ol ref={ref} className="min-h-0 flex-1 overflow-y-auto p-2 text-sm">
+          {rows.map((pair, i) => (
+            <li key={pair[0].key} className={`grid grid-cols-[2.5rem_1fr_1fr] items-center rounded-md ${i % 2 ? "bg-surface-2/50" : ""}`}>
+              <span className="pl-2 tabular-nums text-muted">{Math.ceil(pair[0].ply / 2)}.</span>
+              {pair[0].ply % 2 === 0 ? <><span className="px-2 text-muted">…</span>{cell(pair[0])}</> : <>{cell(pair[0])}{cell(pair[1])}</>}
+            </li>
+          ))}
+        </ol>
+      )}
+    </nav>
+  );
+}
