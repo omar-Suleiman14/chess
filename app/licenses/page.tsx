@@ -1,20 +1,18 @@
-import type { Metadata } from "next";
-import { PageHeader } from "@/components/shell/AppShell";
+import { InfoPage } from "@/components/site/InfoPage";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Licences" };
+export const metadata = pageMetadata("Licences", "Open-source licences and corresponding source for Chess by Chaos, Stockfish 19 Lite, chess pieces, sounds, and dependencies.", "/licenses");
 
 const REPO = "https://github.com/omar-Suleiman14/chess";
 
 export default function LicensesPage() {
   return (
-    <main className="mx-auto min-h-dvh max-w-xl pb-12">
-      <PageHeader title="Licences" />
-      <div className="grid gap-4 px-4 text-sm leading-relaxed">
+    <InfoPage title="Licences" path="/licenses">
         <p>
           Chess by Chaos is free software under the GNU GPL v3. Full source: <a className="underline" href={REPO}>{REPO}</a>.
         </p>
         <section>
-          <h2 className="font-semibold">Stockfish 19 (Lite, single-threaded WebAssembly)</h2>
+          <h2 className="font-semibold">Stockfish</h2>
           <p>
             The engine running in your browser is Stockfish 19 via Stockfish.js 19.0.1 (npm <code>stockfish@19.0.1</code>, files{" "}
             <code>stockfish-19-lite-single.js/.wasm</code>), GPL-3.0. Stockfish is developed by the Stockfish developers; Stockfish.js by Nathan Rugg. Chess by
@@ -37,7 +35,6 @@ export default function LicensesPage() {
             <li>Sherine pixel-art sprite: supplied by the project owner for this project. See THIRD_PARTY_NOTICES.md for provenance.</li>
           </ul>
         </section>
-      </div>
-    </main>
+    </InfoPage>
   );
 }

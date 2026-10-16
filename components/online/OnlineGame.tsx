@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import { motion } from "motion/react";
-import { useRouter } from "next/navigation";
+import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { Board, type LastMove } from "@/components/chess/Board";

@@ -42,10 +42,14 @@ export function useEngineState(): EngineState {
 export function usePrewarmEngine(enabled = true): void {
   useEffect(() => {
     if (!enabled || !supportsEngine()) return;
-    const idle = (window as unknown as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+    const idle = window.requestIdleCallback?.bind(window);
     const start = () => void getEngine().start().catch(() => {});
-    if (idle) idle(start, { timeout: 1500 });
-    else setTimeout(start, 300);
+    if (idle) {
+      const id = idle(start, { timeout: 1500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(start, 300);
+    return () => clearTimeout(id);
   }, [enabled]);
 }
 

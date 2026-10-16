@@ -52,6 +52,8 @@ const nextConfig: NextConfig = {
     }
     return [
       { source: "/:path*", headers: security },
+      ...["/profile/:path*", "/settings/:path*", "/friends/:path*", "/u/:path*", "/progress/:path*", "/game/:path*", "/time-machine/:path*", "/bench/:path*", "/play/:code", "/learn/custom/:path*", "/learn/practice/:path*", "/search", "/mcp/:path*", "/api/:path*"].map((source) => ({ source, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] })),
+      ...(process.env.VERCEL_ENV === "preview" || process.env.SEO_NOINDEX === "true" ? [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }] : []),
       {
         // Engine files live under a version directory, so they can be cached forever.
         source: "/engine/:version/:file*",
@@ -61,6 +63,7 @@ const nextConfig: NextConfig = {
         ],
       },
       { source: "/fatma/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=604800" }] },
+      ...["/pieces/:path*", "/sounds/:path*"].map((source) => ({ source, headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }] })),
     ];
   },
 };

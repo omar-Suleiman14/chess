@@ -105,8 +105,7 @@ export default function SettingsPage() {
             />
             <div className="flex min-h-14 items-center gap-3 border-b border-line px-4">
               <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" /></svg>
-              <input
-                type="range"
+              <input type="range"
                 min={0}
                 max={1}
                 step={0.05}
@@ -136,6 +135,7 @@ export default function SettingsPage() {
             <Segmented label="Motion" value={settings.motion} onChange={(motion) => update({ motion })} options={[["system", "System"], ["full", "Full"], ["reduced", "Reduced"]]} />
           </div>
         </Group>
+
 
         <Group title="Sherine">
           <Segmented label="Sherine speaks" value={settings.fatmaLanguage} onChange={(fatmaLanguage) => update({ fatmaLanguage })} options={FATMA_LANGUAGES} />

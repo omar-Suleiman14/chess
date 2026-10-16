@@ -3,8 +3,10 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Authenticated, ConvexReactClient, useMutation } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { ConvexQueryCacheProvider } from "convex-helpers/react/cache/provider";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
+import { CardCacheIdentity } from "@/lib/client/localCardCache";
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export default function ConvexClientProvider({
@@ -14,10 +16,13 @@ export default function ConvexClientProvider({
 }) {
   return (
     <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <ConvexQueryCacheProvider expiration={60_000} maxIdleEntries={32}>
+      <CardCacheIdentity />
       <Authenticated>
         <SyncUser />
       </Authenticated>
       {children}
+      </ConvexQueryCacheProvider>
     </ConvexProviderWithClerk>
   );
 }

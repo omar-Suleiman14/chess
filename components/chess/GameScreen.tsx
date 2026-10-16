@@ -2,7 +2,7 @@
 
 import { capturesAlongLine } from "@/lib/chess/captures";
 import { motion } from "motion/react";
-import Link from "next/link";
+import Link from "@/components/navigation/PrefetchLink";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FatmaPanel } from "@/components/fatma/FatmaPanel";
 import { IOS_SPRING } from "@/components/ui/Switch";
@@ -50,6 +50,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [evalOptIn, setEvalOptIn] = useState(false);
   const evals = useRef(new Map<string, Evaluation>());
+  const evaluatedGame = useRef<string | undefined>(undefined);
 
   const onMove = useCallback(
     ({ applied, by, node }: MoveEvent) => {
@@ -170,7 +171,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
   const onFinalEval = useCallback(
     (e: Evaluation) => {
+      if (evaluatedGame.current !== game?.meta.gameKey) {
+        evals.current.clear();
+        evaluatedGame.current = game?.meta.gameKey;
+      }
+      const previous = evals.current.get(e.nodeKey);
       evals.current.set(e.nodeKey, e);
+      if (previous?.fen === e.fen && (previous.depth ?? 0) >= (e.depth ?? 0)) return;
       const g = game;
       if (!g || !tree) return;
       // Save meaningful browser analysis for practice/MCP (signed-in, synced games).
@@ -297,30 +304,26 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           </div>
         </div>
         <div className="ms-auto flex items-center gap-1.5">
-          <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 shrink-0 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)]" aria-label="New game" aria-keyshortcuts="n">
+          <button onClick={() => setShowNew(true)} className="press-overlay h-11 shrink-0 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)]" aria-label="New game" aria-keyshortcuts="n">
             New
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.94 }}
-            transition={IOS_SPRING}
+          </button>
+          <button
             onClick={() => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"))}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
+            className="press-overlay grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
             aria-label="Flip board"
             aria-keyshortcuts="f"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
               <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.94 }}
-            transition={IOS_SPRING}
+          </button>
+          <button
             onClick={() => {
               unlockAudio();
               update({ sound: !settings.sound });
               if (!settings.sound) playSound("move", settings.volume);
             }}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
+            className="press-overlay grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
             aria-label={settings.sound ? "Mute sounds" : "Turn sounds on"}
             aria-pressed={settings.sound}
             title={settings.sound ? "Sound on" : "Sound off"}
@@ -333,8 +336,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
                 <path d="M16 9.5l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
               )}
             </svg>
-          </motion.button>
-            <button disabled={!active} onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-ink shadow-[var(--shadow)] disabled:opacity-40" aria-label="Resign" title="Resign">
+          </button>
+            <button disabled={!active} onClick={() => setConfirmResign(true)} className="press-overlay grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-ink shadow-[var(--shadow)] disabled:opacity-40" aria-label="Resign" title="Resign">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           <MenuButton />
@@ -425,17 +428,15 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
 
       <footer className="safe-bottom flex w-full items-center gap-3 pt-2 [grid-area:footer] lg:pb-0">
-        <motion.button
-          whileTap={{ scale: 0.94 }}
-          transition={IOS_SPRING}
+        <button
           onClick={() => setConfirmUndo(true)}
           disabled={!game || moveCount === 0}
-          className={`flex ${FOOTER_BUTTON_SIZE} shrink-0 items-center justify-center gap-2 rounded-full bg-accent text-base font-semibold text-accent-text transition-opacity enabled:hover:opacity-90 disabled:opacity-40`}
+          className={`press-overlay flex ${FOOTER_BUTTON_SIZE} shrink-0 items-center justify-center gap-2 rounded-full bg-accent text-base font-semibold text-accent-text disabled:opacity-40`}
           aria-keyshortcuts="u"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
-        </motion.button>
+        </button>
         <div className="flex-1" />
         <ReviewArrows onBack={() => step(-1)} onForward={() => step(1)} backDisabled={moveCount === 0 || viewPly === 0} forwardDisabled={!reviewing} />
 

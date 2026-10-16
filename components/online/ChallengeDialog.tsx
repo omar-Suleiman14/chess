@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { useRouter } from "next/navigation";
+import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
 import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { Dialog, Segmented } from "@/components/chess/GameScreen";

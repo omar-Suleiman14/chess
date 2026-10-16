@@ -1,10 +1,12 @@
 "use client";
 
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
+import { useQuery } from "convex-helpers/react/cache/hooks";
+import { useSocialTime } from "@/lib/client/socialCache";
 import { AnimatePresence, motion } from "motion/react";
-import Link from "next/link";
+import Link from "@/components/navigation/PrefetchLink";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { api } from "@/convex/_generated/api";
 import { Avatar } from "@/components/profile/ChessCard";
 import { IOS_SPRING } from "@/components/ui/Switch";
@@ -16,7 +18,7 @@ export function ChallengeBanner() {
   const { isAuthenticated } = useConvexAuth();
   const pathname = usePathname();
   const { settings } = useSettings();
-  const [mountedAt] = useState(() => Date.now());
+  const mountedAt = useSocialTime();
   const data = useQuery(api.friends.overview, isAuthenticated ? { now: mountedAt } : "skip");
   const dismiss = useMutation(api.friends.dismissChallenge);
   const challenge = data?.challenges.find((c) => !pathname.startsWith(`/play/${c.code}`));

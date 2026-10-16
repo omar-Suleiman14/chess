@@ -69,7 +69,7 @@ export function Select<T extends string>({ value, options, onChange, label }: { 
           setOpen((o) => !o);
         }}
         onKeyDown={onKey}
-        className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl bg-surface px-4 text-left shadow-[var(--shadow)] active:scale-[0.99]"
+        className="press-overlay flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl bg-surface px-4 text-left shadow-[var(--shadow)]"
       >
         <span className="truncate">{current.label}</span>
         <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" aria-hidden="true">

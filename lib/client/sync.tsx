@@ -32,8 +32,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const listeners = useRef(new Set<(op: QueuedOp, result: unknown) => void>());
 
   const refreshCount = useCallback(async () => {
-    const ops = await store.queued();
-    setStatus((s) => ({ ...s, pending: ops.length }));
+    const pending = await store.queuedCount();
+    setStatus((s) => ({ ...s, pending }));
   }, []);
 
   const run = useCallback(

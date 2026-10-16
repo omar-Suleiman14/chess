@@ -18,15 +18,19 @@ export function inViewTransition(): boolean {
   return active;
 }
 
-export function navigateWithTransition(router: Router, href: string): void {
+export async function navigateWithTransition(router: Router, href: string): Promise<void> {
   const start = (document as Document & { startViewTransition?: StartViewTransition }).startViewTransition?.bind(document);
-  if (!start || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const motion = document.documentElement.dataset.motion;
+  const reduced = motion === "reduced" || (!motion && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  if (!start || reduced || active) {
     router.push(href);
     return;
   }
   const target = new URL(href, window.location.href).pathname;
   active = true;
-  const transition = start(
+  let transition: ViewTransition;
+  try {
+    transition = start(
     () =>
       new Promise<void>((resolve) => {
         router.push(href);
@@ -39,13 +43,18 @@ export function navigateWithTransition(router: Router, href: string): void {
         };
         check();
       }),
-  );
+    );
+  } catch {
+    active = false;
+    router.push(href);
+    return;
+  }
   const done = () => {
     active = false;
   };
   transition.ready.catch(() => {});
   transition.updateCallbackDone.catch(() => {});
-  transition.finished.then(done, done);
+  await transition.finished.then(done, done);
 }
 
 /** A stable, CSS-safe view-transition-name for a card. */

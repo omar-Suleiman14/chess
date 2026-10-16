@@ -1,11 +1,13 @@
 "use client";
 
+
 import { capturesAlongLine } from "@/lib/chess/captures";
 import { CapturedPieces } from "@/components/chess/CapturedPieces";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { motion } from "motion/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/navigation/PrefetchLink";
+import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
+import { readAnalysis, writeAnalysis } from "@/lib/client/analysisCache";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { MoveReview } from "@/components/chess/MoveReview";
@@ -181,15 +183,19 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
       if (run !== analysisRun.current) return;
       if (positionStatus(n.fen).over) { setAnalysing({ done: i + 1, total: nodes.length }); continue; }
       try {
-        const result = await getEngine().search({ kind: "review", fen: n.fen, movetimeMs: REVIEW_MOVETIME });
+        const settingsHash = `review:mt${REVIEW_MOVETIME}:mpv1`;
+        const cached = await readAnalysis(n.fen, settingsHash);
         if (run !== analysisRun.current) return;
+        const result = cached ? { ...cached, elapsedMs: cached.computeMs } : await getEngine().search({ kind: "review", fen: n.fen, movetimeMs: REVIEW_MOVETIME });
+        if (run !== analysisRun.current) return;
+        if (!cached) void writeAnalysis(n.fen, settingsHash, result);
         setScores((s) => ({ ...s, [n.key]: { score: result.score, depth: result.depth, bestmove: result.bestmove } }));
         if (game.meta.synced && isAuthenticated && result.depth && (result.score.cp !== undefined || result.score.mate !== undefined)) {
           void sync.enqueue(game.meta.gameKey, "analysis", {
             gameKey: game.meta.gameKey,
             nodeKey: n.key,
             engineBuild: ENGINE_BUILD,
-            settingsHash: `review:mt${REVIEW_MOVETIME}:mpv1`,
+            settingsHash,
             depth: result.depth,
             scoreCp: result.score.cp,
             scoreMate: result.score.mate,
@@ -325,8 +331,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
               {speed}×
             </button>
           </div>
-          <input
-            type="range"
+          <input type="range"
             min={0}
             max={path.length}
             value={cursor}

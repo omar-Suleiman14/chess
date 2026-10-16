@@ -1,11 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
+import Link from "@/components/navigation/PrefetchLink";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cardTransitionName, navigateWithTransition } from "@/lib/client/viewTransition";
 import { ChessCard } from "./ChessCard";
 import type { DeckCard } from "./CardDeck";
 import { useShyTilt } from "./useShyTilt";
+import { CardQueryPrefetch } from "@/lib/client/socialCache";
 
 /**
  * Up to five cards in a 3D stack: the front one upright, neighbours leaning
@@ -85,6 +87,7 @@ export function CardStack({ cards, label = "Chess cards", footer }: { cards: Dec
 
   return (
     <div className="grid justify-items-center gap-2">
+      {shown.filter(({ position, card }) => Math.abs(position) <= 1 && new URL(card.url, "https://chess.chaos.fail").pathname.startsWith("/u/")).map(({ card }) => <CardQueryPrefetch key={card.id} alias={card.id} />)}
       <div className="card-stack-scene w-full" style={{ ["--fan-count" as string]: shown.length } as CSSProperties}>
         <div
           ref={stage}
@@ -139,7 +142,7 @@ export function CardStack({ cards, label = "Chess cards", footer }: { cards: Dec
               </span>
             );
             return position === 0 ? (
-              <a
+              <Link
                 key={card.id}
                 href={card.url}
                 className="card-stack__card"
@@ -148,16 +151,18 @@ export function CardStack({ cards, label = "Chess cards", footer }: { cards: Dec
                 draggable={false}
                 aria-label={`Open ${card.label}'s card`}
                 onClick={(e) => {
-                  if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+                  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                   e.preventDefault();
                   const path = new URL(card.url, window.location.href).pathname;
                   // Only a card page has the matching card to morph into.
-                  if (path.startsWith("/u/")) navigateWithTransition(router, path);
+                  // Do not make React await the browser animation: the browser
+                  // waits for the route commit, so awaiting it can stall both.
+                  if (path.startsWith("/u/")) void navigateWithTransition(router, path);
                   else router.push(path);
                 }}
               >
                 {art}
-              </a>
+              </Link>
             ) : (
               <button
                 key={card.id}

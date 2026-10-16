@@ -1,7 +1,7 @@
 "use client";
 
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import Link from "next/link";
+import Link from "@/components/navigation/PrefetchLink";
 import { useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { LessonPlayer } from "@/components/learn/LessonPlayer";

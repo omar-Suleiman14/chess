@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useLocalCardQuery } from "@/lib/client/localCardCache";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useMemo } from "react";
 import { api } from "@/convex/_generated/api";
 import type { DeckCard } from "@/components/profile/CardDeck";
@@ -11,7 +12,7 @@ import { useOrigin } from "@/lib/client/useOrigin";
 
 /** Every player who made their card public, with Sherine among them. */
 export default function PlayersPage() {
-  const cards = useQuery(api.profiles.publicCards);
+  const cards = useLocalCardQuery(api.profiles.publicCards, {}, "public");
   const origin = useOrigin();
   const deck: DeckCard[] = useMemo(
     () => [
@@ -30,7 +31,7 @@ export default function PlayersPage() {
           <p className="mt-3 text-[15px] leading-relaxed text-muted">Everyone with a public card, and Sherine. Swipe or drag to browse. Tap a card to open it.</p>
         </header>
         {cards === undefined ? (
-          <p className="py-28 text-muted" role="status">Loading players…</p>
+          <LoadingSpinner label="Loading players" className="py-28" />
         ) : (
           <CardStack cards={deck} label="Player cards" />
         )}

@@ -50,7 +50,14 @@ function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<Settings>) };
+    const saved = JSON.parse(raw) as Partial<Settings>;
+    if (!saved || typeof saved !== "object") return DEFAULT_SETTINGS;
+    const next = { ...DEFAULT_SETTINGS };
+    for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) {
+      if (Object.hasOwn(saved, key)) Object.assign(next, { [key]: saved[key] });
+    }
+    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* Keep readable preferences when writes are blocked. */ }
+    return next;
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -90,6 +97,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.dataset.contrast = settings.highContrast ? "high" : "normal";
     document.documentElement.dataset.motion = reducedMotion ? "reduced" : "full";
   }, [settings.palette, settings.highContrast, reducedMotion]);
+
 
   const value = useMemo(() => ({ settings, update, reducedMotion }), [settings, update, reducedMotion]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

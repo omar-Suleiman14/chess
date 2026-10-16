@@ -29,6 +29,9 @@ importers:
       convex:
         specifier: ^1.44.0
         version: 1.46.0(@clerk/clerk-react@5.61.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
+      convex-helpers:
+        specifier: ^0.1.128
+        version: 0.1.128(convex@1.46.0(@clerk/clerk-react@5.61.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1))(react@19.3.1)(typescript@6.0.3)(zod@4.6.7)
       html-to-image:
         specifier: 1.11.13
         version: 1.11.13

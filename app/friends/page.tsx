@@ -1,8 +1,13 @@
 "use client";
 
 import { SignInButton } from "@clerk/nextjs";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import Link from "next/link";
+import { useConvexAuth, useMutation } from "convex/react";
+import { useQuery } from "convex-helpers/react/cache/hooks";
+import Link from "@/components/navigation/PrefetchLink";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useSocialTime } from "@/lib/client/socialCache";
+import { CardProfileLink } from "@/components/profile/CardProfileLink";
+import { useCardScope, useLocalCardQuery } from "@/lib/client/localCardCache";
 import { useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { ChallengeDialog } from "@/components/online/ChallengeDialog";
@@ -18,10 +23,10 @@ type Person = { alias: string; avatarSeed: string; hue: number };
 function PersonRow({ person, children }: { person: Person; children?: React.ReactNode }) {
   return (
     <li className="flex items-center gap-3 py-2.5">
-      <Link href={`/u/${person.alias}`} className="flex min-w-0 flex-1 items-center gap-3">
+      <CardProfileLink alias={person.alias} className="flex min-w-0 flex-1 items-center gap-3">
         <span className="shrink-0 overflow-hidden rounded-xl"><Avatar seed={person.avatarSeed} hue={person.hue} size={40} /></span>
         <span className="truncate font-medium">@{person.alias}</span>
-      </Link>
+      </CardProfileLink>
       <div className="flex shrink-0 items-center gap-1.5">{children}</div>
     </li>
   );
@@ -40,7 +45,7 @@ const pill = "min-h-9 rounded-full px-3.5 text-sm font-medium";
 
 export default function FriendsPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const [mountedAt] = useState(() => Date.now());
+  const mountedAt = useSocialTime();
   const data = useQuery(api.friends.overview, isAuthenticated ? { now: mountedAt } : "skip");
   const ensure = useMutation(api.profiles.ensure);
   const request = useMutation(api.friends.request);
@@ -50,7 +55,8 @@ export default function FriendsPage() {
   const [alias, setAlias] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [challenging, setChallenging] = useState<string | null>(null);
-  const cards = useQuery(api.friends.cards, isAuthenticated ? {} : "skip");
+  const scope = useCardScope();
+  const cards = useLocalCardQuery(api.friends.cards, isAuthenticated ? {} : "skip", scope);
   const origin = useOrigin();
   const [view, setView] = useState<"cards" | "list">("cards");
   useEffect(() => {
@@ -135,7 +141,7 @@ export default function FriendsPage() {
           </p>
         )}
 
-        {data === undefined && <p className="text-sm text-muted" role="status">Loading…</p>}
+        {(data === undefined || (view === "cards" && cards === undefined)) && <LoadingSpinner label="Loading friends" />}
 
         {data && data.challenges.length > 0 && (
           <Section title="Game invites">

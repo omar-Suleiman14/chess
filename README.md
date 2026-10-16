@@ -27,6 +27,10 @@ Offline: games live in IndexedDB first and sync through an idempotent operation 
 
 ## Development
 
+### Search visibility and public policies
+
+See [SEO and launch operations](docs/SEO.md) for metadata, sitemap and indexing rules, site search, public policy pages, Google/Bing verification, and the production crawl check. The public support address is `support@wareed.io`; activate the mailbox before publishing it.
+
 Requirements: Node 22+, pnpm, a Convex project and a Clerk application (both Chess-only).
 
 ```bash

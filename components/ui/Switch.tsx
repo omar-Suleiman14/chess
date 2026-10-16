@@ -18,7 +18,7 @@ export function Switch({ checked, onChange, label, disabled }: { checked: boolea
       className={`relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 disabled:opacity-40 ${checked ? "bg-[#0a84ff]" : "bg-[var(--switch-off)]"}`}
     >
       <motion.span
-        className="absolute left-[2px] top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.15),0_1px_1px_rgba(0,0,0,0.16)]"
+        className="absolute left-[2px] top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.15)]"
         initial={false}
         animate={{ x: checked ? 20 : 0 }}
         transition={IOS_SPRING}

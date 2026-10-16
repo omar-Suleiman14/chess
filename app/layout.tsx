@@ -6,15 +6,23 @@ import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { AppShell } from "@/components/shell/AppShell";
 import { SettingsProvider } from "@/lib/client/settings";
 import { SyncProvider } from "@/lib/client/sync";
+import { NavigationProvider } from "@/components/navigation/NavigationProvider";
+import { INDEXABLE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: { default: "Chess by Chaos", template: "%s · Chess by Chaos" },
-  description: "Play Sherine, a local Stockfish 19 Lite rival. Undo, replay, learn.",
+  metadataBase: new URL(SITE_URL),
+  description: SITE_DESCRIPTION,
   applicationName: "Chess by Chaos",
-  icons: { icon: "/icon.svg" },
+  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon.ico", sizes: "32x32" }], apple: "/apple-touch-icon.png" },
+  robots: { index: INDEXABLE, follow: true, googleBot: { index: INDEXABLE, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
+  openGraph: { type: "website", siteName: SITE_NAME, title: SITE_NAME, description: SITE_DESCRIPTION, locale: "en_US" },
+  twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
+  verification: { google: process.env.GOOGLE_SITE_VERIFICATION, other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined },
+  category: "games",
   appleWebApp: { capable: true, title: "Chess", statusBarStyle: "default" },
 };
 
@@ -32,11 +40,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ClerkProvider dynamic>
+        <ClerkProvider telemetry={false} appearance={{ layout: { privacyPageUrl: "/privacy", termsPageUrl: "/terms" } }}>
           <ConvexClientProvider>
             <SettingsProvider>
               <SyncProvider>
-                <AppShell>{children}</AppShell>
+                <NavigationProvider><AppShell>{children}</AppShell></NavigationProvider>
               </SyncProvider>
             </SettingsProvider>
           </ConvexClientProvider>

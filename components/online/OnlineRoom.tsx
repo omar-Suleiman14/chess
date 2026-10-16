@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/navigation/PrefetchLink";
+import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { api } from "@/convex/_generated/api";

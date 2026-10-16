@@ -1,9 +1,12 @@
 "use client";
 
 import { SignInButton } from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useMutation } from "convex/react";
+import { useQuery } from "convex-helpers/react/cache/hooks";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useCardScope, useLocalCardQuery } from "@/lib/client/localCardCache";
+import Link from "@/components/navigation/PrefetchLink";
+import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
 import { use, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { api } from "@/convex/_generated/api";
 import { ChallengeDialog } from "@/components/online/ChallengeDialog";
@@ -30,7 +33,8 @@ const Arrow = () => (
 export default function PlayerCardPage({ params }: { params: Promise<{ alias: string }> }) {
   const { alias } = use(params);
   const router = useRouter();
-  const card = useQuery(api.profiles.publicCard, { alias });
+  const scope = useCardScope();
+  const card = useLocalCardQuery(api.profiles.publicCard, { alias }, scope);
   const relation = useQuery(api.friends.relation, { alias });
   const { reducedMotion } = useSettings();
   const origin = useOrigin();
@@ -82,7 +86,7 @@ export default function PlayerCardPage({ params }: { params: Promise<{ alias: st
   };
 
   const state = relation?.state;
-  const loading = card === undefined || relation === undefined;
+  const loading = card === undefined;
 
   return (
     <main className="card-public" style={card ? glow(card.cardTheme) : undefined}>
@@ -99,7 +103,7 @@ export default function PlayerCardPage({ params }: { params: Promise<{ alias: st
 
       <div className="grid w-full max-w-4xl justify-items-center gap-6 pt-12 text-center">
         <h1 className="sr-only">@{alias}</h1>
-        {loading && <p className="py-24 text-[#6e6e73]" role="status">Loading card…</p>}
+        {loading && <LoadingSpinner label="Loading card" />}
 
         {!loading && state === "missing" && (
           <div className="grid justify-items-center gap-4">
@@ -118,7 +122,7 @@ export default function PlayerCardPage({ params }: { params: Promise<{ alias: st
         )}
 
         {!loading && card === null && state && state !== "missing" && (
-          <div className="grid max-w-sm justify-items-center gap-2 rounded-3xl bg-white/70 p-8 backdrop-blur" data-vt-ready>
+          <div className="grid max-w-sm justify-items-center gap-2 rounded-3xl bg-surface p-8" data-vt-ready>
             <p className="text-2xl font-bold">@{alias}</p>
             <p className="text-sm text-[#6e6e73]">This card is private. Become friends to see it.</p>
           </div>

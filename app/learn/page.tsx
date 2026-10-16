@@ -1,11 +1,12 @@
 "use client";
 
 import { useConvexAuth, useQuery } from "convex/react";
-import Link from "next/link";
+import Link from "@/components/navigation/PrefetchLink";
 import { useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shell/AppShell";
 import { CURRICULUM, searchTopics, TOPIC_LESSONS } from "@/lib/chess/lessons/curriculum";
+import { SiteFooter } from "@/components/site/SiteFooter";
 
 export default function LearnPage() {
   const { isAuthenticated } = useConvexAuth();
@@ -27,6 +28,8 @@ export default function LearnPage() {
     <main className="mx-auto min-h-dvh max-w-xl pb-12">
       <PageHeader title="Learn" />
       <div className="grid gap-6 px-4">
+        <p className="text-sm leading-6 text-muted">Learn chess with short, interactive lessons: start with how the pieces move, then practise rules, checkmate, tactics, endgames, and openings. Make moves on the board, use hints, and learn at your own pace. No account is needed for the curated lessons.</p>
+        <Link href="/search" className="text-sm underline">Search all lessons and help</Link>
         <Link href={`/learn/${nextLesson.id}`} className="rounded-3xl bg-accent p-5 text-accent-text">
           <p className="text-sm opacity-70">{done.size === 0 ? "Start here" : "Continue"}</p>
           <p className="text-2xl font-semibold">{nextLesson.title}</p>
@@ -108,6 +111,7 @@ export default function LearnPage() {
           </section>
         )}
       </div>
+      <SiteFooter />
     </main>
   );
 }

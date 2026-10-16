@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
+    "check:seo": "node scripts/check-seo.mjs",
     "calibrate": "esbuild scripts/calibrate.ts --bundle --platform=node --format=esm --packages=external --outfile=.cache/calibrate.mjs --log-level=warning && node .cache/calibrate.mjs",
     "slice-fatma": "node scripts/slice-fatma.mjs"
   },
@@ -20,6 +21,7 @@
     "blobatar": "2.7.0",
     "chess.js": "1.4.0",
     "convex": "^1.44.0",
+    "convex-helpers": "^0.1.128",
     "html-to-image": "1.11.13",
     "idb": "8.0.4",
     "mcp-handler": "2.3.0",

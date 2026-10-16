@@ -63,22 +63,21 @@ function useHoldRepeat(action: () => void, disabled: boolean) {
   };
 }
 
-/** Back / forward through the moves. Chevrons nudge the way they point on hover. */
+/** Fixed surface; only the chevrons shrink during a press. */
 export function ReviewArrows({ onBack, onForward, backDisabled, forwardDisabled }: { onBack: () => void; onForward: () => void; backDisabled: boolean; forwardDisabled: boolean }) {
   const back = useHoldRepeat(onBack, backDisabled);
   const forward = useHoldRepeat(onForward, forwardDisabled);
   const button =
-    "group grid h-14 w-16 shrink-0 touch-manipulation select-none place-items-center [-webkit-touch-callout:none] [-webkit-user-select:none] focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent disabled:opacity-30";
-  // Springy nudge in the arrow's direction; a press squashes it. No background change.
-  const chevron = "pointer-events-none h-8 w-8 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-active:scale-75 group-disabled:!translate-x-0 group-disabled:!scale-100";
+    "press-overlay grid h-14 w-16 shrink-0 touch-manipulation select-none place-items-center [-webkit-touch-callout:none] [-webkit-user-select:none] focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent disabled:opacity-30";
+  const chevron = "pointer-events-none h-8 w-8";
   return (
     <div className="flex h-14 shrink-0 select-none overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]" role="group" aria-label="Review moves" dir="ltr">
       <button {...back} disabled={backDisabled} className={button} aria-label="Previous move (hold to rewind)" aria-keyshortcuts="ArrowLeft Home">
-        <svg viewBox="0 0 24 24" className={`${chevron} group-hover:-translate-x-1.5`} aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <svg viewBox="0 0 24 24" className={chevron} aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
       <span className="my-2.5 w-px bg-line" aria-hidden="true" />
       <button {...forward} disabled={forwardDisabled} className={button} aria-label="Next move (hold to fast-forward)" aria-keyshortcuts="ArrowRight End">
-        <svg viewBox="0 0 24 24" className={`${chevron} group-hover:translate-x-1.5`} aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <svg viewBox="0 0 24 24" className={chevron} aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
     </div>
   );

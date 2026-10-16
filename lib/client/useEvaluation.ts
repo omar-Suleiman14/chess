@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ENGINE_BUILD, SearchCancelled } from "../chess/engine/controller";
 import type { WhiteScore } from "../chess/engine/uci";
 import { getEngine, supportsEngine } from "./engine";
+import { readAnalysis, writeAnalysis } from "./analysisCache";
 
 export const EVAL_MOVETIME_MS = 1500;
 export const EVAL_SETTINGS_HASH = `eval:mt${EVAL_MOVETIME_MS}:mpv1`;
@@ -27,8 +28,18 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
     let cancelled = false;
     let lastPaint = 0;
     const engine = getEngine();
-    engine
-      .search({
+    let searching = false;
+    void (async () => {
+      const cached = await readAnalysis(fen, EVAL_SETTINGS_HASH);
+      if (cancelled) return;
+      if (cached) {
+        const final: Evaluation = { nodeKey, fen, score: cached.score, depth: cached.depth, bestmove: cached.bestmove, final: true };
+        setEvaluation(final);
+        finalRef.current?.(final);
+        return;
+      }
+      searching = true;
+      const result = await engine.search({
         kind: "eval",
         fen,
         movetimeMs: EVAL_MOVETIME_MS,
@@ -38,24 +49,23 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
           lastPaint = now;
           setEvaluation({ nodeKey, fen, score: info.score, depth: info.depth, final: false });
         },
-      })
-      .then((result) => {
-        if (cancelled) return;
-        const final: Evaluation = { nodeKey, fen, score: result.score, depth: result.depth, bestmove: result.bestmove, final: true };
-        setEvaluation(final);
-        finalRef.current?.(final);
-      })
-      .catch((error: unknown) => {
-        if (!(error instanceof SearchCancelled)) setEvaluation(null);
       });
+      if (cancelled) return;
+      void writeAnalysis(fen, EVAL_SETTINGS_HASH, result);
+      const final: Evaluation = { nodeKey, fen, score: result.score, depth: result.depth, bestmove: result.bestmove, final: true };
+      setEvaluation(final);
+      finalRef.current?.(final);
+    })().catch((error: unknown) => {
+      if (!cancelled && !(error instanceof SearchCancelled)) setEvaluation(null);
+    });
     return () => {
       cancelled = true;
-      engine.cancel("eval");
+      if (searching) engine.cancel("eval");
     };
   }, [fen, nodeKey, enabled]);
 
   // Only show scores that belong to the position on the board (no stale jumps).
-  const current = evaluation && evaluation.fen === fen ? evaluation : null;
+  const current = enabled && evaluation && evaluation.fen === fen && evaluation.nodeKey === nodeKey ? evaluation : null;
   return current;
 }
 

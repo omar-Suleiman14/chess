@@ -38,7 +38,7 @@ export function GameResult({ result, reason, human, description, reducedMotion, 
     <div className="pointer-events-none fixed inset-0 z-[70] grid place-items-center p-4">
       <motion.div
         role="status"
-        className="pointer-events-auto relative max-h-[calc(100dvh-2rem)] w-[min(300px,100%)] overflow-y-auto rounded-3xl border border-line bg-surface/95 px-5 pb-5 pt-6 text-center shadow-[0_18px_65px_rgba(0,0,0,0.45)] backdrop-blur-md"
+        className="pointer-events-auto relative max-h-[calc(100dvh-2rem)] w-[min(300px,100%)] overflow-y-auto rounded-3xl border border-line bg-surface px-5 pb-5 pt-6 text-center shadow-[0_18px_65px_rgba(0,0,0,0.45)]"
         initial={reducedMotion ? false : { opacity: 0, y: 22, scale: 0.88 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 30, delay: resigned ? 0.15 : 0.45 }}
