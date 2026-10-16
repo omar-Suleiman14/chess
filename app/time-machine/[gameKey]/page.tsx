@@ -6,6 +6,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
+import { MoveReview } from "@/components/chess/MoveReview";
+import { PlayerIdentity } from "@/components/chess/PlayerIdentity";
+import { FatmaSprite } from "@/components/fatma/FatmaSprite";
+import { MOVE_QUALITY, reviewMove } from "@/lib/chess/review";
 import { Board, type LastMove } from "@/components/chess/Board";
 import { Dialog, Segmented } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
@@ -62,6 +66,11 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
   const tree = game?.tree ?? createTree("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "x", 0);
   const activeBranch = branchKey && tree.branches[branchKey] ? branchKey : tree.activeBranchKey;
   const path = useMemo(() => (game ? pathTo(tree, tree.branches[activeBranch]?.headKey ?? "root") : []), [game, tree, activeBranch]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setScores({});
+  }, [gameKey]);
 
   // Saved server analysis seeds the local score map.
   useEffect(() => {
@@ -147,16 +156,27 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
     });
     return findMistakes(moves, game.meta.humanColor);
   }, [game, path, scores, tree.nodes]);
+  const reviewed = useMemo(() => path.flatMap((n) => {
+    const parent = tree.nodes[n.parentKey ?? "root"];
+    const before = scores[parent.key];
+    const after = scores[n.key];
+    const review = reviewMove({ fenBefore: parent.fen, uci: n.uci, san: n.san, ply: n.ply,
+      before: before ? { ...before, bestmove: before.bestmove ?? undefined } : undefined, after });
+    return review ? [review] : [];
+  }), [path, scores, tree.nodes]);
+  const selectedReview = reviewed.find((move) => move.ply === node?.ply);
+  const selectedStyle = selectedReview ? MOVE_QUALITY[selectedReview.quality] : null;
   const mistakePlies = new Set(mistakes.map((m) => m.ply));
 
   const analyse = useCallback(async () => {
     if (!supportsEngine() || !game) return;
     const run = ++analysisRun.current;
     const nodes = [tree.nodes.root, ...path].filter((n) => !scores[n.key] || (scores[n.key].depth ?? 0) < 10);
+    setMessage(null);
     setAnalysing({ done: 0, total: nodes.length });
     for (const [i, n] of nodes.entries()) {
       if (run !== analysisRun.current) return;
-      if (positionStatus(n.fen).over) continue;
+      if (positionStatus(n.fen).over) { setAnalysing({ done: i + 1, total: nodes.length }); continue; }
       try {
         const result = await getEngine().search({ kind: "review", fen: n.fen, movetimeMs: REVIEW_MOVETIME });
         if (run !== analysisRun.current) return;
@@ -176,17 +196,24 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
           });
         }
       } catch (error) {
-        if (!(error instanceof SearchCancelled)) break;
+        if (run !== analysisRun.current) return;
+        if (!(error instanceof SearchCancelled)) { setMessage("Analysis stopped. Tap Analyse to retry the remaining positions."); break; }
       }
       setAnalysing({ done: i + 1, total: nodes.length });
     }
-    setAnalysing(null);
+    if (run === analysisRun.current) setAnalysing(null);
   }, [game, path, scores, tree.nodes, isAuthenticated, sync]);
 
-  useEffect(() => () => {
+  const cancelAnalysis = useCallback(() => {
     analysisRun.current++;
     if (supportsEngine()) getEngine().cancel("review");
   }, []);
+  useEffect(() => {
+    cancelAnalysis();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAnalysing(null);
+    return cancelAnalysis;
+  }, [gameKey, activeBranch, cancelAnalysis]);
 
   const startBranch = async (from: TreeNode, opponentId: string) => {
     if (!game) return;
@@ -267,7 +294,10 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
       <PageHeader title="Time Machine" />
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
         <div className="mx-auto w-full max-w-[min(92vw,calc(100dvh-260px),640px)]">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><FatmaSprite expression="idle" size={42} reducedMotion={reducedMotion} />Fatma</div>
           <Board
+            moveBadge={selectedReview && selectedStyle && node ? { square: node.uci.slice(2, 4) as Square, symbol: selectedStyle.symbol, color: selectedStyle.color, label: selectedStyle.label } : undefined}
+            result={game.meta.status === "finished" && cursor === path.length && activeBranch === tree.activeBranchKey ? { result: game.meta.result, reason: game.meta.resultReason } : undefined}
             fen={fen}
             orientation={game.meta.humanColor}
             movable={null}
@@ -280,6 +310,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
             reducedMotion={reducedMotion}
             label={`Replay board at ${node ? moveLabel(node) : "start"}`}
           />
+          <PlayerIdentity />
           <div className="mt-3 flex items-center gap-2">
             <button onClick={() => setCursor(0)} aria-label="Go to start" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">⏮</button>
             <button onClick={() => setCursor((c) => Math.max(0, c - 1))} aria-label="Previous move" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-[var(--shadow)]">◀</button>
@@ -332,6 +363,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
         </div>
 
         <aside className="grid content-start gap-3">
+          <MoveReview moves={reviewed} total={path.length} human={game.meta.humanColor} cursor={node?.ply ?? 0} onSelect={(ply) => { setPlaying(false); const index = path.findIndex((move) => move.ply === ply); if (index >= 0) setCursor(index + 1); }} />
           <ol className="max-h-[40dvh] overflow-y-auto rounded-2xl bg-surface p-2 text-sm shadow-[var(--shadow)]" aria-label="Moves">
             {path.map((n, i) => (
               <li key={n.key} className="inline-block">
@@ -347,6 +379,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
                   <span className="relative">
                     {n.ply % 2 === 1 ? `${Math.ceil(n.ply / 2)}. ` : ""}
                     {n.san}
+                    {(() => { const review = reviewed.find((move) => move.ply === n.ply); return review ? <span className="ml-1 font-bold" title={MOVE_QUALITY[review.quality].label} style={{ color: MOVE_QUALITY[review.quality].color }}>{MOVE_QUALITY[review.quality].symbol}</span> : null; })()}
                   </span>
                 </button>
               </li>

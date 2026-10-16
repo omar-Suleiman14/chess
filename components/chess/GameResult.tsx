@@ -15,13 +15,6 @@ type Props = {
   reviewUrl?: string;
 };
 
-const CONFETTI = Array.from({ length: 24 }, (_, i) => ({
-  left: `${(i * 37) % 100}%`,
-  color: ["#a3c96b", "#f7d76b", "#e9efdf", "#80c4b7"][i % 4],
-  delay: (i % 6) * 0.07,
-  drift: ((i % 5) - 2) * 24,
-}));
-
 /** A finite end-of-game celebration; dismiss it to inspect the final board. */
 export function GameResult({ result, reason, human, description, reducedMotion, onRematch, reviewUrl }: Props) {
   const [dismissed, setDismissed] = useState(false);
@@ -35,22 +28,12 @@ export function GameResult({ result, reason, human, description, reducedMotion, 
 
   return (
     <div className="pointer-events-none absolute inset-0 z-40 grid place-items-center overflow-hidden rounded-xl">
-      {won && !reducedMotion && (
-        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-          {CONFETTI.map((piece, i) => (
-            <motion.span key={i} className="absolute top-0 h-3 w-1.5 rounded-sm" style={{ left: piece.left, backgroundColor: piece.color }}
-              initial={{ y: -24, x: 0, rotate: 0, opacity: 0 }}
-              animate={{ y: [0, 420, 800], x: piece.drift, rotate: (i % 2 ? 1 : -1) * 480, opacity: [0, 1, 1, 0] }}
-              transition={{ duration: 2.4, delay: piece.delay, ease: "easeOut" }} />
-          ))}
-        </div>
-      )}
       <motion.div
         role="status"
         className="pointer-events-auto relative mx-4 max-h-full w-[min(290px,calc(100%-2rem))] overflow-y-auto rounded-3xl border border-line bg-surface/95 px-5 pb-5 pt-6 text-center shadow-[0_18px_65px_rgba(0,0,0,0.45)] backdrop-blur-md"
         initial={reducedMotion ? false : { opacity: 0, y: 22, scale: 0.88 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 22 }}
+        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 22, delay: 1.5 }}
       >
         <button onClick={() => setDismissed(true)} aria-label="Dismiss result" className="absolute right-1 top-1 grid h-11 w-11 place-items-center rounded-full text-muted">
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>

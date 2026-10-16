@@ -20,6 +20,7 @@ import { useFatma } from "@/lib/client/useFatma";
 import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
 import { GameResult } from "./GameResult";
+import { PlayerIdentity } from "./PlayerIdentity";
 
 type Props = {
   /** Default options for "New game" on this screen. */
@@ -250,13 +251,12 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className="min-w-0">
-            <p className="truncate text-base font-semibold leading-tight">
-              Fatma
+            <p className="sr-only">
+              Chess
             </p>
           </div>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
-          {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
           <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 shrink-0 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)]" aria-label="New game" aria-keyshortcuts="n">
             New
           </motion.button>
@@ -282,6 +282,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </header>
 
       <section className="flex flex-1 flex-col items-center justify-center">
+        <div className="mb-2 flex w-full items-center gap-2">
+          <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName />
+          {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
+        </div>
         <div className="flex w-full items-stretch gap-2">
           {settings.evalBar && (evalAllowed ? (
             <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} />
@@ -298,6 +302,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           ))}
           <div className="relative min-w-0 flex-1">
             <Board
+              result={resultText && game && !reviewing ? { result: game.meta.result, reason: game.meta.resultReason } : undefined}
               fen={fen}
               orientation={orientation}
               movable={active && turn === human && !reviewing ? human : null}
@@ -319,11 +324,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
                 description={resultText}
                 reducedMotion={reducedMotion}
                 onRematch={() => void chess.newGame({ ...defaults, opponentId: game.meta.opponentId })}
-                reviewUrl={game.meta.synced ? `/time-machine/${game.meta.gameKey}` : undefined}
+                reviewUrl={`/time-machine/${game.meta.gameKey}`}
               />
             )}
           </div>
         </div>
+
+        <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}</div>
 
         {/* Fixed-height status line, then Fatma's fixed-size corner: nothing here can resize the layout. */}
         <div className="mt-1.5 flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted" aria-live="polite">
@@ -347,7 +354,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           )}
           {sync.status.error && <span className="truncate text-danger">{sync.status.error}</span>}
         </div>
-        <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} />
       </section>
 
       <p className="sr-only" aria-live="assertive">
@@ -357,7 +363,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
 
       <footer className="safe-bottom flex w-full items-center gap-3 pt-2">
-        {tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}
         <div className="flex-1" />
         <motion.button
           whileTap={{ scale: 0.94 }}

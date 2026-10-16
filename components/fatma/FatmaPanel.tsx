@@ -10,16 +10,17 @@ import { FatmaSprite } from "./FatmaSprite";
  * Fatma's corner: a fixed-size space (sprite + bubble) so her lines never
  * move the board or controls. The bubble floats inside it, max two lines.
  */
-export function FatmaPanel({ fatma, thinking, reducedMotion }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean }) {
+export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean }) {
   const expression = fatma.line ? fatma.expression : thinking ? "thinking" : "idle";
   return (
     <div className="pointer-events-none relative h-16 w-full">
+      {showName && <span className="absolute left-14 top-0 text-sm font-semibold">Fatma</span>}
       {fatma.enabled && (
         <>
           <div className="absolute bottom-0 left-0">
             <FatmaSprite expression={expression} size={56} reducedMotion={reducedMotion} />
           </div>
-          <div aria-live="polite" className="absolute bottom-3 left-14 right-0 flex items-end">
+          <div aria-live="polite" className={`absolute ${showName ? "bottom-0" : "bottom-3"} left-14 right-0 flex items-end`}>
             {fatma.line && (
               <button
                 onClick={fatma.dismiss}
