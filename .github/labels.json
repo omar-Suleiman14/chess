@@ -1,0 +1,152 @@
+[
+  {
+    "name": "priority:P0",
+    "color": "B42318",
+    "description": "Critical path; blocks playable delivery or security"
+  },
+  {
+    "name": "priority:P1",
+    "color": "D97706",
+    "description": "High-priority user-visible capability"
+  },
+  {
+    "name": "priority:P2",
+    "color": "0E7490",
+    "description": "Later phase / polish"
+  },
+  {
+    "name": "status:blocked",
+    "color": "CF222E",
+    "description": "Waiting on prerequisite, experiment, or decision"
+  },
+  {
+    "name": "type:feature",
+    "color": "1D76DB",
+    "description": "End-user functionality"
+  },
+  {
+    "name": "type:infrastructure",
+    "color": "545B64",
+    "description": "Framework, build, deployment, data platform"
+  },
+  {
+    "name": "type:docs",
+    "color": "0075CA",
+    "description": "Documentation, architecture and planning"
+  },
+  {
+    "name": "type:research",
+    "color": "8C56C4",
+    "description": "Benchmark / feasibility spike / technical investigation"
+  },
+  {
+    "name": "type:security",
+    "color": "B60205",
+    "description": "Authentication, authorization or privacy"
+  },
+  {
+    "name": "type:testing",
+    "color": "006B75",
+    "description": "Tests, reliability and performance"
+  },
+  {
+    "name": "area:chess-engine",
+    "color": "0366D6",
+    "description": "Stockfish Lite WASM / UCI / worker"
+  },
+  {
+    "name": "area:board",
+    "color": "1B9E77",
+    "description": "Chess board interaction and move correctness"
+  },
+  {
+    "name": "area:game-modes",
+    "color": "6F42C1",
+    "description": "Full Power, Climb and Timed modes"
+  },
+  {
+    "name": "area:ratings",
+    "color": "A37700",
+    "description": "Ratings, calibrations, fair-play eligibility"
+  },
+  {
+    "name": "area:history",
+    "color": "B46A1D",
+    "description": "Game persistence, Undo and branching"
+  },
+  {
+    "name": "area:time-machine",
+    "color": "C46E98",
+    "description": "Replay, timeline and branch UX"
+  },
+  {
+    "name": "area:lessons",
+    "color": "2A8FBD",
+    "description": "Fixed/adaptive/on-demand playable lessons"
+  },
+  {
+    "name": "area:fatma",
+    "color": "D15A77",
+    "description": "Fatma character/dialogue/evolution"
+  },
+  {
+    "name": "area:mcp",
+    "color": "8250DF",
+    "description": "MCP ChatGPT/Claude tools and auth"
+  },
+  {
+    "name": "area:ui-ux",
+    "color": "5D8B8A",
+    "description": "Minimal Apple-inspired design, motion and controls"
+  },
+  {
+    "name": "area:profiles",
+    "color": "6684A3",
+    "description": "Chaos Cards/Blobatar/profile reuse"
+  },
+  {
+    "name": "area:open-source",
+    "color": "238636",
+    "description": "Licensing, attribution, contribution ecosystem"
+  },
+  {
+    "name": "area:quality",
+    "color": "6B7280",
+    "description": "Performance, mobile, accessibility, QA"
+  },
+  {
+    "name": "phase:G0",
+    "color": "FAE17A",
+    "description": "G0 feasibility and blockers"
+  },
+  {
+    "name": "phase:G1",
+    "color": "D4E5FC",
+    "description": "G1 core chess functionality"
+  },
+  {
+    "name": "phase:G2",
+    "color": "D8F5E1",
+    "description": "G2 polished daily play"
+  },
+  {
+    "name": "phase:G3",
+    "color": "F0DDF7",
+    "description": "G3 ratings and lessons"
+  },
+  {
+    "name": "phase:G4",
+    "color": "FEE2C6",
+    "description": "G4 Time Machine/history"
+  },
+  {
+    "name": "phase:G5",
+    "color": "E4DFFB",
+    "description": "G5 MCP and character evolution"
+  },
+  {
+    "name": "phase:G6",
+    "color": "DDDDE4",
+    "description": "G6 release hardening"
+  }
+]
