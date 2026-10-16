@@ -6,7 +6,7 @@ import type { Color } from "@/lib/chess/rules";
 
 /**
  * chess.com-style evaluation bar: White-positive, the number sits on the
- * winning side in a clear bold face, with B/W labels at the ends. The fill is
+ * winning side in a clear bold face. The fill is
  * a display mapping, not a win probability.
  */
 export function EvalBar({ score, orientation, depth, reducedMotion }: { score: WhiteScore | null; orientation: Color; depth?: number; reducedMotion?: boolean }) {
@@ -18,8 +18,7 @@ export function EvalBar({ score, orientation, depth, reducedMotion }: { score: W
   // The number sits at the end of whichever side is ahead.
   const numberAtBottom = whiteBetter === whiteAtBottom;
   return (
-    <div className="flex w-[28px] shrink-0 flex-col items-center gap-1 self-stretch">
-      <span className="text-[10px] font-semibold leading-none text-muted" aria-hidden="true">{whiteAtBottom ? "B" : "W"}</span>
+    <div className="flex w-[28px] shrink-0 self-stretch">
       <div
         className="relative w-full flex-1 overflow-hidden rounded-[5px] bg-[#403d39]"
         role="meter"
@@ -45,7 +44,6 @@ export function EvalBar({ score, orientation, depth, reducedMotion }: { score: W
           </span>
         )}
       </div>
-      <span className="text-[10px] font-semibold leading-none text-muted" aria-hidden="true">{whiteAtBottom ? "W" : "B"}</span>
     </div>
   );
 }

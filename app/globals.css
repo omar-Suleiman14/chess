@@ -129,6 +129,47 @@ button {
 .safe-bottom { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 .safe-top { padding-top: max(8px, env(safe-area-inset-top)); }
 
+/* One shared geometry for solo and online play. The board and move panel
+   occupy the same row; player identities and controls share the next row. */
+.game-layout {
+  --eval-gutter: 0px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-areas: "header" "moves" "group" "status" "footer";
+  width: 100%;
+  max-width: min(100%, max(284px, calc(100dvh - 316px)), 790px);
+  min-width: 0;
+  min-height: 100dvh;
+  margin-inline: auto;
+}
+.game-board-group { grid-area: group; display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: center; }
+.game-opponent { grid-area: opponent; width: 100%; margin-bottom: 8px; }
+.game-position { grid-area: board; min-width: 0; }
+.game-player { grid-area: player; width: 100%; }
+@media (max-width: 1023px) and (max-height: 620px) {
+  .game-layout > header { padding-top: max(4px, env(safe-area-inset-top)); padding-bottom: 4px; }
+  .game-opponent { margin-bottom: 4px; }
+}
+@media (min-width: 1024px) {
+  .game-layout {
+    --board-size: min(calc(100dvh - 208px), calc(100vw - 380px - var(--eval-gutter)), 1000px);
+    width: fit-content;
+    max-width: none;
+    min-height: 0;
+    padding-block: 16px;
+    grid-template-columns: calc(var(--board-size) + var(--eval-gutter)) 300px;
+    grid-template-rows: 56px var(--board-size) 56px minmax(24px, auto);
+    grid-template-areas: "opponent header" "board moves" "player footer" ". status";
+    gap: 8px 32px;
+  }
+  .game-board-group { display: contents; }
+  .game-opponent, .game-player { display: flex; min-width: 0; align-items: center; margin: 0; }
+  .game-layout > header, .game-layout > footer { padding-block: 0; }
+  .game-moves { overflow: hidden; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+  .game-moves > nav { border-radius: 0; box-shadow: none; }
+}
+
 /* Board */
 .board {
   touch-action: none;

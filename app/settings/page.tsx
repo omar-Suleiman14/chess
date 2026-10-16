@@ -27,7 +27,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function SettingsPage() {
-  const { settings, update, glassOn, glassOffReason } = useSettings();
+  const { settings, update, glassOn } = useSettings();
   const palette = PALETTES.find((p) => p[0] === settings.palette) ?? PALETTES[0];
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-16">
@@ -93,22 +93,13 @@ export default function SettingsPage() {
             <SwitchRow
               label="Liquid Glass"
               badge="Experimental"
-              hint={
-                settings.glass !== "auto"
-                  ? "Set by you."
-                  : glassOffReason === "webkit"
-                    ? "Off by default in Safari and on iPhone and iPad, which can't show the refraction."
-                    : glassOffReason === "weak"
-                      ? "Off by default on this device to keep it smooth."
-                      : "Refractive glass buttons, switches and sliders."
-              }
+              hint="Off by default on every device. Turn on for refractive buttons, switches and sliders."
               checked={glassOn}
               onChange={(v) => update({ glass: v ? "on" : "off" })}
             />
-            {/* Only while glass is on against this device's default; otherwise resetting changes nothing. */}
-            {settings.glass === "on" && glassOffReason && (
-              <button onClick={() => update({ glass: "auto" })} className="flex min-h-12 w-full items-center px-4 text-start text-sm font-medium text-[#0a84ff]">
-                Reset Liquid Glass to this device&apos;s default (off)
+            {settings.glass === "on" && (
+              <button onClick={() => update({ glass: "off" })} className="flex min-h-12 w-full items-center px-4 text-start text-sm font-medium text-[#0a84ff]">
+                Reset Liquid Glass to default (off)
               </button>
             )}
             <SwitchRow

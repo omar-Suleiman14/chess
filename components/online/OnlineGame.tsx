@@ -18,7 +18,7 @@ import { GlassButton } from "@/components/ui/Glass";
 import { capturesAlongLine } from "@/lib/chess/captures";
 import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
-import { haptic, installAudioUnlock, playSound, unlockAudio } from "@/lib/client/sound";
+import { haptic, installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
 import { avatarFromName, timeControlLabel, useServerOffset } from "@/lib/client/online";
 import { canSubmitMove, livePendingMove, type PendingMove } from "@/lib/client/onlineMoves";
 import { PLAY_STAGE } from "@/lib/client/viewTransition";
@@ -42,7 +42,7 @@ function other(c: Color): Color {
 
 function moveSound(applied: NonNullable<ReturnType<typeof applyUci>>) {
   const castle = applied.flags.includes("k") || applied.flags.includes("q");
-  return applied.checkmate ? "mate" : applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : "move";
+  return applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : "move";
 }
 
 function toLastMove(uci: string | null, key: string): LastMove {
@@ -125,7 +125,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         const applied = applyUci(prevFen.current, last.uci);
         const mover = sideToMove(prevFen.current);
         if (applied) setAnnouncement(`${(mover === "w" ? room.white : room.black) ?? "Opponent"}: ${describeMove(applied, mover)}`);
-        if (applied && settings.sound) playSound(moveSound(applied), settings.volume);
+        if (applied && !applied.checkmate && settings.sound) playSound(moveSound(applied), settings.volume);
         if (settings.haptics) haptic(8);
       }
     }
@@ -135,11 +135,15 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
 
   const ended = useRef(room.status === "finished");
   useEffect(() => {
+    if (room.status !== "finished") {
+      ended.current = false;
+      return;
+    }
     if (room.status === "finished" && !ended.current) {
       ended.current = true;
-      if (settings.sound && room.resultReason !== "checkmate") playSound("end", settings.volume);
+      if (settings.sound) playSound(resultSound(room.result, you), settings.volume);
     }
-  }, [room.status, room.resultReason, settings.sound, settings.volume]);
+  }, [room.status, room.result, you, settings.sound, settings.volume]);
 
   // Rematch accepted: both players follow the new room.
   useEffect(() => {
@@ -153,7 +157,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       const applied = applyUci(room.fen, uci);
       if (!applied) return false;
       setPending({ ply: room.ply, fen: applied.fen, uci });
-      if (settings.sound) playSound(moveSound(applied), settings.volume);
+      if (!applied.checkmate && settings.sound) playSound(moveSound(applied), settings.volume);
       if (settings.haptics) haptic(applied.captured ? [8, 30, 8] : 8);
       try {
         await move({ roomId: room.roomId, token, uci, ply: room.ply });
@@ -273,8 +277,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
     {settings.livingBackground && <CharacterField reducedMotion={reducedMotion} />}
     <main className="min-h-dvh w-full px-3 sm:px-6">
       <div
-        className="mx-auto grid min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-300px),790px)] grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_1fr_auto_auto] [grid-template-areas:'header'_'moves'_'board'_'status'_'footer'] lg:h-dvh lg:min-h-0 lg:w-fit lg:max-w-none lg:grid-cols-[var(--board-col)_300px] lg:grid-rows-[auto_minmax(0,1fr)_auto_auto] lg:gap-x-8 lg:py-4 lg:[grid-template-areas:'board_header'_'board_moves'_'board_status'_'board_footer']"
-        style={{ ["--board-col" as string]: "min(calc(100dvh - 130px), calc(100vw - 400px), 1060px)" }}
+        className="game-layout"
       >
         <header className="safe-top flex items-center justify-end gap-1.5 pb-2 [grid-area:header] lg:pt-0">
           {playing && (
@@ -324,8 +327,8 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
           <MenuButton />
         </header>
 
-        <div className="min-h-0 [grid-area:moves] lg:flex lg:flex-col lg:pb-2">
-          <p className="px-1 pb-1.5 text-xs text-muted">
+        <div className="game-moves min-h-0 [grid-area:moves] lg:flex lg:flex-col">
+          <p className="px-3 pb-1.5 text-xs text-muted lg:pt-3">
             {timeControlLabel(room.initialMs, room.incrementMs)} · PIN <span className="tabular-nums">{room.code}</span>
             {!playing && " · watching"}
           </p>
@@ -335,9 +338,9 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
           <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="hidden flex-1 lg:flex" />
         </div>
 
-        <section className="flex min-w-0 flex-col items-center justify-center gap-1 [grid-area:board]">
-          {row(top)}
-          <div className="relative w-full" data-vt-ready style={{ viewTransitionName: PLAY_STAGE }}>
+        <section className="game-board-group">
+          <div className="game-opponent">{row(top)}</div>
+          <div className="game-position relative w-full" data-vt-ready style={{ viewTransitionName: PLAY_STAGE }}>
             <Board
               fen={fen}
               orientation={orientation}
@@ -352,7 +355,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
               label={`Chess board${you ? `, you play ${you === "w" ? "White" : "Black"}` : ""}. ${reviewing ? "Reviewing an earlier move." : finished ? "Game over." : myTurn ? "Your move." : `${nameOf(toMove)} to move.`}`}
             />
           </div>
-          {row(bottom)}
+          <div className="game-player">{row(bottom)}</div>
         </section>
 
         <div className="flex min-h-6 w-full flex-wrap items-center justify-end gap-2 text-xs text-muted [grid-area:status] lg:justify-start" aria-live="polite">

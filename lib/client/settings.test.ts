@@ -50,6 +50,14 @@ describe("isWebKit", () => {
 });
 
 describe("settings sync", () => {
+  it("defaults glass off, migrates legacy auto, and preserves an explicit opt-in", () => {
+    expect(fromSaved(null).glass).toBe("off");
+    expect(fromSaved({ glass: "auto" }).glass).toBe("off");
+    expect(fromSaved({ glass: "on" }).glass).toBe("on");
+    const pulled = resolveSettingsSync(0, { settings: { glass: "auto" }, changedAt: 10 });
+    expect(pulled).toMatchObject({ action: "pull", settings: { glass: "off" } });
+  });
+
   it("adopts the account's settings when they are newer", () => {
     const d = resolveSettingsSync(10, { settings: { palette: "sage", think: "deep" }, changedAt: 20 });
     expect(d.action).toBe("pull");

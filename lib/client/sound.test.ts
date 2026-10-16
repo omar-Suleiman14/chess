@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const start = vi.fn();
 const vibrate = vi.fn();
@@ -25,6 +27,30 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("navigation sound and haptics", () => {
+  it.each([
+    ["1-0", "w", "victory"], ["1-0", "b", "defeat"],
+    ["0-1", "w", "defeat"], ["0-1", "b", "victory"],
+    ["1/2-1/2", "w", "draw"], ["1/2-1/2", "b", "draw"],
+    ["1/2-1/2", null, "draw"], ["1-0", null, "end"],
+    [null, "w", "end"], [undefined, "b", "end"],
+  ] as const)("plays %s from seat %s as %s", async (result, seat, expected) => {
+    const { resultSound } = await import("./sound");
+    expect(resultSound(result, seat)).toBe(expected);
+  });
+
+  it("ships MP3 data for every requested recording", async () => {
+    const { unlockAudio } = await import("./sound");
+    unlockAudio();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(10));
+    for (const [url] of vi.mocked(fetch).mock.calls) {
+      const data = readFileSync(resolve("public", String(url).slice(1)));
+      // Reject missing files, HTML error responses and upstream symlink text.
+      const isMp3 = data.subarray(0, 3).toString() === "ID3" || (data[0] === 0xff && (data[1] & 0xe0) === 0xe0);
+      expect(isMp3, String(url)).toBe(true);
+      expect(data.length).toBeGreaterThan(1000);
+    }
+  });
+
   it("plays the first gesture after cold audio buffers finish loading", async () => {
     const { unlockAudio, playSound } = await import("./sound");
     unlockAudio();

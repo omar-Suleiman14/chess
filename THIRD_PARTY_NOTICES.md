@@ -46,9 +46,21 @@ The in-app [/licenses](app/licenses/page.tsx) page links to the licence and sour
 
 Licences as listed in [lila's COPYING.md](https://github.com/lichess-org/lila/blob/master/COPYING.md). Files are unmodified.
 
-## Sounds (from lichess-org/lila `public/sound/standard/`)
+## Sounds
 
-`public/sounds/standard/*.mp3` (Move, Capture, GenericNotify, Select, Confirmation, Error, LowTime) are part of lila, © the lila authors, **AGPL-3.0-or-later**. They are combined with this GPL-3.0 project as GPL-3.0 §13 permits, and keep their AGPL terms. Their corresponding source is the files themselves plus [lila](https://github.com/lichess-org/lila). Unmodified.
+### Result chimes (CC0)
+
+`public/sounds/results/` contains three short cues from **Kenney Interface Sounds 1.0**, [official source and download](https://kenney.nl/assets/interface-sounds), **CC0 1.0**. The original licence is shipped as `public/sounds/results/LICENSE.txt`.
+
+- `Victory.mp3`: `Audio/confirmation_001.ogg`, a short rising chime (0.29 seconds).
+- `Defeat.mp3`: `Audio/question_002.ogg`, a short falling chime (0.33 seconds).
+- `Draw.mp3`: `Audio/bong_001.ogg`, a single neutral tone (0.12 seconds).
+
+Source archive: [kenney_interface-sounds.zip](https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip). Converted from Ogg Vorbis to MP3 using FFmpeg/libmp3lame (`-q:a 3`) for browser compatibility; no cropping or pitch changes. Playback volume is reduced in the app. The existing move, capture and utility sounds are unchanged.
+
+### Existing Lichess Standard recordings
+
+`public/sounds/standard/*.mp3` (Move, Capture, GenericNotify, Select, Confirmation, Error, LowTime) were previously copied from [lichess-org/lila](https://github.com/lichess-org/lila/tree/master/public/sound/standard). Upstream [COPYING.md](https://github.com/lichess-org/lila/blob/master/COPYING.md) lists the other sounds in `public/sound` as **non-free exceptions**. The previous claim that these Standard assets were AGPL-3.0-or-later was incorrect. These existing recordings are retained unchanged; this update adds only CC0 result cues.
 
 ## Liquid Glass technique (kube.io)
 

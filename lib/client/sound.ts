@@ -1,10 +1,12 @@
-// Recorded chess sounds (Lichess "standard" set, AGPL-3.0-or-later, see
+// Existing Lichess Standard recordings and Kenney CC0 result chimes (see
 // THIRD_PARTY_NOTICES.md), decoded once into Web Audio buffers so playback is
 // instant and overlapping moves never cut each other off.
 
-export type SoundName = "move" | "capture" | "check" | "castle" | "promote" | "mate" | "end" | "select" | "correct" | "wrong" | "lowtime" | "sheet";
+import type { Color } from "../chess/rules";
 
-const FILES: Record<string, string> = {
+export type SoundName = "move" | "capture" | "check" | "castle" | "promote" | "victory" | "defeat" | "draw" | "end" | "select" | "correct" | "wrong" | "lowtime" | "sheet";
+
+const FILES = {
   move: "/sounds/standard/Move.mp3",
   capture: "/sounds/standard/Capture.mp3",
   notify: "/sounds/standard/GenericNotify.mp3",
@@ -12,6 +14,9 @@ const FILES: Record<string, string> = {
   confirm: "/sounds/standard/Confirmation.mp3",
   error: "/sounds/standard/Error.mp3",
   lowtime: "/sounds/standard/LowTime.mp3",
+  victory: "/sounds/results/Victory.mp3",
+  defeat: "/sounds/results/Defeat.mp3",
+  draw: "/sounds/results/Draw.mp3",
 };
 
 // Which recording each game event uses, and its relative loudness.
@@ -21,7 +26,9 @@ const MAP: Record<SoundName, [keyof typeof FILES, number] | null> = {
   promote: ["move", 1],
   check: ["move", 1],
   capture: ["capture", 1],
-  mate: ["notify", 0.8],
+  victory: ["victory", 0.45],
+  defeat: ["defeat", 0.4],
+  draw: ["draw", 0.4],
   end: ["notify", 0.8],
   select: null, // silent: picking a piece up shouldn't click
   correct: ["confirm", 0.7],
@@ -29,6 +36,13 @@ const MAP: Record<SoundName, [keyof typeof FILES, number] | null> = {
   lowtime: ["lowtime", 0.8],
   sheet: null,
 };
+
+/** Endings reflect the player's seat, including resignations and timeouts. */
+export function resultSound(result: string | null | undefined, player: Color | null): SoundName {
+  if (result === "1/2-1/2") return "draw";
+  if (!player || (result !== "1-0" && result !== "0-1")) return "end";
+  return (result === "1-0") === (player === "w") ? "victory" : "defeat";
+}
 
 let ctx: AudioContext | null = null;
 const buffers = new Map<string, AudioBuffer>();

@@ -25,7 +25,7 @@ export type Settings = {
   /** English, Franco (Egyptian Arabic in Latin letters) or Egyptian Arabic. */
   fatmaLanguage: FatmaLanguage;
   highContrast: boolean;
-  /** Experimental Liquid Glass controls. "auto" follows the device default (see glassDefault). */
+  /** Experimental Liquid Glass controls. Legacy "auto" now means off everywhere. */
   glass: "auto" | "on" | "off";
   /** Faint drifting characters behind the app that ripple when you tap empty space. */
   livingBackground: boolean;
@@ -45,7 +45,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fatmaSound: false,
   fatmaLanguage: "en",
   highContrast: false,
-  glass: "auto",
+  glass: "off",
   livingBackground: false,
 };
 
@@ -55,9 +55,9 @@ type Ctx = {
   settings: Settings;
   update: (patch: Partial<Settings>) => void;
   reducedMotion: boolean;
-  /** Whether Liquid Glass is on right now (the setting, or the device default for "auto"). */
+  /** Liquid Glass is enabled only by an explicit opt-in. */
   glassOn: boolean;
-  /** Why "auto" means off on this device, or null when it means on. */
+  /** Device limitations relevant when explicitly opting into glass. */
   glassOffReason: GlassOffReason;
 };
 const SettingsContext = createContext<Ctx | null>(null);
@@ -74,6 +74,7 @@ export function fromSaved(saved: unknown): Settings {
     const value = (saved as Partial<Settings>)[key];
     if (Object.hasOwn(saved, key) && value !== undefined && value !== null) Object.assign(next, { [key]: value });
   }
+  if (next.glass === "auto") next.glass = "off";
   return next;
 }
 
@@ -227,7 +228,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 
   const reducedMotion = settings.motion === "reduced" || (settings.motion === "system" && systemReduced);
-  const glassOn = offReason !== "unknown" && (settings.glass === "on" || (settings.glass === "auto" && offReason === null));
+  const glassOn = offReason !== "unknown" && settings.glass === "on";
   const glassOffReasonValue = offReason === "unknown" ? null : offReason;
 
   useEffect(() => {

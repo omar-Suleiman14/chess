@@ -16,7 +16,7 @@ import { headNode, moveLabel, pathTo } from "@/lib/chess/history/tree";
 import { describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useEngineState, usePrewarmEngine } from "@/lib/client/engine";
 import { useSettings } from "@/lib/client/settings";
-import { haptic, installAudioUnlock, playSound, unlockAudio } from "@/lib/client/sound";
+import { haptic, installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
 import { useSync } from "@/lib/client/sync";
 import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from "@/lib/client/useChessGame";
 import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
@@ -70,7 +70,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       const mover: Color = node.ply % 2 === 1 ? "w" : "b";
       setAnnouncement(`${by === "fatma" ? "Sherine: " : ""}${describeMove(applied, mover)}`);
       if (settings.sound) {
-        playSound(applied.checkmate ? "mate" : applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : "move", settings.volume);
+        // The result effect plays the ending once, after the final move.
+        if (!applied.checkmate) playSound(applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : "move", settings.volume);
       }
       if (settings.haptics && by === "human") haptic(applied.captured ? [8, 30, 8] : 8);
       if (by === "human") {
@@ -215,11 +216,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   );
 
   // End-of-game and low-time cues.
-  const endSounded = useRef<string | null>(null);
+  const previousGameStatus = useRef<{ key: string; status: "active" | "finished" } | null>(null);
   useEffect(() => {
-    if (!game || game.meta.status !== "finished" || endSounded.current === game.meta.gameKey) return;
-    endSounded.current = game.meta.gameKey;
-    if (settings.sound && game.meta.resultReason !== "checkmate") playSound("end", settings.volume);
+    if (!game) return;
+    const previous = previousGameStatus.current;
+    previousGameStatus.current = { key: game.meta.gameKey, status: game.meta.status };
+    // Loading an old result is silent; only an active game ending gets a cue.
+    if (game.meta.status !== "finished" || previous?.key !== game.meta.gameKey || previous.status !== "active") return;
+    if (settings.sound) playSound(resultSound(game.meta.result, game.meta.humanColor), settings.volume);
   }, [game, settings.sound, settings.volume]);
   const lowTimeWarned = useRef<string | null>(null);
   const humanMs = game?.clock ? remaining(game.clock, human, monotonicNow()) : null;
@@ -299,8 +303,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       {/* Phones: one column exactly as wide as the board, sized so everything fits on screen.
           Wide screens: the board as large as the window allows, controls and moves in a side panel. */}
       <div
-        className="mx-auto grid min-h-dvh w-full min-w-0 max-w-[min(100%,calc(100dvh-300px),790px)] grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_1fr_auto_auto] [grid-template-areas:'header'_'moves'_'board'_'status'_'footer'] lg:h-dvh lg:min-h-0 lg:w-fit lg:max-w-none lg:grid-cols-[var(--board-col)_300px] lg:grid-rows-[auto_minmax(0,1fr)_auto_auto] lg:gap-x-8 lg:py-4 lg:[grid-template-areas:'board_header'_'board_moves'_'board_status'_'board_footer']"
-        style={{ ["--board-col" as string]: "min(calc(100dvh - 130px), calc(100vw - 400px), 1100px)" }}
+        className="game-layout"
+        style={{ ["--eval-gutter" as string]: settings.evalBar ? "36px" : "0px" }}
       >
       <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2 [grid-area:header] lg:pt-0">
         <div className="flex min-w-0 items-center gap-2">
@@ -351,19 +355,19 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
       </header>
 
-      <div className="min-h-0 [grid-area:moves] lg:flex lg:flex-col lg:pb-2">
+      <div className="game-moves min-h-0 [grid-area:moves] lg:flex lg:flex-col">
         <div className="lg:hidden">
           <MoveStrip line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
         </div>
         <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="hidden flex-1 lg:flex" />
       </div>
 
-      <section className="flex min-w-0 flex-col items-center justify-center [grid-area:board]">
-        <div className="mb-2 flex w-full items-center gap-2">
+      <section className="game-board-group">
+        <div className="game-opponent flex items-center gap-2">
           <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName captures={captures.captured[fatmaColor]} capturedColor={human} advantage={captures.advantage[fatmaColor]} />
           {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
         </div>
-        <div className="relative flex w-full items-stretch gap-2">
+        <div className="game-position relative flex w-full items-stretch gap-2">
           {settings.evalBar && (evalAllowed ? (
             <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} />
           ) : (
@@ -407,7 +411,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           )}
         </div>
 
-        <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} />}</div>
+        <div className="game-player flex items-center justify-between gap-2"><PlayerIdentity captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} />}</div>
       </section>
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
