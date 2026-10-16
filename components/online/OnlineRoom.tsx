@@ -9,7 +9,8 @@ import { api } from "@/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { PageHeader } from "@/components/shell/AppShell";
 import { CopyField } from "@/components/ui/CopyField";
-import { inviteUrl, playerToken, saveName, timeControlLabel, usePlayerToken } from "@/lib/client/online";
+import { inviteUrl, playerToken, saveName, timeControlLabel, useOnlineAvatar, usePlayerToken, withAvatarFallback } from "@/lib/client/online";
+import { PLAY_STAGE, runViewTransition } from "@/lib/client/viewTransition";
 import { errorText, NameField, useDefaultName } from "./OnlineShared";
 import { OnlineGame } from "./OnlineGame";
 
@@ -21,6 +22,17 @@ export function OnlineRoom({ code }: { code: string }) {
   // Queries can't read the clock; a value fixed at mount only gates "expired".
   const [mountedAt] = useState(() => Date.now());
   const room = useQuery(api.online.byCode, token ? { code, token, now: mountedAt } : "skip");
+  // When a friend joins, the invite morphs into the board: hold the invite on
+  // screen until the transition has snapshotted it, then show the game.
+  const live = room ? room.status : null;
+  const [shown, setShown] = useState(live);
+  useEffect(() => {
+    if (live === shown) return;
+    if (shown === "waiting" && live === "active") runViewTransition(() => setShown(live));
+    // Any other change (first load, finishing, cancelling) just shows the new state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    else setShown(live);
+  }, [live, shown]);
 
   if (room === undefined) {
     return (
@@ -43,7 +55,7 @@ export function OnlineRoom({ code }: { code: string }) {
       </Shell>
     );
   }
-  if (room.status === "waiting") {
+  if (room.status === "waiting" || shown === "waiting") {
     return <Shell>{room.you ? <Waiting room={room} /> : <JoinCard room={room} />}</Shell>;
   }
   return <OnlineGame key={room.roomId} room={room} token={token!} />;
@@ -109,7 +121,7 @@ function Waiting({ room }: { room: RoomView }) {
         {invited && <p className="mt-2 inline-block rounded-full bg-ok/15 px-3 py-1 text-sm font-medium text-ok">Invite sent to @{invited}</p>}
       </div>
 
-      <div className="grid gap-4 rounded-3xl bg-surface p-5 shadow-[var(--shadow)] sm:grid-cols-[auto_1fr] sm:items-center">
+      <div className="grid gap-4 rounded-3xl bg-surface p-5 shadow-[var(--shadow)] sm:grid-cols-[auto_1fr] sm:items-center" data-vt-ready style={{ viewTransitionName: PLAY_STAGE }}>
         <div className="mx-auto w-44 rounded-2xl bg-white p-3 sm:w-40">
           {svg ? <span className="block [&>svg]:h-auto [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} role="img" aria-label="QR code for the invite link" /> : <div className="aspect-square" />}
         </div>
@@ -149,6 +161,7 @@ function Waiting({ room }: { room: RoomView }) {
 
 function JoinCard({ room }: { room: RoomView }) {
   const join = useMutation(api.online.join);
+  const avatar = useOnlineAvatar();
   const [name, setName] = useDefaultName();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,7 +173,7 @@ function JoinCard({ room }: { room: RoomView }) {
     setError(null);
     saveName(name);
     try {
-      await join({ code: room.code, token: playerToken(), name });
+      await withAvatarFallback((a) => join({ code: room.code, token: playerToken(), name, avatar: a }), avatar);
       // The room query updates to "active" and the game appears.
     } catch (e) {
       setError(errorText(e));

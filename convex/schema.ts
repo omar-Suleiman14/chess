@@ -5,6 +5,27 @@ import { v } from "convex/values";
 // derived server-side, never accepted from clients.
 
 export const colorValidator = v.union(v.literal("w"), v.literal("b"));
+/** Every app preference, each optional so older rows and partial saves stay valid. */
+export const settingsValidator = v.object({
+  palette: v.optional(v.union(v.literal("ivory"), v.literal("sage"), v.literal("slate"), v.literal("blue"))),
+  pieceSet: v.optional(v.union(v.literal("cburnett"), v.literal("merida"), v.literal("chessnut"), v.literal("mpchess"), v.literal("fantasy"))),
+  sound: v.optional(v.boolean()),
+  volume: v.optional(v.number()),
+  haptics: v.optional(v.boolean()),
+  motion: v.optional(v.union(v.literal("system"), v.literal("full"), v.literal("reduced"))),
+  evalBar: v.optional(v.boolean()),
+  legalDots: v.optional(v.boolean()),
+  coordinates: v.optional(v.boolean()),
+  think: v.optional(v.union(v.literal("fast"), v.literal("standard"), v.literal("deep"))),
+  fatmaSound: v.optional(v.boolean()),
+  fatmaLanguage: v.optional(v.union(v.literal("en"), v.literal("franco"), v.literal("egy"))),
+  highContrast: v.optional(v.boolean()),
+  glass: v.optional(v.union(v.literal("auto"), v.literal("on"), v.literal("off"))),
+  livingBackground: v.optional(v.boolean()),
+});
+
+/** A player's avatar in an online room: the same seed/hue pair as a chess profile. */
+export const onlineAvatarValidator = v.object({ seed: v.string(), hue: v.number() });
 export const modeValidator = v.union(
   v.literal("full_power"),
   v.literal("climb"),
@@ -303,6 +324,15 @@ export default defineSchema({
    * Play-a-friend rooms. Works for guests: each seat is claimed by a random
    * client secret (`hostToken` / `guestToken`) that queries never return.
    */
+  /** App preferences, synced across a signed-in player's devices. One row per player. */
+  userSettings: defineTable({
+    owner: v.string(),
+    settings: settingsValidator,
+    /** Client time of the change these settings came from; newer wins across devices. */
+    changedAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_owner", ["owner"]),
+
   onlineRooms: defineTable({
     code: v.string(),
     status: v.union(v.literal("waiting"), v.literal("active"), v.literal("finished"), v.literal("cancelled")),
@@ -310,6 +340,9 @@ export default defineSchema({
     guestToken: v.optional(v.string()),
     hostName: v.string(),
     guestName: v.optional(v.string()),
+    /** Blobatar shown next to each player; absent on rooms made before avatars. */
+    hostAvatar: v.optional(onlineAvatarValidator),
+    guestAvatar: v.optional(onlineAvatarValidator),
     hostColor: colorValidator,
     /** Absent = untimed. */
     initialMs: v.optional(v.number()),

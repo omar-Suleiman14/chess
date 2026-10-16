@@ -150,6 +150,7 @@ export const myCard = query({
 
 const TABLES = [
   "games",
+  "userSettings",
   "operations",
   "engineAnalyses",
   "ratingProfiles",
@@ -220,6 +221,7 @@ async function queryOwned(ctx: MutationCtx, name: Exclude<(typeof TABLES)[number
     case "customLessons": return await ctx.db.query("customLessons").withIndex("by_owner_and_createdAt", (q) => q.eq("owner", owner)).take(200);
     case "practiceItems": return await ctx.db.query("practiceItems").withIndex("by_owner_and_dueAt", (q) => q.eq("owner", owner)).take(200);
     case "chessProfiles": return await ctx.db.query("chessProfiles").withIndex("by_owner", (q) => q.eq("owner", owner)).take(200);
+    case "userSettings": return await ctx.db.query("userSettings").withIndex("by_owner", (q) => q.eq("owner", owner)).take(200);
     case "fatmaStates": return await ctx.db.query("fatmaStates").withIndex("by_owner", (q) => q.eq("owner", owner)).take(200);
     case "fatmaPacks": return await ctx.db.query("fatmaPacks").withIndex("by_owner_and_status", (q) => q.eq("owner", owner)).take(200);
     case "mcpGrants": return await ctx.db.query("mcpGrants").withIndex("by_owner", (q) => q.eq("owner", owner)).take(200);
@@ -240,7 +242,7 @@ export const exportMyData = query({
   args: {},
   handler: async (ctx) => {
     const owner = await requireOwner(ctx);
-    const [profile, ratings, ledger, lessons, practice, fatma, packs, games] = await Promise.all([
+    const [profile, ratings, ledger, lessons, practice, fatma, packs, games, settings] = await Promise.all([
       ctx.db.query("chessProfiles").withIndex("by_owner", (q) => q.eq("owner", owner)).unique(),
       ctx.db.query("ratingProfiles").withIndex("by_owner_and_pool", (q) => q.eq("owner", owner)).take(50),
       ctx.db.query("ratingLedger").withIndex("by_owner_and_pool", (q) => q.eq("owner", owner)).take(1000),
@@ -249,7 +251,8 @@ export const exportMyData = query({
       ctx.db.query("fatmaStates").withIndex("by_owner", (q) => q.eq("owner", owner)).unique(),
       ctx.db.query("fatmaPacks").withIndex("by_owner_and_status", (q) => q.eq("owner", owner)).take(100),
       ctx.db.query("games").withIndex("by_owner_and_updatedAt", (q) => q.eq("owner", owner)).order("desc").take(500),
+      ctx.db.query("userSettings").withIndex("by_owner", (q) => q.eq("owner", owner)).unique(),
     ]);
-    return { exportedFor: "chess-by-chaos", version: 1, profile, ratings, ledger, lessons, practice, fatma, packs, gameKeys: games.map((g) => g.gameKey) };
+    return { exportedFor: "chess-by-chaos", version: 1, profile, ratings, ledger, lessons, practice, fatma, packs, settings: settings?.settings ?? null, gameKeys: games.map((g) => g.gameKey) };
   },
 });

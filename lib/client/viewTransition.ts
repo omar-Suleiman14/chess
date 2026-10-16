@@ -1,6 +1,7 @@
 "use client";
 
 import type { useRouter } from "next/navigation";
+import { flushSync } from "react-dom";
 
 // Same-document View Transitions around a Next.js navigation: the browser
 // snapshots the old page, we navigate, and elements sharing a
@@ -18,11 +19,47 @@ export function inViewTransition(): boolean {
   return active;
 }
 
-export async function navigateWithTransition(router: Router, href: string): Promise<void> {
-  const start = (document as Document & { startViewTransition?: StartViewTransition }).startViewTransition?.bind(document);
+function startFn(): StartViewTransition | undefined {
+  return (document as Document & { startViewTransition?: StartViewTransition }).startViewTransition?.bind(document);
+}
+
+function motionReduced(): boolean {
   const motion = document.documentElement.dataset.motion;
-  const reduced = motion === "reduced" || (!motion && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  if (!start || reduced || active) {
+  return motion === "reduced" || (!motion && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+/**
+ * Runs a React state change inside a view transition, so elements sharing a
+ * `view-transition-name` morph between the old and new UI. Falls back to a
+ * plain update without the API, under reduced motion, or mid-transition.
+ */
+export function runViewTransition(update: () => void): void {
+  const start = startFn();
+  if (!start || motionReduced() || active) {
+    update();
+    return;
+  }
+  active = true;
+  const done = () => {
+    active = false;
+  };
+  try {
+    const transition = start(async () => flushSync(update));
+    transition.ready.catch(() => {});
+    transition.updateCallbackDone.catch(() => {});
+    void transition.finished.then(done, done);
+  } catch {
+    done();
+    update();
+  }
+}
+
+/** Play a friend: the create button, the QR invite and the board morph into one another. */
+export const PLAY_STAGE = "play-stage";
+
+export async function navigateWithTransition(router: Router, href: string): Promise<void> {
+  const start = startFn();
+  if (!start || motionReduced() || active) {
     router.push(href);
     return;
   }

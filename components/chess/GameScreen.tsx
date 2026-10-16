@@ -10,7 +10,7 @@ import { GlassButton, GlassLayer } from "@/components/ui/Glass";
 import { useGlassOn } from "@/lib/client/settings";
 import { MenuButton } from "@/components/shell/AppShell";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
-import { findTimeControl, formatClock, remaining } from "@/lib/chess/clock";
+import { findTimeControl, remaining } from "@/lib/chess/clock";
 import { findOpponent } from "@/lib/chess/engine/opponents";
 import { headNode, moveLabel, pathTo } from "@/lib/chess/history/tree";
 import { describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
@@ -26,6 +26,8 @@ import { EvalBar } from "./EvalBar";
 import { GameResult } from "./GameResult";
 import { MoveList, MoveStrip } from "./MoveStrip";
 import { FOOTER_BUTTON_SIZE, ReviewArrows } from "./ReviewArrows";
+import { ClockChip } from "./ClockChip";
+import { CharacterField } from "@/components/shell/CharacterField";
 import { PlayerIdentity } from "./PlayerIdentity";
 
 type Props = {
@@ -289,6 +291,9 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
 
   return (
+    <>
+    {/* Optional living background: only behind games (Settings → Display). */}
+    {settings.livingBackground && <CharacterField reducedMotion={reducedMotion} />}
     <main className="min-h-dvh w-full px-3 sm:px-6">
       <LoadingScreen />
       {/* Phones: one column exactly as wide as the board, sized so everything fits on screen.
@@ -402,7 +407,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           )}
         </div>
 
-        <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} large />}</div>
+        <div className="flex w-full items-center justify-between gap-2"><PlayerIdentity captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} />{tc && <ClockChip ms={clockFor(human)} running={active && turn === human} />}</div>
       </section>
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
@@ -497,6 +502,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         />
       )}
     </main>
+    </>
   );
 }
 
@@ -517,21 +523,6 @@ function resultLine(result: string | undefined, reason: string | undefined, huma
   return `${humanWon ? "You win" : "Sherine wins"} ${why[reason ?? ""] ?? ""}`.trim();
 }
 
-function ClockChip({ ms, running, large }: { ms: number | null; running: boolean; large?: boolean }) {
-  if (ms === null) return null;
-  const low = ms < 20_000;
-  return (
-    <span
-      className={`rounded-xl px-3 font-mono tabular-nums ${large ? "min-h-12 content-center text-lg" : "py-1.5 text-base"} ${
-        running ? "bg-accent text-accent-text" : "bg-surface text-ink shadow-[var(--shadow)]"
-      } ${low && running ? "!bg-danger !text-white" : ""}`}
-      role="timer"
-      aria-label={`${formatClock(ms)} remaining${running ? ", running" : ""}`}
-    >
-      {formatClock(ms)}
-    </span>
-  );
-}
 
 export function Dialog({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);

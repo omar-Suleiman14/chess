@@ -105,14 +105,15 @@ export default function SettingsPage() {
               checked={glassOn}
               onChange={(v) => update({ glass: v ? "on" : "off" })}
             />
-            {settings.glass !== "auto" && (
+            {/* Only while glass is on against this device's default; otherwise resetting changes nothing. */}
+            {settings.glass === "on" && glassOffReason && (
               <button onClick={() => update({ glass: "auto" })} className="flex min-h-12 w-full items-center px-4 text-start text-sm font-medium text-[#0a84ff]">
-                Reset Liquid Glass to this device&apos;s default ({glassOffReason ? "off" : "on"})
+                Reset Liquid Glass to this device&apos;s default (off)
               </button>
             )}
             <SwitchRow
               label="Living background"
-              hint="Faint drifting characters behind the app. Tap empty space to send a ripple through them."
+              hint="Drifting characters behind the board while you play. Tap empty space to send a ripple through them."
               checked={settings.livingBackground}
               onChange={(v) => update({ livingBackground: v })}
             />

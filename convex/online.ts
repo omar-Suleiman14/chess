@@ -8,7 +8,7 @@ import { components, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { fail } from "./model/auth";
-import { colorValidator } from "./schema";
+import { colorValidator, onlineAvatarValidator } from "./schema";
 import { applyUci, DEFAULT_POSITION, statusFromPath, timeoutOutcome, sideToMove, type Color, type Outcome } from "../lib/chess/rules";
 
 const rateLimiter = new RateLimiter(components.rateLimiter, {
@@ -29,6 +29,12 @@ function checkToken(token: string) {
 function cleanName(name: string): string {
   const trimmed = name.replace(/[<>{}`\\]/g, "").trim().slice(0, MAX_NAME);
   return trimmed || "Guest";
+}
+
+/** Same rules as profile avatars; anything else is dropped rather than refused. */
+function cleanAvatar(avatar: { seed: string; hue: number } | undefined) {
+  if (!avatar || !/^[A-Za-z0-9_-]{1,32}$/.test(avatar.seed) || !Number.isInteger(avatar.hue) || avatar.hue < 0 || avatar.hue >= 360) return undefined;
+  return { seed: avatar.seed, hue: avatar.hue };
 }
 
 function other(c: Color): Color {
@@ -135,6 +141,7 @@ export const create = mutation({
   args: {
     token: v.string(),
     name: v.string(),
+    avatar: v.optional(onlineAvatarValidator),
     color: v.union(colorValidator, v.literal("random")),
     ...timeControlArgs,
   },
@@ -151,6 +158,7 @@ export const create = mutation({
       status: "waiting",
       hostToken: args.token,
       hostName: cleanName(args.name),
+      hostAvatar: cleanAvatar(args.avatar),
       hostColor: args.color === "random" ? (Math.random() < 0.5 ? "w" : "b") : args.color,
       initialMs: args.initialMs,
       incrementMs: timed ? (args.incrementMs ?? 0) : undefined,
@@ -167,7 +175,7 @@ export const create = mutation({
 });
 
 export const join = mutation({
-  args: { code: v.string(), token: v.string(), name: v.string() },
+  args: { code: v.string(), token: v.string(), name: v.string(), avatar: v.optional(onlineAvatarValidator) },
   handler: async (ctx, args) => {
     checkToken(args.token);
     if (!CODE.test(args.code)) fail("bad_request", "The PIN is 6 digits.");
@@ -177,7 +185,7 @@ export const join = mutation({
     if (seat) return { roomId: room._id, color: seat };
     if (room.status !== "waiting") fail("full", "That game already has two players.");
     if (Date.now() - room.createdAt > WAITING_TTL_MS) fail("expired", "That invite has expired. Ask for a new one.");
-    await ctx.db.patch("onlineRooms", room._id, { guestToken: args.token, guestName: cleanName(args.name), status: "active", updatedAt: Date.now() });
+    await ctx.db.patch("onlineRooms", room._id, { guestToken: args.token, guestName: cleanName(args.name), guestAvatar: cleanAvatar(args.avatar), status: "active", updatedAt: Date.now() });
     return { roomId: room._id, color: other(room.hostColor) };
   },
 });
@@ -328,6 +336,8 @@ export const rematch = mutation({
       guestToken: room.guestToken,
       hostName: room.hostName,
       guestName: room.guestName,
+      hostAvatar: room.hostAvatar,
+      guestAvatar: room.guestAvatar,
       hostColor: other(room.hostColor),
       initialMs: room.initialMs,
       incrementMs: room.incrementMs,
@@ -353,6 +363,8 @@ const roomView = v.object({
   you: v.union(colorValidator, v.null()),
   white: v.union(v.string(), v.null()),
   black: v.union(v.string(), v.null()),
+  whiteAvatar: v.union(onlineAvatarValidator, v.null()),
+  blackAvatar: v.union(onlineAvatarValidator, v.null()),
   initialMs: v.union(v.number(), v.null()),
   incrementMs: v.union(v.number(), v.null()),
   fen: v.string(),
@@ -390,6 +402,8 @@ export const byCode = query({
       you: TOKEN.test(args.token) ? seatOf(room, args.token) : null,
       white: (hostIsWhite ? room.hostName : room.guestName) ?? null,
       black: (hostIsWhite ? room.guestName : room.hostName) ?? null,
+      whiteAvatar: (hostIsWhite ? room.hostAvatar : room.guestAvatar) ?? null,
+      blackAvatar: (hostIsWhite ? room.guestAvatar : room.hostAvatar) ?? null,
       initialMs: room.initialMs ?? null,
       incrementMs: room.incrementMs ?? null,
       fen: room.fen,
