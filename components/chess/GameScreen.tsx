@@ -257,10 +257,22 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
         <div className="flex items-center gap-2">
           {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
-          <MenuButton actions={[
-            { label: "New game", onSelect: () => setShowNew(true) },
-            { label: "Flip board", onSelect: () => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w")) },
-          ]} />
+          <motion.button whileTap={{ scale: 0.94 }} transition={IOS_SPRING} onClick={() => setShowNew(true)} className="h-11 shrink-0 rounded-full bg-surface px-3.5 text-sm font-medium shadow-[var(--shadow)]" aria-label="New game" aria-keyshortcuts="n">
+            New
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            transition={IOS_SPRING}
+            onClick={() => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"))}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)]"
+            aria-label="Flip board"
+            aria-keyshortcuts="f"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </motion.button>
+          <MenuButton />
         </div>
       </header>
 

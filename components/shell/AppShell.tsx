@@ -10,8 +10,7 @@ import { useSettings } from "@/lib/client/settings";
 import { playSound } from "@/lib/client/sound";
 import { useSync } from "@/lib/client/sync";
 
-export type MenuAction = { label: string; onSelect: () => void };
-type ShellCtx = { openMenu: (actions?: MenuAction[]) => void; closeMenu: () => Promise<void> };
+type ShellCtx = { openMenu: () => void; closeMenu: () => void };
 const Ctx = createContext<ShellCtx | null>(null);
 export const useShell = () => {
   const c = useContext(Ctx);
@@ -53,7 +52,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [actions, setActions] = useState<MenuAction[]>([]);
   const [height, setHeight] = useState(800);
   // Single source of truth: sheet translateY. Everything else derives from it.
   const sheetY = useMotionValue(800);
@@ -77,8 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("resize", measure);
   }, [open, sheetY]);
 
-  const openMenu = useCallback((menuActions: MenuAction[] = []) => {
-    setActions(menuActions);
+  const openMenu = useCallback(() => {
     triggerRef.current = document.activeElement as HTMLElement | null;
     setOpen(true);
     if (settings.sound) playSound("sheet", settings.volume * 0.6);
@@ -86,11 +83,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     else animate(sheetY, 0, SHEET_SPRING);
   }, [reducedMotion, sheetY, settings.sound, settings.volume]);
 
-  const closeMenu = useCallback(() => new Promise<void>((resolve) => {
+  const closeMenu = useCallback(() => {
     const done = () => {
       setOpen(false);
       triggerRef.current?.focus?.();
-      resolve();
     };
     if (reducedMotion) {
       sheetY.set(height);
@@ -98,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     } else {
       void animate(sheetY, height, SHEET_SPRING).then(done);
     }
-  }), [reducedMotion, sheetY, height]);
+  }, [reducedMotion, sheetY, height]);
 
   // Going back to the page the menu was opened from re-opens the menu.
   // (Opened after the router has settled, so the close-on-navigate below can't undo it.)
@@ -198,18 +194,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
-          {actions.length > 0 && (
-            <div className="mt-3">
-              <p className="px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted">This game</p>
-              <div className="overflow-hidden rounded-2xl bg-surface-2">
-                {actions.map((action) => (
-                  <button key={action.label} onClick={async () => { await closeMenu(); action.onSelect(); }} className="block min-h-12 w-full border-b border-line px-4 py-3 text-left font-medium last:border-b-0 active:bg-line/60">
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           {SECTIONS.map((section) => (
             <div key={section.title} className="mt-3">
               <p className="px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted">{section.title}</p>
@@ -272,10 +256,10 @@ function AccountRow() {
 }
 
 /** Circular horizontal-ellipsis menu button. */
-export function MenuButton({ actions }: { actions?: MenuAction[] } = {}) {
+export function MenuButton() {
   const { openMenu } = useShell();
   return (
-    <button onClick={() => openMenu(actions)} aria-label="Open menu" aria-haspopup="dialog" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)] active:scale-95">
+    <button onClick={openMenu} aria-label="Open menu" aria-haspopup="dialog" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface shadow-[var(--shadow)] active:scale-95">
       <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
         <circle cx="6" cy="12" r="1.8" fill="currentColor" />
         <circle cx="12" cy="12" r="1.8" fill="currentColor" />
