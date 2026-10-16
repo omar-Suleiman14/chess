@@ -12,6 +12,8 @@ export type LocalGameMeta = {
   gameKey: string;
   mode: "full_power" | "climb" | "timed" | "practice" | "import";
   opponentId: string;
+  /** Missing on pre-v2 local games, which retain opponent version 1. */
+  opponentVersion?: number;
   humanColor: Color;
   timeControlId?: string;
   rated: "eligible" | "ineligible" | "unrated";

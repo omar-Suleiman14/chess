@@ -13,6 +13,7 @@ export const create = mutation({
     gameKey: v.string(),
     mode: modeValidator,
     opponentId: v.string(),
+    opponentVersion: v.optional(v.number()),
     humanColor: colorValidator,
     originFen: v.optional(v.string()),
     timeControlId: v.optional(v.string()),

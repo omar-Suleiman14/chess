@@ -3,7 +3,9 @@
 // a 95% interval and the implied rating gap. Output is EVIDENCE, not truth:
 // bot-vs-bot results on one machine are not human ratings.
 //
-//   pnpm calibrate -- --games 40 --pairs 0-10 --out docs/calibration/climb-v1.json
+//   pnpm calibrate -- --games 40 --pairs 0-10
+// Defaults to docs/calibration/<current pool version>.json; --out overrides it.
+// --game-offset N assigns global game indices N..N+games-1 for disjoint workers.
 //
 // Each game starts from one of a fixed set of balanced openings, and every
 // opening is played twice with colours swapped, so deterministic presets
@@ -26,8 +28,13 @@ function arg(name: string, fallback: string): string {
 }
 
 const GAMES = Number(arg("games", "10"));
+// Split a matchup across workers without repeating its game IDs or openings.
+const GAME_OFFSET = Number(arg("game-offset", "0"));
+if (!Number.isSafeInteger(GAMES) || GAMES < 1 || !Number.isSafeInteger(GAME_OFFSET) || GAME_OFFSET < 0 || !Number.isSafeInteger(GAME_OFFSET + GAMES)) {
+  throw new Error("--games must be positive and --game-offset nonnegative safe integers");
+}
 const [FROM, TO] = arg("pairs", "0-3").split("-").map(Number);
-const OUT = arg("out", "docs/calibration/climb-v1.json");
+const OUT = arg("out", `docs/calibration/${OPPONENT_POOL_VERSION}.json`);
 const MAX_PLIES = 240;
 
 class NodeEngine {
@@ -131,7 +138,7 @@ async function main(): Promise<void> {
     const upper = CLIMB_OPPONENTS[i + 1];
     let upperScore = 0;
     const results: number[] = [];
-    for (let g = 0; g < GAMES; g++) {
+    for (let g = GAME_OFFSET; g < GAME_OFFSET + GAMES; g++) {
       const upperIsWhite = g % 2 === 0;
       const opening = OPENINGS[Math.floor(g / 2) % OPENINGS.length];
       const whiteScore = await play(engine, upperIsWhite ? upper : lower, upperIsWhite ? lower : upper, `${upper.id}-${lower.id}-${g}`, opening);
@@ -167,6 +174,7 @@ async function main(): Promise<void> {
     date: new Date().toISOString(),
     machine: { platform: process.platform, arch: process.arch, node: process.version },
     maxPlies: MAX_PLIES,
+    gameRange: { from: GAME_OFFSET, toExclusive: GAME_OFFSET + GAMES },
     openings: OPENINGS.map((o) => o.join(" ")),
     note: "Bot-vs-bot evidence on one machine. Gaps are relative; absolute ratings are an anchored assumption, not a human measurement.",
     pairs,

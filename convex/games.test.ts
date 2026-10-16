@@ -54,6 +54,22 @@ beforeEach(() => {
 });
 
 describe("games", () => {
+  it("preserves legacy opponent versions and records the played version in ratings", async () => {
+    const t = setup();
+    const old = await newGame(t, alice, { mode: "climb", opponentId: "climb-07" });
+    const current = await newGame(t, alice, { mode: "climb", opponentId: "climb-07", opponentVersion: 2 });
+    for (const [game, version] of [[old, 1], [current, 2]] as const) {
+      const snapshot = (await game.user.query(api.games.get, { gameKey: game.gameKey }))!;
+      expect(snapshot.game.opponentVersion).toBe(version);
+      await play(t, game, ["e2e4", "e7e5"]);
+      await game.user.mutation(api.games.finish, { opId: opId(), gameKey: game.gameKey, claim: "resign" });
+      const ledger = await game.user.query(api.progress.ledger, { pool: "climb" });
+      expect(ledger.find(entry => entry.gameId === snapshot.game._id)).toMatchObject({ opponentId: "climb-07", opponentVersion: version });
+    }
+    await expect(newGame(t, alice, { mode: "climb", opponentId: "climb-07", opponentVersion: 99 })).rejects.toThrow(/unknown opponent/i);
+    await expect(newGame(t, alice, { mode: "climb", opponentId: "climb-01", opponentVersion: 2 })).rejects.toThrow(/unknown opponent/i);
+  });
+
   it("replaces older Sherine sessions, retaining moves, branches, imports and other owners", async () => {
     const t = setup();
     const old = await newGame(t, alice, { startedAt: 1 });

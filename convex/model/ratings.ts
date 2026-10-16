@@ -19,7 +19,7 @@ export async function applyRating(ctx: MutationCtx, owner: Owner, game: Doc<"gam
   if (!pool || game.rated !== "eligible") return;
   const already = await ctx.db.query("ratingLedger").withIndex("by_gameId", (q) => q.eq("gameId", game._id)).first();
   if (already) return;
-  const opponent = findOpponent(game.opponentId);
+  const opponent = findOpponent(game.opponentId, game.opponentVersion);
   if (!opponent) return;
   const profile = await ctx.db
     .query("ratingProfiles")

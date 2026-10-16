@@ -46,6 +46,7 @@ export type CreateGameInput = {
   gameKey: string;
   mode: Mode;
   opponentId: string;
+  opponentVersion?: number;
   humanColor: Color;
   originFen?: string;
   timeControlId?: string;
@@ -66,7 +67,8 @@ export async function createGame(ctx: MutationCtx, owner: Owner, input: CreateGa
     .unique();
   if (existing) return existing;
 
-  const opponent = findOpponent(input.opponentId);
+  // Older clients and offline queued creates omit the version and played v1.
+  const opponent = findOpponent(input.opponentId, input.opponentVersion ?? 1);
   if (!opponent) fail("bad_request", "Unknown opponent.");
   if (input.mode === "climb" && !CLIMB_OPPONENTS.some((o) => o.id === opponent.id)) {
     fail("bad_request", "Climb games must use a Climb opponent.");

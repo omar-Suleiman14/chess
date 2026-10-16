@@ -72,6 +72,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
         gameKey: g.meta.gameKey,
         mode: g.meta.mode,
         opponentId: g.meta.opponentId,
+        opponentVersion: g.meta.opponentVersion ?? 1,
         humanColor: g.meta.humanColor,
         originFen: g.tree.originFen === DEFAULT_POSITION ? undefined : g.tree.originFen,
         timeControlId: g.meta.timeControlId,
@@ -156,7 +157,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
     if (!g || g.meta.status !== "active") return;
     const head = headNode(g.tree);
     if (sideToMove(head.fen) === g.meta.humanColor) return;
-    const opponent = findOpponent(g.meta.opponentId);
+    const opponent = findOpponent(g.meta.opponentId, g.meta.opponentVersion ?? 1);
     if (!opponent) return;
     const generation = ++replyGeneration.current;
     setThinking(true);
@@ -228,6 +229,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
           gameKey: newKey("g"),
           mode: opts.mode,
           opponentId: opts.opponentId,
+          opponentVersion: findOpponent(opts.opponentId)?.version ?? 1,
           humanColor: opts.humanColor,
           timeControlId: opts.timeControlId,
           rated,
@@ -440,6 +442,7 @@ export function fromSnapshot(snap: Snapshot, clock?: ClockState): LocalGame {
       gameKey: g.gameKey,
       mode: g.mode,
       opponentId: g.opponentId,
+      opponentVersion: g.opponentVersion,
       humanColor: g.humanColor,
       timeControlId: g.timeControlId,
       rated: g.rated,

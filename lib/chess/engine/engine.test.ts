@@ -142,6 +142,18 @@ describe("EngineController", () => {
 });
 
 describe("opponents", () => {
+  it("keeps an existing game's policy stable across ladder revisions", () => {
+    const old = findOpponent("climb-07", 1)!;
+    const current = findOpponent("climb-07")!;
+    expect(old.version).toBe(1);
+    expect(old.policy).toMatchObject({ options: { UCI_Elo: 1450 } });
+    expect(current.version).toBe(2);
+    expect(current.policy).toMatchObject({ depth: 2, options: { "Skill Level": 2 } });
+    expect(findOpponent("climb-07", 99)).toBeUndefined();
+    expect(findOpponent("climb-01", 2)).toBeUndefined();
+    expect(findOpponent("full-power-fast", 2)).toBeUndefined();
+  });
+
   it("never weakens Full Power", () => {
     const full = fullPowerOpponent("standard");
     expect(full.policy.kind).toBe("stockfish");

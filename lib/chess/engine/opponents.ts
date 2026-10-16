@@ -1,5 +1,5 @@
 // Versioned opponent presets. Ratings here are *estimates* until a calibration
-// run (scripts/calibrate.mjs) records evidence; the UI must say so.
+// run (scripts/calibrate.ts) records evidence; the UI must say so.
 import type { EngineOptions } from "./controller";
 
 export type ThinkPreset = "fast" | "standard" | "deep";
@@ -28,14 +28,14 @@ export type Opponent = {
   policy: OpponentPolicy;
 };
 
-export const OPPONENT_POOL_VERSION = "climb-v1";
+export const OPPONENT_POOL_VERSION = "climb-v2";
 
 /**
- * The Climb ladder. Ratings below Stockfish's UCI_Elo floor (1320) come from
- * the deterministic beginner policies. All values are provisional guesses
- * (calibrated=false) until benchmarked.
+ * Original Climb presets, retained for existing games and report reproduction.
+ * Relative bot strength can be benchmarked; nominal human ratings remain
+ * provisional estimates (calibrated=false).
  */
-export const CLIMB_OPPONENTS: Opponent[] = [
+const CLIMB_V1: Opponent[] = [
   { id: "climb-01", version: 1, name: "Wobbly Pawn", rating: 250, ratingDeviation: 300, calibrated: false, policy: { kind: "beginner", policy: "random", blunderRate: 1 } },
   { id: "climb-02", version: 1, name: "Snack Grabber", rating: 450, ratingDeviation: 300, calibrated: false, policy: { kind: "beginner", policy: "greedy", blunderRate: 0.35 } },
   { id: "climb-03", version: 1, name: "Nervous Knight", rating: 650, ratingDeviation: 300, calibrated: false, policy: { kind: "beginner", policy: "careful", blunderRate: 0.25 } },
@@ -48,6 +48,16 @@ export const CLIMB_OPPONENTS: Opponent[] = [
   { id: "climb-10", version: 1, name: "Sherine (ruthless)", rating: 2400, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 2400 }, movetimeMs: 1000 } },
   { id: "climb-11", version: 1, name: "Sherine · Full Power", rating: FULL_POWER_LABEL, ratingDeviation: 350, calibrated: false, policy: { kind: "stockfish", options: {}, movetimeMs: THINK_TIME_MS.standard } },
 ];
+
+// Keep historical policies available to games already started on v1. The v1
+// report found an inverted middle step and inconclusive beginner separation.
+// These changes are checked by the adjacent-matchup reports in docs/calibration.
+export const CLIMB_OPPONENTS: Opponent[] = CLIMB_V1.map((opponent): Opponent => {
+  if (opponent.id === "climb-04") return { ...opponent, version: 2, policy: { kind: "beginner", policy: "careful", blunderRate: 0 } };
+  if (opponent.id === "climb-06") return { ...opponent, version: 2, policy: { kind: "stockfish", options: { "Skill Level": 1 }, movetimeMs: 90, depth: 3 } };
+  if (opponent.id === "climb-07") return { ...opponent, version: 2, policy: { kind: "stockfish", options: { "Skill Level": 2 }, movetimeMs: 120, depth: 2 } };
+  return opponent;
+});
 
 export function fullPowerOpponent(preset: ThinkPreset): Opponent {
   return {
@@ -62,13 +72,15 @@ export function fullPowerOpponent(preset: ThinkPreset): Opponent {
   };
 }
 
-export function findOpponent(id: string): Opponent | undefined {
+export function findOpponent(id: string, version?: number): Opponent | undefined {
   if (id.startsWith("full-power-")) {
+    if (version !== undefined && version !== 1) return undefined;
     const preset = id.slice("full-power-".length) as ThinkPreset;
     if (preset in THINK_TIME_MS) return fullPowerOpponent(preset);
     return undefined;
   }
-  return CLIMB_OPPONENTS.find((o) => o.id === id);
+  const pool = version === 1 ? CLIMB_V1 : CLIMB_OPPONENTS;
+  return pool.find((o) => o.id === id && (version === undefined || o.version === version));
 }
 
 export function ratingLabel(opponent: Opponent): string {
