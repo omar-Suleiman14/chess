@@ -16,4 +16,4 @@ Choose the task you want to finish.
 
 Reference: [Product contracts](SPECIFICATION.md), [UI contracts](UI_UX.md), [Sherine](SHERINE.md), [Caching](CACHING.md), [MCP](MCP.md), [SEO](SEO.md), [sound rights](SOUND-LEDGER.md), and [calibration evidence](calibration/README.md).
 
-[Release status](ROADMAP.md) records what still needs testing. A feature described here may exist on the feature branch before production receives it.
+[Verification evidence](EXPERIENCE-VERIFICATION.md) records the measured release checks. [Release status](ROADMAP.md) records what still needs testing. A feature described here may exist on the feature branch before production receives it.

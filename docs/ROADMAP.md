@@ -15,7 +15,7 @@ Source of requested work: [live Chess checklist](https://app.notion.com/p/408448
 
 ## Evidence
 
-[Verification report](VERIFICATION-2026-10-29.md) covers the earlier gameplay work. The expanded experience report and retained lab artifacts distinguish automated checks from manual release checks. Tests cover legality, engine scheduling, PGN/branches, Glicko-2, ownership, idempotency, assistance, settings, sound fixtures, and rematch transitions.
+[Verification report](VERIFICATION-2026-10-29.md) covers the earlier gameplay work. [The expanded experience report](EXPERIENCE-VERIFICATION.md) and retained lab artifacts distinguish automated checks from manual release checks. Tests cover legality, engine scheduling, PGN/branches, Glicko-2, ownership, idempotency, assistance, settings, sound fixtures, and rematch transitions.
 
 ## Still requires release evidence
 

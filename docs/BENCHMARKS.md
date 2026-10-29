@@ -1,27 +1,33 @@
-# Engine benchmarks (P02 / BLK-01)
+# Measure performance
 
-Run `/bench` on the device you want to measure (keep the tab in front), then paste the JSON into [issue #3](https://github.com/omar-Suleiman14/chess/issues/3). Nothing on that page is simulated: it starts real Stockfish workers and runs real searches.
+## Run the browser matrix
 
-Engine: Stockfish.js **19.0.1**, `stockfish-19-lite-single.{js,wasm}` (single-threaded, ~1.8 MB WASM), served from `/engine/19.0.1/` with immutable caching.
+1. Run `corepack pnpm test:experience` on a quiet machine with Chromium installed.
+2. Read `.cache/performance/current/summary.json` and the functional/Lighthouse reports.
+3. Open the sanitized `.trace.json` files in DevTools. Compare the same hardware, browser, viewport, game state, and engine setting.
 
-## Measured results
+The suite tests Classic, Material 3 Expressive, and Glass Full/Balanced/Minimal with evaluation on/off and Minimal/Ambient/Off scenes. Each cohort has five fresh contexts. It records drag response, ten Friends open/close interactions, resize, rAF gaps, long tasks, paint/layout work, memory, and lab LCP/CLS. Artifacts strip URL queries, headers, request bodies, and token fields.
 
-| Device / browser | Worker ready (first) | Worker ready (warm, median) | Depth @ 0.4 s / 1.2 s / 3.5 s | First standard reply | Main-thread smoothness |
-| --- | --- | --- | --- | --- | --- |
-| Windows desktop (28 threads, 16 GB), Chromium 152 in the Claude app pane, dev server | 354 ms | 226 ms | 16 / 19 / 24 | 1205 ms | **Not measurable here**: the pane throttles `requestAnimationFrame` to ~1 fps even when idle |
-| iPhone Safari | **not yet measured** | | | | |
-| Android Chrome | **not yet measured** | | | | |
+For an extended scroll/history run against an existing guest QA server:
 
-Search overshoot past the requested `movetime` was 5–9 ms (median) on desktop.
+```bash
+node scripts/benchmark-ui.mjs --label extended --background all --runs 5 --scroll-ms 30000 --review-steps 10
+```
 
-## Go / no-go
+Do not run unit tests, builds, or other browser suites beside a controlled benchmark. The CI gate flags move p95 above 50 ms, CLS above .05, browser errors, and large Lighthouse blocking time. A cloud scheduling failure remains evidence; rerun a suspected interference case separately and retain both reports.
 
-- Desktop: **go**. Start-up is well under a second and depth at Standard (1.2 s) is about 19.
-- iPhone: **open**. This is the BLK-01 gate. Needs a real-device run of `/bench`, plus manual checks: backgrounding and returning (the app terminates the worker after 60 s hidden and restarts it lazily), a second tab, Low Power Mode, cellular, and offline after the first load.
+## Read the results correctly
 
-## Protocol for the device run
+[Release evidence](EXPERIENCE-VERIFICATION.md) contains before/after metadata and measured exceptions. rAF timing is a scheduling proxy, not presented frames. Lighthouse uses simulated throttling; its score is not gameplay smoothness or field p75. Total paint time is not isolated effect cost. GPU power, battery, and actual display frames need representative hardware tools.
 
-1. Open `https://<deployment>/bench` on the device. Run it once after a fresh install or cache clear (cold), then run it again (warm).
-2. Background the tab for over 60 s, return, and play a move on `/`. Sherine must still reply. The worker restarts automatically.
-3. Repeat in Low Power Mode, and on cellular.
-4. Paste both JSON blobs and notes into issue #3.
+Targets: normal move response ≤50 ms; field INP ≤100 ms, LCP ≤1.25 s, CLS ≤.05 at p75; dropped presented frames below 2.5%. The 60% effect-cost and 2× improvement goals remain aspirational until demonstrated.
+
+## Measure a real device
+
+1. Open `/bench` on the deployment. Keep the tab visible and run the real Stockfish benchmark once cold, then warm.
+2. Export the local Web Vitals observations. Label device, browser, theme/tier, scene mode, evaluation, and network.
+3. Background for more than 60 seconds, return, and play. Confirm the worker restarts and clocks remain correct.
+4. Repeat with low-power mode, cellular, touch drag, sound unlock, and reduced motion/transparency.
+5. Capture browser performance traces for drag, rapid review, 30-second scroll, Friends ×10, and resize. Record median/p95 and inspect actual presented frames where available.
+
+Use a mid-range Android, older iPhone/Safari, integrated-GPU laptop, and modern desktop. Physical-device runs are still required. [Issue #3](https://github.com/omar-Suleiman14/chess/issues/3) retains the older engine spike: Windows/Chromium worker startup 354 ms cold, 226 ms warm median; depths 16/19/24 at 0.4/1.2/3.5 seconds. That pane throttled rAF and could not measure smoothness.
