@@ -63,6 +63,18 @@ class FakeEngine implements WorkerLike {
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 describe("EngineController", () => {
+  it("keeps the scored principal line when depth-only and secondary messages follow", async () => {
+    const fake = new FakeEngine();
+    const engine = new EngineController(() => fake);
+    const pending = engine.search({ kind: "eval", fen: DEFAULT_POSITION, movetimeMs: 100 });
+    await tick();
+    await tick();
+    fake.onmessage?.({ data: "info depth 13 nodes 5000" });
+    fake.onmessage?.({ data: "info depth 12 multipv 2 score cp -200 pv d2d4" });
+    fake.complete();
+    expect((await pending).score).toEqual({ cp: 31 });
+    engine.terminate();
+  });
   it("completes the handshake and returns a validated move", async () => {
     const fake = new FakeEngine();
     const engine = new EngineController(() => fake);

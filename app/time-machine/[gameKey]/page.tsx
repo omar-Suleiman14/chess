@@ -20,7 +20,7 @@ import { PageHeader } from "@/components/shell/AppShell";
 import { Select } from "@/components/ui/Select";
 import { GlassButton } from "@/components/ui/Glass";
 import { Slider } from "@/components/ui/Slider";
-import { ENGINE_BUILD, SearchCancelled } from "@/lib/chess/engine/controller";
+import { ENGINE_BUILD, SearchCancelled, type SearchResult } from "@/lib/chess/engine/controller";
 import { CLIMB_OPPONENTS } from "@/lib/chess/engine/opponents";
 import { formatScore, type WhiteScore } from "@/lib/chess/engine/uci";
 import { exportPgn } from "@/lib/chess/history/pgn";
@@ -54,7 +54,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
-  const [scores, setScores] = useState<Record<string, { score: WhiteScore; depth?: number; bestmove?: string | null }>>({});
+  const [scores, setScores] = useState<Record<string, { score: WhiteScore; depth?: number; bestmove?: string | null; candidates?: SearchResult["candidates"] }>>({});
   const [analysing, setAnalysing] = useState<{ done: number; total: number } | null>(null);
   const [continueFrom, setContinueFrom] = useState<TreeNode | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -178,20 +178,25 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
   const analyse = useCallback(async () => {
     if (!supportsEngine() || !game) return;
     const run = ++analysisRun.current;
-    const nodes = [tree.nodes.root, ...path].filter((n) => !scores[n.key] || (scores[n.key].depth ?? 0) < 10);
+    const nodes = [tree.nodes.root, ...path].filter((n) => !scores[n.key] || (scores[n.key].depth ?? 0) < 10 || !scores[n.key].candidates);
     setMessage(null);
     setAnalysing({ done: 0, total: nodes.length });
     for (const [i, n] of nodes.entries()) {
       if (run !== analysisRun.current) return;
       if (positionStatus(n.fen).over) { setAnalysing({ done: i + 1, total: nodes.length }); continue; }
       try {
-        const settingsHash = `review:mt${REVIEW_MOVETIME}:mpv1`;
+        const settingsHash = `review:mt${REVIEW_MOVETIME}:mpv2:v2`;
         const cached = await readAnalysis(n.fen, settingsHash);
         if (run !== analysisRun.current) return;
-        const result = cached ? { ...cached, elapsedMs: cached.computeMs } : await getEngine().search({ kind: "review", fen: n.fen, gameId: `review:${game.meta.gameKey}`, movetimeMs: REVIEW_MOVETIME });
+        const result = cached ? { ...cached, elapsedMs: cached.computeMs } : await getEngine().search({ kind: "review", fen: n.fen, gameId: `review:${game.meta.gameKey}`, movetimeMs: REVIEW_MOVETIME, multiPv: 2 });
         if (run !== analysisRun.current) return;
+        if (!Number.isFinite(result.score.cp) && !Number.isFinite(result.score.mate)) {
+          setMessage("Engine analysis is unavailable for some positions. Retry Analyse.");
+          setAnalysing({ done: i + 1, total: nodes.length });
+          continue;
+        }
         if (!cached) void writeAnalysis(n.fen, settingsHash, result);
-        setScores((s) => ({ ...s, [n.key]: { score: result.score, depth: result.depth, bestmove: result.bestmove } }));
+        setScores((s) => ({ ...s, [n.key]: { score: result.score, depth: result.depth, bestmove: result.bestmove, candidates: result.candidates } }));
         if (game.meta.synced && isAuthenticated && result.depth && (result.score.cp !== undefined || result.score.mate !== undefined)) {
           void sync.enqueue(game.meta.gameKey, "analysis", {
             gameKey: game.meta.gameKey,
@@ -252,7 +257,7 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
       }
     }
     // Guest / device-only game: branch locally.
-    await store.saveGame({
+    const saved = await store.saveGame({
       meta: {
         gameKey: newGameKey,
         mode: "practice",
@@ -260,12 +265,18 @@ export default function ReplayPage({ params }: { params: Promise<{ gameKey: stri
         humanColor: sideToMove(from.fen),
         rated: "unrated",
         status: "active",
+        parentGameKey: game.meta.gameKey,
+        parentNodeKey: from.key,
         label,
         synced: false,
         updatedAt: Date.now(),
       },
       tree: createTree(from.fen, mainBranchKey, Date.now()),
     });
+    if (!saved) {
+      setMessage("Could not save this practice game on your device. Check browser storage.");
+      return;
+    }
     await store.setCurrent(newGameKey);
     router.push(`/game/${newGameKey}`);
   };

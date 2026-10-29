@@ -6,8 +6,9 @@ import Link from "@/components/navigation/PrefetchLink";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FatmaPanel } from "@/components/fatma/FatmaPanel";
 import { IOS_SPRING } from "@/components/ui/Switch";
-import { GlassButton, GlassLayer } from "@/components/ui/Glass";
-import { useGlassOn } from "@/lib/client/settings";
+import { GlassButton } from "@/components/ui/Glass";
+import { Dialog } from "@/components/ui/Dialog";
+export { Dialog } from "@/components/ui/Dialog";
 import { MenuButton } from "@/components/shell/AppShell";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, remaining } from "@/lib/chess/clock";
@@ -30,6 +31,11 @@ import { FOOTER_BUTTON_SIZE, ReviewArrows } from "./ReviewArrows";
 import { ClockChip } from "./ClockChip";
 import { CharacterField } from "@/components/shell/CharacterField";
 import { PlayerIdentity } from "./PlayerIdentity";
+import { FriendsButton } from "@/components/friends/FriendsButton";
+import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
+import { useMoveCoach } from "@/lib/client/useMoveCoach";
+import { MOVE_QUALITY } from "@/lib/chess/review";
+import { applyUci } from "@/lib/chess/rules";
 
 type Props = {
   /** Default options for "New game" on this screen. */
@@ -44,6 +50,7 @@ type Props = {
 
 export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props) {
   const { settings, reducedMotion, update } = useSettings();
+  const { coaching } = useCoachingPreferences();
   const fatma = useFatma();
   const sync = useSync();
   const engineState = useEngineState();
@@ -51,6 +58,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const [lastMove, setLastMove] = useState<LastMove>(null);
   const [orientationOverride, setOrientationOverride] = useState<Color | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const [confirmResign, setConfirmResign] = useState(false);
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [evalOptIn, setEvalOptIn] = useState(false);
@@ -157,6 +165,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const active = game?.meta.status === "active";
   const ratedEligible = game?.meta.rated === "eligible";
   const evalAllowed = settings.evalBar && (!ratedEligible || evalOptIn);
+  const coachingAllowed = !ratedEligible || evalOptIn;
+  const lastHumanMove = reviewing ? viewNode ?? undefined : line.findLast((node) => {
+    const parent = node.parentKey ? tree?.nodes[node.parentKey] : undefined;
+    return parent && sideToMove(parent.fen) === human;
+  });
+  const coach = useMoveCoach(lastHumanMove, lastHumanMove?.parentKey ? tree?.nodes[lastHumanMove.parentKey]?.fen : undefined,
+    coachingAllowed && (coaching.moveFeedback || coaching.explanations) && (!active || turn === human));
   const checkSq = status.check ? kingSquare(fen, sideToMove(fen)) ?? null : null;
   const viewLastMove: LastMove = reviewing
     ? viewNode && viewNode.ply > 0
@@ -184,6 +199,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       const previous = evals.current.get(e.nodeKey);
       evals.current.set(e.nodeKey, e);
       if (previous?.fen === e.fen && (previous.depth ?? 0) >= (e.depth ?? 0)) return;
+      if ((e.depth ?? 0) >= 10 && e.score.mate !== undefined && Math.abs(e.score.mate) <= 3) fatma.say("near_mate");
       const g = game;
       if (!g || !tree) return;
       // Save meaningful browser analysis for practice/MCP (signed-in, synced games).
@@ -206,7 +222,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       if (!node?.parentKey || node.ply === 0 || e.nodeKey !== headNode(tree).key) return;
       const moverIsHuman = sideToMove(tree.nodes[node.parentKey].fen) === g.meta.humanColor;
       const before = evals.current.get(node.parentKey);
-      if (!moverIsHuman || !before) return;
+      if (!moverIsHuman || !before || (before.depth ?? 0) < 10 || (e.depth ?? 0) < 10) return;
       const sign = g.meta.humanColor === "w" ? 1 : -1;
       const val = (s: Evaluation["score"]) => (s.mate !== undefined ? Math.sign(s.mate) * 3000 : s.cp ?? 0) * sign;
       const delta = val(e.score) - val(before.score);
@@ -227,13 +243,18 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     if (settings.sound) playSound(resultSound(game.meta.result, game.meta.humanColor), settings.volume);
   }, [game, settings.sound, settings.volume]);
   const lowTimeWarned = useRef<string | null>(null);
-  const humanMs = game?.clock ? remaining(game.clock, human, monotonicNow()) : null;
   useEffect(() => {
-    if (humanMs === null || humanMs > 20_000 || !game || game.meta.status !== "active") return;
-    if (lowTimeWarned.current === game.meta.gameKey) return;
-    lowTimeWarned.current = game.meta.gameKey;
-    if (settings.sound) playSound("lowtime", settings.volume);
-  }, [humanMs, game, settings.sound, settings.volume]);
+    if (!game?.clock || game.meta.status !== "active") return;
+    const clock = game.clock;
+    const checkTime = () => {
+      if (remaining(clock, human, monotonicNow()) > 20_000 || lowTimeWarned.current === game.meta.gameKey) return;
+      lowTimeWarned.current = game.meta.gameKey;
+      if (settings.sound) playSound("lowtime", settings.volume);
+      fatma.say("time_pressure");
+    };
+    const timer = setInterval(checkTime, 500);
+    return () => clearInterval(timer);
+  }, [game, human, settings.sound, settings.volume, fatma]);
 
   // She gets chatty if you think for a long time.
   useEffect(() => {
@@ -243,7 +264,19 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [head?.key, active, turn, human, reviewing]);
 
-  const evaluation = useEvaluation(fen, viewNode?.key ?? "root", evalAllowed && !status.over, onFinalEval);
+  const evaluation = useEvaluation(fen, viewNode?.key ?? "root", (evalAllowed || (coachingAllowed && coaching.hints)) && !status.over, onFinalEval);
+  const hint = coachingAllowed && coaching.hints && evaluation?.final && (evaluation.depth ?? 0) >= 10 && evaluation.bestmove ? applyUci(fen, evaluation.bestmove) : null;
+  const previousCoach = useRef<string | null>(null);
+  useEffect(() => {
+    if (coach?.kind !== "ready" || previousCoach.current === coach.key || reviewing) return;
+    previousCoach.current = coach.key;
+    const timer = setTimeout(() => {
+      if (coach.review.quality === "blunder" || coach.review.quality === "miss") fatma.say("human_blunder");
+      else if (coach.review.quality === "brilliant") fatma.say("human_sacrifice");
+      else if (coach.review.quality === "best" || coach.review.quality === "great") fatma.say("human_good_move");
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [coach, fatma, reviewing]);
 
   const handleMove = useCallback(
     async (uci: string) => {
@@ -311,18 +344,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           Wide screens: the board as large as the window allows, controls and moves in a side panel. */}
       <div
         className="game-layout"
-        style={{ ["--eval-gutter" as string]: settings.evalBar ? "36px" : "0px" }}
+        style={{ ["--eval-gutter" as string]: "0px" }}
       >
       <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2 [grid-area:header] lg:pt-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="min-w-0">
-            <p className="sr-only">
-              Chess
-            </p>
-          </div>
-        </div>
-        <div className="ms-auto flex items-center gap-1.5">
-          <GlassButton onClick={() => setShowNew(true)} className="h-11 shrink-0 rounded-full px-3.5 text-sm font-medium" aria-label="New game" aria-keyshortcuts="n">
+        <span className="sr-only">Chess</span>
+        <div className="ms-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-0.5 min-[400px]:gap-1">
+          <FriendsButton />
+          <GlassButton onClick={() => update({ evalBar: !settings.evalBar })} aria-label={settings.evalBar ? "Hide evaluation" : "Show evaluation"} aria-pressed={settings.evalBar} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-semibold">±</GlassButton>
+          <GlassButton onClick={() => setShowNew(true)} className="h-11 shrink-0 rounded-full px-2.5 text-sm font-medium min-[400px]:px-3.5" aria-label="New game" aria-keyshortcuts="n">
             New
           </GlassButton>
           <GlassButton
@@ -341,7 +370,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               update({ sound: !settings.sound });
               if (!settings.sound) playSound("move", settings.volume);
             }}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full"
+            className="hidden h-11 w-11 shrink-0 place-items-center rounded-full min-[400px]:grid"
             aria-label={settings.sound ? "Mute sounds" : "Turn sounds on"}
             aria-pressed={settings.sound}
             title={settings.sound ? "Sound on" : "Sound off"}
@@ -355,9 +384,12 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               )}
             </svg>
           </GlassButton>
-            <GlassButton disabled={!active} onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink" aria-label="Resign" title="Resign">
+            <GlassButton disabled={!active} onClick={() => setConfirmResign(true)} className="hidden h-11 w-11 shrink-0 place-items-center rounded-full text-ink min-[400px]:grid" aria-label="Resign" title="Resign">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </GlassButton>
+          <GlassButton onClick={() => setShowActions(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full min-[400px]:hidden" aria-label="Game controls" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" fill="var(--surface)" /><circle cx="15" cy="17" r="3" fill="var(--surface)" /></svg>
+          </GlassButton>
           <MenuButton />
         </div>
       </header>
@@ -366,7 +398,17 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         <div className="lg:hidden">
           <MoveStrip line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
         </div>
-        <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="hidden flex-1 lg:flex" />
+        <details open className="hidden min-h-0 flex-1 overflow-hidden lg:flex lg:flex-col">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Move history</summary>
+          <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="flex h-[calc(100%-44px)]" />
+        </details>
+        {(coaching.moveFeedback || coaching.explanations || coaching.hints) && <section aria-label="Optional coaching" className="shrink-0 border-t border-line bg-surface p-3 text-sm" aria-live="polite">
+          {!coachingAllowed ? <button onClick={() => { setEvalOptIn(true); chess.markAssisted("engine_lines"); }} className="min-h-11 underline">Enable coaching · makes this game unrated</button> : <>
+            {coaching.moveFeedback && <p>{coach?.kind === "ready" ? `${lastHumanMove?.san}: ${MOVE_QUALITY[coach.review.quality].label}` : coach?.kind === "unavailable" ? "Move analysis unavailable at sufficient depth." : lastHumanMove ? "Analyzing move…" : "Play a move to start review."}</p>}
+            {coaching.explanations && coach?.kind === "ready" && <p className="mt-1 text-muted">{coach.review.quality === "best" ? "Matches the engine's best move." : `${coach.review.bestSan} was the engine alternative. Evaluation loss: ${(coach.review.lossCp / 100).toFixed(2)} pawns.`}</p>}
+            {coaching.hints && <p className="mt-1 text-muted">{hint ? `Engine suggestion: ${hint.san}` : "Hint unavailable or analyzing."}</p>}
+          </>}
+        </section>}
       </div>
 
       <section className="game-board-group">
@@ -374,21 +416,21 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <FatmaPanel fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName captures={captures.captured[fatmaColor]} capturedColor={human} advantage={captures.advantage[fatmaColor]} />
           {tc && <ClockChip ms={clockFor(fatmaColor)} running={active && turn === fatmaColor} />}
         </div>
-        <div className="game-position relative flex w-full items-stretch gap-2">
+        <div className="game-position relative flex w-full flex-col items-stretch gap-1">
           {settings.evalBar && (evalAllowed ? (
-            <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} />
+            <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} horizontal />
           ) : (
             <button
               onClick={() => {
                 setEvalOptIn(true);
                 chess.markAssisted("eval_bar");
               }}
-              className="w-[28px] shrink-0 rounded-[5px] bg-surface-2"
+              className="h-6 w-full shrink-0 rounded-[5px] bg-surface-2 text-xs"
               aria-label="Show evaluation bar. This makes the current rated game unrated."
               title="Show evaluation (makes this game unrated)"
-            />
+            >Show evaluation · makes this game unrated</button>
           ))}
-          <div className="relative min-w-0 flex-1">
+          <div className="relative min-w-0 w-full">
             <Board
               result={resultText && game && !reviewing ? { result: game.meta.result, reason: game.meta.resultReason } : undefined}
               fen={fen}
@@ -400,6 +442,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               onPremove={premove.queue}
               lastMove={reviewing ? viewLastMove : lastMove}
               checkSquare={checkSq}
+              hintSquares={hint ? [hint.from, hint.to] : []}
               showLegalDots={settings.legalDots}
               coordinates={settings.coordinates}
               reducedMotion={reducedMotion}
@@ -425,7 +468,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </section>
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
-        <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted [grid-area:status] lg:justify-start" aria-live="polite">
+        <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted empty:hidden [grid-area:status] lg:justify-start" aria-live="polite">
           {premove.uci && <button onClick={premove.cancel} className="shrink-0 underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
           {engineWaking && <span>Sherine is waking up…</span>}
           {chess.thinking && !engineWaking && <span>Sherine is thinking…</span>}
@@ -467,6 +510,11 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </div>
 
       {showKeys && <KeyboardHelp onClose={() => setShowKeys(false)} extra={[["U", "Undo (asks first)"], ["N", "New game"]]} />}
+      {showActions && <Dialog title="Game controls" onClose={() => setShowActions(false)}>
+        <button onClick={() => { unlockAudio(); update({ sound: !settings.sound }); }} className="min-h-11 rounded-2xl bg-surface-2">{settings.sound ? "Mute sounds" : "Turn sounds on"}</button>
+        <button disabled={!active} onClick={() => { setShowActions(false); setConfirmResign(true); }} className="min-h-11 rounded-2xl bg-surface-2 text-danger">Resign</button>
+        <Link href="/settings" className="grid min-h-11 place-items-center rounded-2xl bg-surface-2">Coaching and Sherine settings</Link>
+      </Dialog>}
 
       {confirmUndo && (
         <Dialog title="Undo your last move?" onClose={() => setConfirmUndo(false)}>
@@ -539,64 +587,6 @@ function resultLine(result: string | undefined, reason: string | undefined, huma
 }
 
 
-export function Dialog({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const titleId = useId();
-  const glassOn = useGlassOn();
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
-  useEffect(() => {
-    // Focus moves in, Tab stays inside, Escape closes, and focus returns to where it was.
-    const previous = document.activeElement as HTMLElement | null;
-    ref.current?.querySelector<HTMLElement>("button,input,select,a[href]")?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onCloseRef.current();
-        return;
-      }
-      if (e.key !== "Tab" || !ref.current) return;
-      const items = Array.from(ref.current.querySelectorAll<HTMLElement>("button:not([disabled]),input,select,a[href],[tabindex]:not([tabindex='-1'])"));
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => {
-      window.removeEventListener("keydown", onKey, true);
-      previous?.focus?.();
-    };
-  }, []);
-  return (
-    <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-      <motion.div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className={glassOn ? "glass-panel w-full max-w-sm rounded-3xl p-5" : "w-full max-w-sm rounded-3xl bg-surface p-5 shadow-[var(--shadow)]"}
-        onClick={(e) => e.stopPropagation()}
-        // Glass skips the fade: a translucent parent would cut the lens off from the page.
-        initial={glassOn ? { y: 48, scale: 0.96 } : { opacity: 0, y: 48, scale: 0.96 }}
-        animate={glassOn ? { y: 0, scale: 1 } : { opacity: 1, y: 0, scale: 1 }}
-        transition={IOS_SPRING}
-      >
-        <GlassLayer radius={24} blur={10} glassThickness={90} bezelWidth={24} specularOpacity={0.6} />
-        <h2 id={titleId} className="mb-4 text-lg font-semibold">{title}</h2>
-        <div className="grid gap-2">{children}</div>
-      </motion.div>
-    </motion.div>
-  );
-}
 
 function NewGameDialog({
   defaults,

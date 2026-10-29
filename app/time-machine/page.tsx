@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/shell/AppShell";
 import { findOpponent } from "@/lib/chess/engine/opponents";
 import { newKey } from "@/lib/client/ids";
 import { store, type LocalGame } from "@/lib/client/store";
+import { importPgn } from "@/lib/chess/history/pgn";
 
 const MODE: Record<string, string> = { full_power: "Full Power", climb: "Climb", timed: "Timed", practice: "Branch", import: "Imported" };
 
@@ -34,11 +35,22 @@ export default function TimeMachinePage() {
     setImporting(true);
     try {
       const gameKey = newKey("i");
-      await importGame({ opId: newKey("op"), gameKey, pgn, humanColor: "w" });
+      if (isAuthenticated) {
+        await importGame({ opId: newKey("op"), gameKey, pgn, humanColor: "w" });
+      } else {
+        const parsed = importPgn(pgn, () => newKey("n"), Date.now());
+        const result = parsed.result === "1-0" || parsed.result === "0-1" || parsed.result === "1/2-1/2" ? parsed.result : undefined;
+        const saved = await store.saveGame({ tree: parsed.tree, meta: {
+          gameKey, mode: "import", opponentId: "full-power-standard", humanColor: "w", rated: "unrated",
+          status: result ? "finished" : "active", result, resultReason: result ? "imported" : undefined,
+          label: (parsed.headers.Event ?? "Imported game").slice(0, 60), synced: false, updatedAt: Date.now(),
+        } });
+        if (!saved) throw new Error("Could not save this game on your device. Check browser storage.");
+      }
       router.push(`/time-machine/${gameKey}`);
     } catch (error) {
       const data = (error as { data?: { message?: string } }).data;
-      setImportError(data?.message ?? "Could not import that PGN.");
+      setImportError(data?.message ?? (error instanceof Error ? error.message : "Could not import that PGN."));
     } finally {
       setImporting(false);
     }
@@ -82,9 +94,10 @@ export default function TimeMachinePage() {
           </button>
         )}
 
-        {isAuthenticated && (
+        {(
           <details className="rounded-2xl bg-surface p-4 shadow-[var(--shadow)]">
             <summary className="cursor-pointer font-medium">Import PGN</summary>
+            <p className="mt-2 text-xs text-muted">Paste a PGN to replay and practice. {isAuthenticated ? "Saved to your account." : "Saved on this device. No account needed."}</p>
             <textarea
               value={pgn}
               onChange={(e) => setPgn(e.target.value)}

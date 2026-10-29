@@ -145,8 +145,10 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
       commit(next);
       callbacks.current.onMove?.({ applied, by, node });
       const fatmaColor: Color = g.meta.humanColor === "w" ? "b" : "w";
-      if (applied.captured) callbacks.current.onFatma?.(by === "human" ? "human_capture" : "fatma_capture");
-      if (applied.check && !applied.checkmate) callbacks.current.onFatma?.(mover === fatmaColor ? "check_given" : "check_received");
+      if (!status?.over) {
+        if (applied.check) callbacks.current.onFatma?.(mover === fatmaColor ? "check_given" : "check_received");
+        else if (applied.captured) callbacks.current.onFatma?.(by === "human" ? "human_capture" : "fatma_capture");
+      }
       return true;
     },
     [commit, ensureCreated, finishLocally, sync],
@@ -216,6 +218,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
 
   const newGame = useCallback(
     async (opts: NewGameOptions) => {
+      const rematch = gameRef.current?.meta.status === "finished" && !opts.parentGameKey;
       const generation = ++newGameGeneration.current;
       replyGeneration.current++;
       if (supportsEngine()) getEngine().cancel("move");
@@ -248,7 +251,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
       if (generation !== newGameGeneration.current) return gameRef.current ?? g;
       commit(g);
       await store.setCurrent(g.meta.gameKey);
-      callbacks.current.onFatma?.("game_start");
+      callbacks.current.onFatma?.(rematch ? "rematch" : "game_start");
       // Preserve offline move order: close operations follow each old game's
       // queued moves, and precede the new session's create.
       for (const old of closed) if (old.meta.synced) await sync.enqueue(old.meta.gameKey, "finish", { gameKey: old.meta.gameKey, claim: "replace" });

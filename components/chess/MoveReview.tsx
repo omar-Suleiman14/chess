@@ -26,7 +26,7 @@ export function MoveReview({ moves, total, human, cursor, onSelect }: { moves: R
           ))}
         </tbody>
       </table>
-      <details className="mt-3 text-xs text-muted"><summary className="cursor-pointer py-1">How moves are graded</summary><p className="mt-1">Based on evaluation loss: ≤20 excellent, ≤50 good, 51–149 inaccuracy, 150–299 mistake, 300+ blunder (centipawns). Best matches the engine; missed mates are marked separately.</p></details>
+      <details className="mt-3 text-xs text-muted"><summary className="cursor-pointer py-1">How moves are graded</summary><p className="mt-1">Depth 10+ on both positions. Evaluation loss: ≤20 excellent, ≤50 good, 51–149 inaccuracy, 150–299 mistake, 300+ blunder, in centipawns. Best matches the engine. Book matches our small curated opening book. Missed Win means a missed forced mate. Great requires depth 16+ and a 150cp gap to the next-best move; Brilliant also requires a non-losing sacrifice accepted by the engine&apos;s best reply. Without this evidence, those labels are not awarded.</p></details>
       {selected && <div className="mt-3 rounded-xl bg-surface-2 p-3 text-sm" aria-live="polite"><strong style={{ color: MOVE_QUALITY[selected.quality].color }}>{MOVE_QUALITY[selected.quality].symbol} {MOVE_QUALITY[selected.quality].label}</strong><p className="mt-1 text-muted">{selected.quality === "best" ? "Matches Stockfish’s best move." : `Engine recommendation: ${selected.bestSan} · evaluation loss ${(selected.lossCp / 100).toFixed(2)} pawns.`}</p></div>}
       <button disabled={!first} onClick={() => first && onSelect(first.ply)} className="mt-4 min-h-11 w-full rounded-full bg-accent px-4 font-semibold text-accent-text disabled:opacity-40">Start review</button>
     </section>

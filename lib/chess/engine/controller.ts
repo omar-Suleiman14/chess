@@ -48,6 +48,7 @@ export type SearchResult = {
   pv: string[];
   elapsedMs: number;
   options: EngineOptions;
+  candidates?: Array<{ uci: string; score: WhiteScore; depth: number }>;
 };
 
 export class SearchCancelled extends Error {
@@ -89,6 +90,7 @@ type Pending = {
   cancelled: boolean;
   startedAt: number;
   last?: UciInfo;
+  variations: Map<number, UciInfo>;
   options: EngineOptions;
 };
 
@@ -153,6 +155,7 @@ export class EngineController {
         reject,
         cancelled: false,
         startedAt: 0,
+        variations: new Map(),
         options: { ...DEFAULT_ENGINE_OPTIONS, ...request.options },
       };
       // Only the newest eval matters; drop queued stale ones.
@@ -259,7 +262,9 @@ export class EngineController {
     const info = parseInfo(line);
     if (info) {
       if (info.bound) return; // Aspiration-window bounds are not reliable scores.
-      if ((info.multipv ?? 1) === 1) active.last = info;
+      const primaryScore = (info.multipv ?? 1) === 1 && (info.scoreCp !== undefined || info.scoreMate !== undefined);
+      if (primaryScore) active.last = info;
+      if (info.depth && info.pv?.[0] && (info.scoreCp !== undefined || info.scoreMate !== undefined)) active.variations.set(info.multipv ?? 1, info);
       if (!active.cancelled && active.request.onInfo && (info.scoreCp !== undefined || info.scoreMate !== undefined)) {
         active.request.onInfo({
           requestId: active.id,
@@ -296,6 +301,7 @@ export class EngineController {
         pv: last.pv ?? [],
         elapsedMs: now() - active.startedAt,
         options: active.options,
+        candidates: [...active.variations.values()].flatMap((info) => info.pv?.[0] && info.depth ? [{ uci: info.pv[0], score: toWhiteScore(info, sideToMove(active.request.fen)), depth: info.depth }] : []),
       });
     }
     this.setState(this.worker ? "ready" : "terminated");

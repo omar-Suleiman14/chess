@@ -136,9 +136,9 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto 1fr auto auto;
-  grid-template-areas: "header" "moves" "group" "status" "footer";
+  grid-template-areas: "header" "group" "moves" "status" "footer";
   width: 100%;
-  max-width: min(100%, max(284px, calc(100dvh - 316px)), 790px);
+  max-width: min(100%, max(284px, calc(100dvh - 350px)));
   min-width: 0;
   min-height: 100dvh;
   margin-inline: auto;
@@ -148,18 +148,20 @@ button {
 .game-position { grid-area: board; min-width: 0; }
 .game-player { grid-area: player; width: 100%; }
 @media (max-width: 1023px) and (max-height: 620px) {
-  .game-layout > header { padding-top: max(4px, env(safe-area-inset-top)); padding-bottom: 4px; }
-  .game-opponent { margin-bottom: 4px; }
+  .game-layout > header { padding-top: max(4px, env(safe-area-inset-top)); padding-bottom: 2px; }
+  .game-opponent { margin-bottom: 0; }
+  .game-opponent > div { height: 44px; }
+  .game-player > div { padding-block: 2px; }
 }
 @media (min-width: 1024px) {
   .game-layout {
-    --board-size: min(calc(100dvh - 208px), calc(100vw - 380px - var(--eval-gutter)), 1000px);
+    --board-size: min(calc(100dvh - 208px), calc(100vw - 380px - var(--eval-gutter)));
     width: fit-content;
     max-width: none;
     min-height: 0;
     padding-block: 16px;
     grid-template-columns: calc(var(--board-size) + var(--eval-gutter)) 300px;
-    grid-template-rows: 56px var(--board-size) 56px minmax(24px, auto);
+    grid-template-rows: 56px auto 56px minmax(24px, auto);
     grid-template-areas: "opponent header" "board moves" "player footer" ". status";
     gap: 8px 32px;
   }

@@ -44,6 +44,7 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
         fen,
         movetimeMs: EVAL_MOVETIME_MS,
         onInfo: (info) => {
+          if (info.multipv !== 1) return;
           const now = performance.now();
           if (cancelled || now - lastPaint < UPDATE_INTERVAL_MS) return;
           lastPaint = now;
@@ -51,6 +52,10 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
         },
       });
       if (cancelled) return;
+      if (result.score.cp === undefined && result.score.mate === undefined) {
+        setEvaluation(null);
+        return;
+      }
       void writeAnalysis(fen, EVAL_SETTINGS_HASH, result);
       const final: Evaluation = { nodeKey, fen, score: result.score, depth: result.depth, bestmove: result.bestmove, final: true };
       setEvaluation(final);

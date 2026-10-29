@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/Slider";
 import { FATMA_LANGUAGES } from "@/lib/chess/personality/lines";
 import { useSettings, type Palette } from "@/lib/client/settings";
 import { haptic, playSound, unlockAudio } from "@/lib/client/sound";
+import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
 
 const PALETTES: Array<[Palette, string, string, string]> = [
   ["ivory", "Ivory", "#efe6d5", "#c3a982"],
@@ -28,6 +29,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 
 export default function SettingsPage() {
   const { settings, update, glassOn } = useSettings();
+  const { coaching, updateCoaching } = useCoachingPreferences();
   const palette = PALETTES.find((p) => p[0] === settings.palette) ?? PALETTES[0];
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-16">
@@ -89,6 +91,9 @@ export default function SettingsPage() {
             <SwitchRow label="Legal move dots" checked={settings.legalDots} onChange={(v) => update({ legalDots: v })} />
             <SwitchRow label="Coordinates" checked={settings.coordinates} onChange={(v) => update({ coordinates: v })} />
             <SwitchRow label="Evaluation bar" hint="Hide it to test yourself. Never live in rated games." checked={settings.evalBar} onChange={(v) => update({ evalBar: v })} />
+            <SwitchRow label="Move classifications" hint="Only with depth 10+ analysis on both positions." checked={coaching.moveFeedback} onChange={(moveFeedback) => updateCoaching({ moveFeedback })} />
+            <SwitchRow label="Coach explanations" checked={coaching.explanations} onChange={(explanations) => updateCoaching({ explanations })} />
+            <SwitchRow label="Engine hints" hint="Best move shown in bot practice. Assistance makes rated bot games unrated." checked={coaching.hints} onChange={(hints) => updateCoaching({ hints })} />
             <SwitchRow label="High contrast" checked={settings.highContrast} onChange={(v) => update({ highContrast: v })} />
             <SwitchRow
               label="Liquid Glass"
@@ -157,7 +162,14 @@ export default function SettingsPage() {
 
 
         <Group title="Sherine">
+          <SwitchRow label="Dialogue sounds" hint="A quiet chime when Sherine speaks. No voice." checked={settings.fatmaSound} onChange={(fatmaSound) => { unlockAudio(); update({ fatmaSound }); }} />
+          <SwitchRow label="Auto language" hint="Browser language initially; follows Arabic, English or Arabizi when you say hi." checked={coaching.autoLanguage} onChange={(autoLanguage) => updateCoaching({ autoLanguage })} />
           <Segmented label="Sherine speaks" value={settings.fatmaLanguage} onChange={(fatmaLanguage) => update({ fatmaLanguage })} options={FATMA_LANGUAGES} />
+          <div className="mt-3 grid gap-3">
+            <Segmented label="Banter frequency" value={coaching.frequency} onChange={(frequency) => updateCoaching({ frequency })} options={[["quiet", "Quiet"], ["balanced", "Balanced"], ["chatty", "Chatty"]]} />
+            <Segmented label="Personality" value={coaching.intensity} onChange={(intensity) => updateCoaching({ intensity })} options={[["gentle", "Gentle"], ["playful", "Playful"], ["spicy", "Spicy"]]} />
+          </div>
+          <p className="mt-2 text-xs text-muted">Coaching and banter preferences are saved on this device. Turn Sherine off in Profile to mute all her commentary.</p>
           <p className="mt-2 px-1 text-xs text-muted">Franco is Egyptian Arabic in Latin letters (3 = ع, 7 = ح, 2 = ء). Tap Sherine during a game to talk to her.</p>
         </Group>
 

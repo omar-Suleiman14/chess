@@ -48,6 +48,7 @@ export type CachedAnalysis = {
   score: WhiteScore;
   depth?: number;
   bestmove: string | null;
+  candidates?: Array<{ uci: string; score: WhiteScore; depth: number }>;
   pv: string[];
   computeMs: number;
   updatedAt: number;

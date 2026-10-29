@@ -3,9 +3,23 @@ import { reviewMove } from "./review";
 import type { AnalysedMove } from "./lessons/adaptive";
 
 const start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-const move: AnalysedMove = { fenBefore: start, uci: "d2d4", san: "d4", ply: 1, before: { score: { cp: 50 }, bestmove: "e2e4", depth: 12 }, after: { score: { cp: 0 }, depth: 12 } };
+const move: AnalysedMove = { fenBefore: start, uci: "b2b3", san: "b3", ply: 1, before: { score: { cp: 50 }, bestmove: "e2e4", depth: 12 }, after: { score: { cp: 0 }, depth: 12 } };
 
 describe("move review", () => {
+  it("never treats an empty engine score as an equal position", () => {
+    expect(reviewMove({ ...move, before: { ...move.before!, score: {} } })).toBeNull();
+    expect(reviewMove({ ...move, after: { score: {}, depth: 12 } })).toBeNull();
+  });
+  it("recognizes verified book moves and does not invent a book label elsewhere", () => {
+    expect(reviewMove({ ...move, uci: "e2e4" })?.quality).toBe("book");
+    expect(reviewMove(move)?.quality).toBe("good");
+  });
+  it("requires deep alternative lines for a Great label", () => {
+    const before = { score: { cp: 50 }, bestmove: "b2b3", depth: 16, candidates: [{ uci: "e2e4", score: { cp: -200 }, depth: 16 }] };
+    expect(reviewMove({ ...move, before, after: { score: { cp: 50 }, depth: 16 } })?.quality).toBe("great");
+    expect(reviewMove({ ...move, before: { ...before, candidates: undefined }, after: { score: { cp: 50 }, depth: 16 } })?.quality).toBe("best");
+    expect(reviewMove({ ...move, before: { ...before, depth: 12 }, after: { score: { cp: 50 }, depth: 16 } })?.quality).toBe("best");
+  });
   it("does not grade missing or shallow analysis", () => {
     expect(reviewMove({ ...move, before: undefined })).toBeNull();
     expect(reviewMove({ ...move, after: undefined })).toBeNull();
@@ -19,7 +33,7 @@ describe("move review", () => {
     expect(reviewMove({ ...move, fenBefore: start.replace(" w ", " b "), ply: 2, uci: "d7d5", before: { score: { cp: 0 }, bestmove: "e7e5", depth: 12 }, after: { score: { cp: 300 }, depth: 12 } })).toMatchObject({ color: "b", quality: "blunder", lossCp: 300 });
   });
   it("recognizes the engine's best move", () => {
-    expect(reviewMove({ ...move, uci: "e2e4" })).toMatchObject({ quality: "best", bestSan: "e4" });
+    expect(reviewMove({ ...move, before: { ...move.before!, bestmove: "b2b3" } })).toMatchObject({ quality: "best", bestSan: "b3" });
   });
   it("marks a missed winning mate separately", () => {
     expect(reviewMove({ ...move, before: { ...move.before!, score: { mate: 3 } } })?.quality).toBe("miss");

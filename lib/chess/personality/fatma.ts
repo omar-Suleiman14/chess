@@ -24,7 +24,12 @@ export type FatmaEvent =
   | "opening"
   | "human_castle"
   | "human_promote"
-  | "poke";
+  | "poke"
+  | "time_pressure"
+  | "near_mate"
+  | "rematch"
+  | "undo_repeat"
+  | "human_sacrifice";
 
 export type Expression = "idle" | "thinking" | "smug" | "amused" | "annoyed" | "impressed" | "plea" | "angry" | "victory" | "defeat" | "grateful";
 
@@ -96,18 +101,20 @@ export function pickLine(
   const chatty = event === "poke";
   if (!PRIORITY_EVENTS.has(event) && !chatty && now - memory.lastSpokeAt < GLOBAL_COOLDOWN_MS) return null;
   const mood = currentMood(memory, now);
-  const eligible = lines.filter(
+  const seenAt = (id: string) => memory.seen[id] ?? memory.seen[id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 80)];
+  const available = lines.filter(
     (l) =>
       l.event === event &&
       (!l.mood || l.mood === mood) &&
       (!l.minReenables || memory.reenableCount >= l.minReenables) &&
-      (!l.unlock || memory.unlocks.includes(l.unlock)) &&
-      (PRIORITY_EVENTS.has(event) || memory.seen[l.id] === undefined || now - memory.seen[l.id] >= LINE_COOLDOWN_MS),
+      (!l.unlock || memory.unlocks.includes(l.unlock)),
   );
+  const eligible = available.filter((l) => PRIORITY_EVENTS.has(event) || seenAt(l.id) === undefined || now - seenAt(l.id)! >= LINE_COOLDOWN_MS);
   if (eligible.length === 0) {
     if (!chatty) return null;
-    const any = lines.filter((l) => l.event === event);
-    return any.length ? any[Math.abs(seed) % any.length] : null;
+    // Once every reply has been seen, repeat the oldest eligible one.
+    // Mood and unlock requirements still apply to direct interactions.
+    return available.toSorted((a, b) => (seenAt(a.id) ?? 0) - (seenAt(b.id) ?? 0))[0] ?? null;
   }
   // Prefer mood-specific and grudge lines, then rotate by seed.
   const specific = eligible.filter((l) => l.mood === mood || l.minReenables);
