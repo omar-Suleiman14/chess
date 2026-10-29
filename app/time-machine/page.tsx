@@ -43,6 +43,7 @@ export default function TimeMachinePage() {
         const saved = await store.saveGame({ tree: parsed.tree, meta: {
           gameKey, mode: "import", opponentId: "full-power-standard", humanColor: "w", rated: "unrated",
           status: result ? "finished" : "active", result, resultReason: result ? "imported" : undefined,
+          playerNames: { white: parsed.headers.White || "White", black: parsed.headers.Black || "Black" },
           label: (parsed.headers.Event ?? "Imported game").slice(0, 60), synced: false, updatedAt: Date.now(),
         } });
         if (!saved) throw new Error("Could not save this game on your device. Check browser storage.");
@@ -60,7 +61,7 @@ export default function TimeMachinePage() {
     <main className="mx-auto min-h-dvh max-w-xl pb-12">
       <PageHeader title="Time Machine" />
       <div className="grid gap-5 px-4">
-        <p className="text-sm text-muted">Replay any game, scrub through it, and continue from any move. Originals are never changed.</p>
+        <p className="text-sm text-muted">Explore saved games by selecting moves. Try a new continuation without changing the original.</p>
         <ul className="overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]">
           {remote.results.map((g) => (
             <li key={g.gameKey} className="border-b border-line last:border-b-0">

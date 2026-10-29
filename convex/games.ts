@@ -129,6 +129,7 @@ export const finish = mutation({
 });
 
 export const importGame = mutation({
+  returns: v.object({ gameKey: v.string(), nodes: v.number() }),
   args: { opId: v.string(), gameKey: v.string(), pgn: v.string(), humanColor: colorValidator },
   handler: async (ctx, { opId, ...args }) => {
     const owner = await requireOwner(ctx);
@@ -169,9 +170,13 @@ export const importGame = mutation({
       }
       const branch = await Games.getBranch(ctx, game._id, mainBranchKey);
       if (branch) await ctx.db.patch("gameBranches", branch._id, { headKey: parsed.mainHeadKey, label: "Imported", kind: "import" });
+      for (const variation of Object.values(parsed.tree.branches).filter((line) => line.key !== mainBranchKey)) {
+        await ctx.db.insert("gameBranches", { owner, gameId: game._id, branchKey: variation.key, headKey: variation.headKey, label: variation.label, kind: variation.kind, forkedFromBranchKey: mainBranchKey, createdAt: now, updatedAt: now });
+      }
       const result = /^(1-0|0-1|1\/2-1\/2)$/.test(parsed.result) ? (parsed.result as "1-0" | "0-1" | "1/2-1/2") : undefined;
       await ctx.db.patch("games", game._id, {
         mode: "import",
+        playerNames: { white: (parsed.headers.White || "White").slice(0, 160), black: (parsed.headers.Black || "Black").slice(0, 160) },
         moveCount: nodes.length,
         status: result ? "finished" : "active",
         result,

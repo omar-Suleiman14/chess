@@ -53,7 +53,6 @@ function GlassSlider({ value, min = 0, max = 100, onValueChange, fill = "var(--s
   const scale = useSpring(useTransform(pressed, [0, 1], [1, 1.55]), SPRING);
   const fillAlpha = useSpring(useTransform(pressed, [0, 1], [1, 0.06]), SPRING);
   const background = useTransform(fillAlpha, (a) => `rgb(255 255 255 / ${a})`);
-  const refraction = useSpring(useTransform(pressed, [0, 1], [0.4, 0.95]));
 
   useEffect(() => {
     const up = () => pressed.set(0);
@@ -74,7 +73,7 @@ function GlassSlider({ value, min = 0, max = 100, onValueChange, fill = "var(--s
         className="pointer-events-none absolute top-1/2 block rounded-full shadow-[0_3px_10px_rgb(0_0_0/0.14)]"
         style={{ width: THUMB_W, height: THUMB_H, marginTop: -THUMB_H / 2, insetInlineStart: `calc((100% - ${THUMB_W}px) * ${pct})`, scale, background }}
       >
-        <GlassLayer radius="pill" surface="convexSquircle" glassThickness={60} bezelWidth={11} refractiveIndex={1.45} blur={0} refraction={refraction} specularOpacity={0.45} specularSaturation={7} />
+        <GlassLayer radius="pill" />
       </motion.span>
       <input
         {...input}

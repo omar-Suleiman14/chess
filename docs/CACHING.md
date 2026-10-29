@@ -15,13 +15,15 @@ Page entrances commit navigation history in an effect, so prefetch and render re
 ## Browser caches
 
 - Versioned Stockfish JS/WASM: one-year immutable HTTP cache. Engine version changes use a new path.
-- Chess pieces and recorded sounds: one-day browser cache, stale-while-revalidate for up to one week. Unchanged resources support ETag/304 revalidation.
+- Chess pieces and cleared legacy sound assets: one-day browser cache, stale-while-revalidate for up to one week. Current event sounds are generated PCM buffers, not network recordings. Up to 128 decoded buffers are kept in memory.
 - Sherine assets: the existing one-week HTTP cache.
 - Next.js build assets: framework-managed hashed immutable files.
 - HTML and RSC containing request/session state: private, no-store; never shared through a CDN or service-worker cache.
 - Sitemap, robots, manifest, and share image: Next.js generated routes, refreshed with the deployment; sitemap and robots are allowed to revalidate rather than being given an immutable browser lifetime.
 
 The app does not install a service worker or promise a fully offline page reload. Existing local games and engine calculations remain device-local; initial files and account/online features require the network.
+
+Theme preferences use versioned local storage. A validated cache stores light/dark theme tokens for the first paint; the settings provider remains authoritative. Local Web Vitals retain at most 120 observations and never block game storage.
 
 ## IndexedDB
 

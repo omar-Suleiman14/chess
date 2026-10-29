@@ -16,7 +16,7 @@ export type Evaluation = { nodeKey: string; fen: string; score: WhiteScore; dept
  * Bounded, lower-priority evaluation of the current position. Never runs
  * when disabled, never blocks Sherine's move search (the controller preempts).
  */
-export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, onFinal?: (e: Evaluation) => void) {
+export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, onFinal?: (e: Evaluation) => void, minimumDepth = 0) {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const finalRef = useRef(onFinal);
   useEffect(() => {
@@ -32,7 +32,7 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
     void (async () => {
       const cached = await readAnalysis(fen, EVAL_SETTINGS_HASH);
       if (cancelled) return;
-      if (cached) {
+      if (cached && (cached.depth ?? 0) >= minimumDepth) {
         const final: Evaluation = { nodeKey, fen, score: cached.score, depth: cached.depth, bestmove: cached.bestmove, final: true };
         setEvaluation(final);
         finalRef.current?.(final);
@@ -67,7 +67,7 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
       cancelled = true;
       if (searching) engine.cancel("eval");
     };
-  }, [fen, nodeKey, enabled]);
+  }, [fen, nodeKey, enabled, minimumDepth]);
 
   // Only show scores that belong to the position on the board (no stale jumps).
   const current = enabled && evaluation && evaluation.fen === fen && evaluation.nodeKey === nodeKey ? evaluation : null;

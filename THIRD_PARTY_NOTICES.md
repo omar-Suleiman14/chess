@@ -60,11 +60,15 @@ Source archive: [kenney_interface-sounds.zip](https://kenney.nl/media/pages/asse
 
 ### Existing Lichess Standard recordings
 
-`public/sounds/standard/*.mp3` (Move, Capture, GenericNotify, Select, Confirmation, Error, LowTime) were previously copied from [lichess-org/lila](https://github.com/lichess-org/lila/tree/master/public/sound/standard). Upstream [COPYING.md](https://github.com/lichess-org/lila/blob/master/COPYING.md) lists the other sounds in `public/sound` as **non-free exceptions**. The previous claim that these Standard assets were AGPL-3.0-or-later was incorrect. These existing recordings are retained unchanged; this update adds only CC0 result cues.
+`public/sounds/standard/*.mp3` (Move, Capture, GenericNotify, Select, Confirmation, Error, LowTime) were previously copied from [lichess-org/lila](https://github.com/lichess-org/lila/tree/master/public/sound/standard). Upstream [COPYING.md](https://github.com/lichess-org/lila/blob/master/COPYING.md) lists the other sounds in `public/sound` as **non-free exceptions**. The previous claim that these Standard assets were AGPL-3.0-or-later was incorrect. These recordings were removed from current builds on 2026-10-29. Git history retains the provenance; the current event player uses original synthesis.
 
-## Liquid Glass technique (kube.io)
+## Retired Liquid Glass renderer
 
-`lib/client/liquidGlass.ts` and the filter chain in `components/ui/Glass.tsx` implement the refraction technique described in Chris Kube's article [Liquid Glass in the Browser: Refraction with CSS and SVG](https://kube.io/blog/liquid-glass-css-svg/) (source: [kube/kube.io](https://github.com/kube/kube.io)). The physics (Snell's law, displacement maps) is standard; the surface profiles, map layout and SVG filter order follow the article's published code, credited here and in the source. The repository owner has reviewed the article and repository, considers them openly published for reuse, and accepted this adaptation on 2026-10-16. Note for future audits: as of that date the kube.io repository carried no licence file.
+The earlier CSS/SVG refraction adaptation from Chris Kube's article was removed on 2026-10-29. The current renderer uses independently authored static CSS materials without displacement maps or the former per-pixel lens algorithm. Git history retains the original credit for the retired implementation.
+
+## Current gameplay sound packs
+
+All current game-event cues are generated from original deterministic synthesis in `lib/experience/audio.ts`, distributed under this repository's GPL-3.0 licence. The complete asset/rights ledger is [docs/SOUND-LEDGER.md](docs/SOUND-LEDGER.md). No third-party instrument recordings or Chess.com audio are used by the current playback path. Only the cleared CC0 legacy result files remain distributed, with their original notices.
 
 ## Original assets (GPL-3.0, this repository)
 

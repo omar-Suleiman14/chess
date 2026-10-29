@@ -1,7 +1,7 @@
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { findOpponent } from "../../lib/chess/engine/opponents";
-import { expectedScore, GLICKO2_VERSION, INITIAL_RATING, updateRating } from "../../lib/chess/ratings/glicko2";
+import { expectedScore, GLICKO2_VERSION, INITIAL_RATING, ratingAfterInactivity, updateRating } from "../../lib/chess/ratings/glicko2";
 import type { Owner } from "./auth";
 
 export function poolFor(game: Pick<Doc<"games">, "mode" | "timeControlId">): string | null {
@@ -25,10 +25,10 @@ export async function applyRating(ctx: MutationCtx, owner: Owner, game: Doc<"gam
     .query("ratingProfiles")
     .withIndex("by_owner_and_pool", (q) => q.eq("owner", owner).eq("pool", pool))
     .unique();
-  const before = profile ? { rating: profile.rating, rd: profile.rd, volatility: profile.volatility } : INITIAL_RATING;
+  const now = Date.now();
+  const before = profile ? ratingAfterInactivity({ rating: profile.rating, rd: profile.rd, volatility: profile.volatility }, profile.updatedAt, now) : INITIAL_RATING;
   const opp = { rating: opponent.rating, rd: opponent.ratingDeviation };
   const after = updateRating(before, [{ opponent: opp, score }]);
-  const now = Date.now();
   await ctx.db.insert("ratingLedger", {
     owner,
     pool,
@@ -45,7 +45,7 @@ export async function applyRating(ctx: MutationCtx, owner: Owner, game: Doc<"gam
     createdAt: now,
   });
   if (profile) {
-    await ctx.db.patch("ratingProfiles", profile._id, { ...after, games: profile.games + 1, updatedAt: now });
+    await ctx.db.patch("ratingProfiles", profile._id, { ...after, algorithmVersion: GLICKO2_VERSION, games: profile.games + 1, updatedAt: now });
   } else {
     await ctx.db.insert("ratingProfiles", { owner, pool, ...after, games: 1, algorithmVersion: GLICKO2_VERSION, updatedAt: now });
   }

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shell/AppShell";
 import { ScrollRow } from "@/components/ui/ScrollRow";
 import { SwitchRow } from "@/components/ui/Switch";
 import { Slider } from "@/components/ui/Slider";
+import { AppearanceSettings, BackgroundSettings, SoundSettings } from "@/components/settings/ExperienceSettings";
 import { FATMA_LANGUAGES } from "@/lib/chess/personality/lines";
 import { useSettings, type Palette } from "@/lib/client/settings";
 import { haptic, playSound, unlockAudio } from "@/lib/client/sound";
@@ -28,13 +29,16 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function SettingsPage() {
-  const { settings, update, glassOn } = useSettings();
+  const { settings, update } = useSettings();
   const { coaching, updateCoaching } = useCoachingPreferences();
   const palette = PALETTES.find((p) => p[0] === settings.palette) ?? PALETTES[0];
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-16">
       <PageHeader title="Settings" />
       <div className="grid grid-cols-1 gap-7 px-4">
+        <AppearanceSettings />
+        <BackgroundSettings />
+        <SoundSettings />
         <Group title="Board">
           <div className="grid grid-cols-4 gap-2 p-1" role="radiogroup" aria-label="Board colours">
             {PALETTES.map(([id, name, light, dark]) => (
@@ -93,26 +97,9 @@ export default function SettingsPage() {
             <SwitchRow label="Evaluation bar" hint="Hide it to test yourself. Never live in rated games." checked={settings.evalBar} onChange={(v) => update({ evalBar: v })} />
             <SwitchRow label="Move classifications" hint="Only with depth 10+ analysis on both positions." checked={coaching.moveFeedback} onChange={(moveFeedback) => updateCoaching({ moveFeedback })} />
             <SwitchRow label="Coach explanations" checked={coaching.explanations} onChange={(explanations) => updateCoaching({ explanations })} />
-            <SwitchRow label="Engine hints" hint="Best move shown in bot practice. Assistance makes rated bot games unrated." checked={coaching.hints} onChange={(hints) => updateCoaching({ hints })} />
+            <SwitchRow label="Show hint button" hint="Ask for a clue, a highlight, then a move. Using help makes rated bot games unrated." checked={coaching.hints} onChange={(hints) => updateCoaching({ hints })} />
             <SwitchRow label="High contrast" checked={settings.highContrast} onChange={(v) => update({ highContrast: v })} />
-            <SwitchRow
-              label="Liquid Glass"
-              badge="Experimental"
-              hint="Off by default on every device. Turn on for refractive buttons, switches and sliders."
-              checked={glassOn}
-              onChange={(v) => update({ glass: v ? "on" : "off" })}
-            />
-            {settings.glass === "on" && (
-              <button onClick={() => update({ glass: "off" })} className="flex min-h-12 w-full items-center px-4 text-start text-sm font-medium text-[#0a84ff]">
-                Reset Liquid Glass to default (off)
-              </button>
-            )}
-            <SwitchRow
-              label="Living background"
-              hint="Drifting characters behind the board while you play. Tap empty space to send a ripple through them."
-              checked={settings.livingBackground}
-              onChange={(v) => update({ livingBackground: v })}
-            />
+
           </div>
         </Group>
 

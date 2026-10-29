@@ -5,9 +5,19 @@ import { ALL_STATIC_LESSONS, searchTopics } from "./lessons/curriculum";
 import { gradeMove, hintFor, validateLesson, type Lesson } from "./lessons/schema";
 import { disable, initialMemory, keepOn, pickLine, reenable, BASE_LINES, GLOBAL_COOLDOWN_MS } from "./personality/fatma";
 import { validatePack } from "./personality/packs";
-import { expectedScore, INITIAL_RATING, isProvisional, updateRating } from "./ratings/glicko2";
+import { expectedScore, INITIAL_RATING, isProvisional, ratingAfterInactivity, updateRating } from "./ratings/glicko2";
 
 describe("Glicko-2", () => {
+  it("inflates uncertainty for full idle days without changing the rating or drifting on reconnect", () => {
+    const rating = { rating: 1700, rd: 80, volatility: 0.06 };
+    const now = 90 * 24 * 60 * 60 * 1000;
+    const idle = ratingAfterInactivity(rating, 0, now);
+    expect(idle.rating).toBe(1700);
+    expect(idle.rd).toBeGreaterThan(80);
+    expect(ratingAfterInactivity(rating, 0, now)).toEqual(idle);
+    expect(ratingAfterInactivity(rating, now, now)).toEqual(rating);
+    expect(ratingAfterInactivity(rating, 0, now * 10000).rd).toBe(350);
+  });
   it("matches Glickman's worked example", () => {
     const updated = updateRating({ rating: 1500, rd: 200, volatility: 0.06 }, [
       { opponent: { rating: 1400, rd: 30 }, score: 1 },

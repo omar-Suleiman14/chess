@@ -1,103 +1,39 @@
-# UI/UX system · Apple simplicity, with Liquid Glass controls
+# UI contracts
 
-> Visual direction is *minimal Apple-inspired*, not an iOS clone. Board is the product. Interactions are what feel premium. Keep onboarding and explanatory copy short.
+The board remains the visual focus. All designs share the same routes, game state, and actions.
 
-## Principles
+## Three designs
 
-1. One primary action per screen; board occupies central attention.
-2. 8×8 board is fully legible and interactive in narrow iPhone portrait and desktop; do not shrink square hit targets under usability threshold where avoidable.
-3. Typography, spacing, contrast and restrained motion matter more than cards/gradients.
-4. Liquid Glass is for floating controls only (buttons, switches, sliders, popups, the menu header): never on the board, cards or body text. No huge dashboards, toy-like colors, heavy shadows or marketing banners.
-5. Controls are obvious, named to accessibility APIs, and large enough for hands, not just mouse cursors.
-6. Character presence is secondary and opt-out. No interrupts in competitive modes.
-
-## First entry
-
-- Display lightweight Sherine/Chess mark while essential code loads; respect reduced motion.
-- Render board shell and game status immediately. Load/cache chess rules synchronously; engine downloads/initializes after board UI starts.
-- Signed-in returning player: Resume current game or Start Full Power as the default action. Auth may be deferred until a save needs syncing; sign-in must not discard local game.
-- Start only Full Power in v1 play surface; enter Climb and Timed via the navigation sheet when released.
-- Bottom area contains Undo as primary secondary control; **no clock on/off switch**. Timed mode has dedicated entry with preset clock selection.
-
-## Board geometry
-
-- Use CSS grid/aspect-ratio 1 and accurate piece layer/drag hit testing; mobile portrait width = min(content, viewport - safe margins); CSS transform animations must not distort input coordinates.
-- White/black orientation switch; left or right small evaluation bar respecting chosen side and user's preferences, score label/mate symbol available in detail sheet.
-- Source/destination highlights, legal move dots (toggleable), last move highlight, king-in-check cue, promotion picker as custom action sheet, move input with tap-tap and drag-drop.
-- Short nonintrusive labels for Sherine, mode, your Elo/Climb state; temporary toast for game finish or blunders; no walls of moves covering board.
-- Board palettes: Ivory/Sage/Slate/Blue as initial curated tokens, separate piece contrast against each square. Persist palette; respect high contrast settings.
-- Engine not ready: allow premove/select, show short 'Sherine is waking up' indicator, no fake reply; permit restart worker from unobtrusive sheet.
-- Evaluation bar color/label always identifiable without depending on color alone. Hide option; search updates throttle ≤8 times/second.
-
-## iOS-like menu sheet
-
-Tap circular horizontal ellipsis near top-right. Sheet opens from bottom; **entire app content (not only board) recedes**:
-
-- Backdrop app scales toward ~0.95–0.97, gets 14–22px radius and moves backward/down slightly; light dim/shadow.
-- Sheet translation and backdrop depth are driven by a **single progress state** (0–1), linked to drag movement; no separated timers.
-- Animate scale, opacity and translate via transform/opacity; tune springs on real iPhone. Proposed start: stiffness 330–440, damping 32–42, mass 1; adjust on device.
-- Dismiss via drag down, tap outside, Escape, accessible close button; handle scrollable sheet inner content correctly, avoid accidental drag while scrolling.
-- Respect iOS safe area home indicator, keyboard appearance, screen rotation, and reduced motion. Focus trapped while modal is active and restored on close.
-- Menu entries: Play (Full Power/Climb/Timed), Learn, Time Machine, Progress, Profile & Sherine, Settings. No persistent sidebar on mobile.
-- On desktop: same modal vocabulary, optionally centered/side anchored if bottom sheet is awkward; never break parity of functionality.
-
-## Liquid Glass
-
-Floating controls use one glass material (`components/ui/Glass.tsx`, optics in `lib/client/liquidGlass.ts`), based on Chris Kube's [Liquid Glass in the Browser](https://kube.io/blog/liquid-glass-css-svg/):
-
-- The rim (bezel) of each shape is a curved surface (squircle for buttons and sliders, lip for switch thumbs). A vertical ray is refracted through it by Snell's law (n = 1.5), traced once along a radius, then swept around the rounded rectangle into an SVG displacement map applied with `backdrop-filter: url(#…)`. A second map adds the rim light.
-- Pressing a control raises the refraction (and swells buttons ~6 %); switch and slider thumbs turn from solid white to clear lenses while held, so the track bends through them.
-- True refraction only renders in Chromium. Firefox (and WebKit, if someone turns glass on there) gets a frosted blur with the same tint and rim.
-- `prefers-reduced-transparency` and High contrast fall back to solid surfaces.
-- Liquid Glass is **experimental**. Settings → Display → **Liquid Glass** turns it on or off. It defaults to `auto`: off in WebKit (Safari, and every browser on iPhone and iPad, which can't render the refraction) and on weak devices (fewer than 4 cores, under 4 GB memory, or Data Saver); on elsewhere. Once changed, a reset link returns it to the device default.
-- **Off means the original UI**, not a degraded glass: every glass component renders the exact pre-glass markup (solid `bg-surface` buttons, the original blue switch, the native slider, solid dialogs and a static menu header). Until the device is known after load, the app renders the off state, so a WebKit device never flashes glass.
-- The menu sheet has no visible close button: swipe down, tap outside or press Escape. A Close button stays for screen readers and appears on keyboard focus.
-- Keep the lens element unstyled, and never put `mix-blend-mode`, `filter`, `opacity < 1` or `mask` on it or its ancestors: those make Chromium cut the lens off from the page behind it.
-
-## Motion specification
-
-| Event | Motion (tunable) | Sound/haptic |
-| --- | --- | --- |
-| Piece selected | brief 0.98→1.00 scale / low latency | very subtle pick tick |
-| Piece move | 120–200ms eased translate; input is immediate | authentic wood/tone |
-| Capture | 180ms layered fade, tiny impact | distinct capture |
-| Castle | king+rook coordinated slide | castle cue |
-| Promotion | custom sheet with 4 legal options | select |
-| Evaluation change | damped number/height transition, bounded update rate | none |
-| Sherine reaction | sprite state transition, 0.5–2s max unless persistent | optional personality cue |
-| Menu sheet | coherent drag-following spring | light open/close |
-| Time Machine scrub | ≤150ms piece snap/tween, no long blocking animations | optional timeline tick |
-| Lesson correct | brief restrained flourish / success | soft affirmative |
-
-No VFX on every click; game sounds should not sound like a UI pop kit. Independent toggles for chess effects, game sound, Sherine dialogue/sound and animations. Reduced motion disables depth/tilt/cinematic scrubbing while preserving state clarity.
-
-## Responsive & input handling
-
-| Context | Layout |
+| Design | Treatment |
 | --- | --- |
-| 320–390px iPhone portrait | square board full allowed width, ellipsis, labels minimal, bottom actions within thumb reach |
-| >390px mobile | roomy board, large controls; safe areas on notched devices |
-| Tablet portrait/landscape | board center, optionally contextual panel for move list |
-| Laptop/desktop | board 520–760px (based on space), optional moves/analysis without distracting from primary board |
-| Keyboard | arrows to move square focus, enter/space activate, shortcuts for undo/replay/pause, Escape sheet dismiss |
-| Screen reader | announce side to move, piece, square, legal targets, move outcome/check, clock status as needed |
+| Classic / Standard | Default. Neutral paper backgrounds, crisp text, restrained surfaces and controls |
+| Material 3 Expressive | Board-derived or chosen tonal color, expressive shapes, stronger headings, selected states, short interaction motion |
+| Liquid Glass | Small translucent navigation/control surfaces; dense text and dialogs use strong opaque material |
 
-Prevent browser page scroll from hijacking piece drag; use pointer capture; stylus and touch parity. Do not rely on hover-only affordances.
+Light, Dark, and System are separate choices. Theme tokens come from `lib/experience/theme.ts`; the provider applies them without restarting gameplay. A validated first-paint cache reduces theme flashes. Contrast, reduced motion, and reduced transparency apply across designs.
 
-## Loading / prefetch rules
+## Glass tiers
 
-- Stage critical path: shell -> board -> auth/session restore -> worker -> eval bar / Sherine -> secondary routes/prefetch.
-- Avoid prefetching all pages/assets before gameplay is stable. Use Next.js route prefetch on navigation intent/hover and `requestIdleCallback`-style idle scheduling where available, with explicit fallback and resource constraints.
-- Heavy character sprite/outfit assets lazy load. Engine worker version cache with immutable hashed assets where possible.
-- Every async path has a retry, offline, stale-data or engine-start-failed UX that preserves active board.
+Navigation uses bounded blur up to 8 px. Controls use 8 px in Balanced and 12 px in Full. Modal sheets use 97% opaque material without backdrop blur. Minimal, reduced transparency, high contrast, and unsupported-browser fallbacks are opaque. No SVG displacement maps, animated blur, or idle glass shimmer remain.
 
-## Sherine character presentation
+## Board and input
 
-Use supplied pixel sprite as a **reference**; licensing/provenance must be cleared prior to adding to public repo. Animation state machine: idle, thinking, amused, smug, annoyed, impressed, plea-disable, angry-reenable, win, lose. Tone: teasing/mean, briefly apologetic when saved from disabling, annoyed when brought back, rewards occasional achievement without becoming generic. Dialogue short (prefer one sentence max), optional and rate-limited. Acknowledge click/tap to dismiss; never block a chess move. Confirmation to disable is playful **but** must offer an immediate clear disable, and keep preference even after reload.
+The board is square, left-to-right, and height-aware. Each of eight semantic grid rows contains eight cells with named squares. Keyboard focus, legal targets, check, last move, and premoves have visible states. Coordinates are decorative because each cell already names its square.
 
-## Quality checks
+Player rows follow their board colors when flipped. The horizontal evaluation uses White's perspective. Human games never expose live engine help. Missing evidence stays unavailable.
 
-- Visual screenshots at 320/375/430px widths and desktop 1280/1600; Safari, Chrome, Firefox as available.
-- 60fps animation goal on current phone hardware; avoid frame drops during engine search, drag and sheet gestures.
-- Avoid CLS on first board paint; accessible contrast/touch targets; dark and light if supported with same palette clarity.
-- Mobile keyboard/safe-area, route switching during active game, background/foreground engine worker restore, OS reduced-motion + no-audio tests.
+## Hints and review
+
+Hints reveal one short sentence at each of Clue, Highlight, and Show move. They never play a move. Eligible-game consent is explicit and irreversible. Stale hints disappear after position changes.
+
+Time Machine uses manual navigation and a White/Black move table before optional insights. Selecting a move never changes a saved game. Analysis can be stopped. Branch changes retain the shared position. A continuation requires confirmation and creates a new unrated game.
+
+## Dialogs and motion
+
+Results have one applicable primary action, a review action when available, and a quiet dismissal. Opening focuses the title; Enter does not automatically request a rematch. Escape closes safely and focus returns. Safe-area padding and scrolling keep actions reachable.
+
+Short transforms and opacity communicate interactions. Reduced motion removes movement. Touch controls target at least 44 CSS pixels. Animated backgrounds are decorative, pointer-transparent, and limited to the game scene. Sound is controlled independently from motion.
+
+## Verification
+
+Use actual screenshots and interactions across themes, light/dark, languages, small phones, desktop, zoom, and reduced motion. Browser automation does not replace VoiceOver, TalkBack, tactile device tests, or usability sessions. See [release status](ROADMAP.md).

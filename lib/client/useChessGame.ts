@@ -315,14 +315,27 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
   }, [commit, ensureCreated, finishLocally, sync]);
 
   const markAssisted = useCallback(
-    (reason: "eval_bar" | "hint" | "engine_lines" | "pause") => {
+    async (reason: "eval_bar" | "hint" | "engine_lines" | "pause"): Promise<boolean> => {
       const g = gameRef.current;
-      if (!g || g.meta.rated !== "eligible") return;
-      const next = { ...g, meta: { ...g.meta, rated: "ineligible" as const } };
-      commit(next);
-      if (g.meta.synced) void sync.enqueue(g.meta.gameKey, "assisted", { gameKey: g.meta.gameKey, reason });
+      if (!g || g.meta.status !== "active") return false;
+      if (g.meta.rated !== "eligible") return true;
+      try {
+        if (g.meta.synced && sync.status.signedIn) {
+          if (!navigator.onLine) return false;
+          await sync.flush();
+          const rated = await convex.mutation(api.games.markAssisted, { gameKey: g.meta.gameKey, reason });
+          if (rated === "eligible") return false;
+        }
+        if (!await store.markAssisted(g.meta.gameKey)) return false;
+        // Queue before revealing help; offline guest outcomes cannot overtake it.
+        if (g.meta.synced) await sync.enqueue(g.meta.gameKey, "assisted", { gameKey: g.meta.gameKey, reason });
+        const current = gameRef.current;
+        if (current?.meta.gameKey !== g.meta.gameKey || current.meta.status !== "active") return false;
+        commit({ ...current, meta: { ...current.meta, rated: "ineligible" } });
+        return true;
+      } catch { return false; }
     },
-    [commit, sync],
+    [commit, sync, convex],
   );
 
   const switchBranch = useCallback(
@@ -446,6 +459,7 @@ export function fromSnapshot(snap: Snapshot, clock?: ClockState): LocalGame {
       mode: g.mode,
       opponentId: g.opponentId,
       opponentVersion: g.opponentVersion,
+      playerNames: g.playerNames,
       humanColor: g.humanColor,
       timeControlId: g.timeControlId,
       rated: g.rated,

@@ -1,5 +1,7 @@
 "use client";
 
+import { BotRatingBadge } from "@/components/chess/RatingBadge";
+import type { Opponent } from "@/lib/chess/engine/opponents";
 import { CapturedPieces } from "@/components/chess/CapturedPieces";
 import type { CapturedPiece } from "@/lib/chess/captures";
 import type { Color } from "@/lib/chess/rules";
@@ -16,7 +18,7 @@ import { FatmaSprite } from "./FatmaSprite";
  * With `showName` it is a player row: sprite, name/captures, then her bubble
  * right beside her.
  */
-export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, captures, capturedColor, advantage }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean; captures?: CapturedPiece[]; capturedColor?: Color; advantage?: number }) {
+export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, opponent, captures, capturedColor, advantage }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean; opponent?: Opponent; captures?: CapturedPiece[]; capturedColor?: Color; advantage?: number }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [greeting, setGreeting] = useState("");
   const expression = fatma.line ? fatma.expression : thinking ? "thinking" : "idle";
@@ -40,8 +42,8 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, c
             <FatmaSprite expression={expression} speaking={progress.speaking} size={48} reducedMotion={reducedMotion} />
           </button>
         )}
-        <div className="min-w-0 max-w-[50%] shrink-0">
-          <span className="block text-sm font-semibold">Sherine</span>
+        <div className="min-w-0 max-w-[65%] shrink-0">
+          <div className="flex min-w-0 items-center gap-1"><span className="text-sm font-semibold">Sherine</span><BotRatingBadge opponent={opponent} /></div>
           <CapturedPieces pieces={captures} color={capturedColor} advantage={advantage} />
         </div>
         <div aria-live="polite" className="flex min-w-0 flex-1 items-center">

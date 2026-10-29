@@ -208,7 +208,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <div className="mx-auto h-1.5 w-10 rounded-full bg-line" />
           <div className={glassOn ? "glass-panel mt-2 flex min-h-14 items-center rounded-full px-5" : "mt-3 flex min-h-11 items-center"}>
-            <GlassLayer radius="pill" blur={3} glassThickness={70} bezelWidth={20} specularOpacity={0.6} />
+            <GlassLayer radius="pill" tier="navigation" />
             <span className="text-lg font-semibold">Chess by Chaos</span>
             <button onClick={closeMenu} className="sr-only focus-visible:not-sr-only focus-visible:ms-auto focus-visible:rounded-full focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm" aria-label="Close menu">
               Close

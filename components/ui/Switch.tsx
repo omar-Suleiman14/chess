@@ -57,7 +57,6 @@ function GlassSwitch({ checked, onChange, label, disabled }: SwitchProps) {
   const thumbScale = useSpring(useTransform(pressed, [0, 1], [1, 1.45]), DRAG_SPRING);
   const thumbFill = useSpring(useTransform(pressed, [0, 1], [1, 0.08]), DRAG_SPRING);
   const background = useTransform(thumbFill, (a) => `rgb(255 255 255 / ${a})`);
-  const refraction = useSpring(useTransform(pressed, [0, 1], [0.4, 1]), DRAG_SPRING);
   const on = useTransform((): number => ((drag.get() ?? (checked ? 1 : 0)) > 0.5 ? 1 : 0));
   const trackColor = useTransform(useSpring(on, DRAG_SPRING), (v) => `color-mix(in srgb, var(--switch-on) ${v * 100}%, var(--switch-off))`);
 
@@ -113,7 +112,7 @@ function GlassSwitch({ checked, onChange, label, disabled }: SwitchProps) {
         className="glass-switch-thumb absolute left-0 top-[2px] block rounded-full"
         style={{ width: THUMB_W, height: THUMB_H, x, scale: thumbScale, background }}
       >
-        <GlassLayer radius="pill" surface="lip" glassThickness={30} bezelWidth={10} refractiveIndex={1.5} blur={0.2} refraction={refraction} specularOpacity={0.5} specularSaturation={6} />
+        <GlassLayer radius="pill" />
       </motion.span>
     </motion.button>
   );

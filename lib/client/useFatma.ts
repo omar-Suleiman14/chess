@@ -135,7 +135,7 @@ export function useFatma() {
       setLine(picked);
       setUtteranceId((id) => id + 1);
       setExpression(picked.expression);
-      if (settings.fatmaSound) playSound("select", settings.volume * 0.35);
+      if (settings.fatmaSound) playSound("select", settings.volume, { channel: "banter" });
       const next = rememberLine(memoryRef.current, picked, now);
       memoryRef.current = next;
       saveLocal(next);

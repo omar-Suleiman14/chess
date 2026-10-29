@@ -391,6 +391,7 @@ export async function rewind(
 export async function markAssisted(ctx: MutationCtx, owner: Owner, gameKey: string, reason: string): Promise<Doc<"games">["rated"]> {
   const game = await getGame(ctx, owner, gameKey);
   if (game.rated !== "eligible") return game.rated;
+  if (game.status !== "active") fail("game_over", "A finished rated game cannot be changed by requesting help.");
   await ctx.db.patch("games", game._id, {
     rated: "ineligible",
     ineligibleReasons: [...game.ineligibleReasons, reason.slice(0, 40)],

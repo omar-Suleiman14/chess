@@ -26,7 +26,7 @@ export function PromotionSheet({ color, onPick, onCancel }: { color: Color; onPi
         className={glassOn ? "glass-panel w-full max-w-sm rounded-[22px] p-3" : "bubble-in w-full max-w-sm rounded-2xl bg-surface p-3 shadow-[var(--shadow)]"}
         onClick={(e) => e.stopPropagation()}
       >
-        <GlassLayer radius={22} blur={8} glassThickness={80} bezelWidth={20} specularOpacity={0.6} />
+        <GlassLayer radius={22} tier="sheet" />
         <p className="mb-2 text-center text-sm text-muted">Promote to</p>
         <div className="grid grid-cols-4 gap-2">
           {OPTIONS.map((p, i) => (

@@ -1,4 +1,4 @@
-# MCP integration · ChatGPT and Claude are coaches, not chessboards
+# MCP reference
 
 MCP is remote authenticated API access to chess records and authoring. No MCP App board in chat. Game, lesson, and branch deep links open the actual chess.chaos.fail web experience.
 
@@ -12,7 +12,7 @@ MCP is remote authenticated API access to chess records and authoring. No MCP Ap
 - Per-user and per-client rate limits; audit exact params schema version, tool, actor, owner, timestamp, success/failure.
 - MCP errors should be actionable: authentication required, permission denied, stale branch revision, illegal move/FEN, bad lesson definition.
 
-## V1 tool catalog (proposed)
+## Tool catalog
 
 | Tool | Permission | Contract |
 | --- | --- | --- |

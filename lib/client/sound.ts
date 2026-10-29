@@ -1,150 +1,132 @@
-// Existing Lichess Standard recordings and Kenney CC0 result chimes (see
-// THIRD_PARTY_NOTICES.md), decoded once into Web Audio buffers so playback is
-// instant and overlapping moves never cut each other off.
-
 import type { Color } from "../chess/rules";
+import { DEFAULT_EXPERIENCE, SOUND_EVENTS, type Experience, type SoundEvent, type SoundPack } from "../experience/config";
+import { soundCategory, soundChannel, synthesize, type SoundChannel } from "../experience/audio";
 
-export type SoundName = "move" | "capture" | "check" | "castle" | "promote" | "victory" | "defeat" | "draw" | "end" | "select" | "correct" | "wrong" | "lowtime" | "sheet";
-
-const FILES = {
-  move: "/sounds/standard/Move.mp3",
-  capture: "/sounds/standard/Capture.mp3",
-  notify: "/sounds/standard/GenericNotify.mp3",
-  select: "/sounds/standard/Select.mp3",
-  confirm: "/sounds/standard/Confirmation.mp3",
-  error: "/sounds/standard/Error.mp3",
-  lowtime: "/sounds/standard/LowTime.mp3",
-  victory: "/sounds/results/Victory.mp3",
-  defeat: "/sounds/results/Defeat.mp3",
-  draw: "/sounds/results/Draw.mp3",
-};
-
-// Which recording each game event uses, and its relative loudness.
-const MAP: Record<SoundName, [keyof typeof FILES, number] | null> = {
-  move: ["move", 1],
-  castle: ["move", 1],
-  promote: ["move", 1],
-  check: ["move", 1],
-  capture: ["capture", 1],
-  victory: ["victory", 0.45],
-  defeat: ["defeat", 0.4],
-  draw: ["draw", 0.4],
-  end: ["notify", 0.8],
-  select: null, // silent: picking a piece up shouldn't click
-  correct: ["confirm", 0.7],
-  wrong: ["error", 0.5],
-  lowtime: ["lowtime", 0.8],
-  sheet: null,
-};
-
-/** Endings reflect the player's seat, including resignations and timeouts. */
-export function resultSound(result: string | null | undefined, player: Color | null): SoundName {
-  if (result === "1/2-1/2") return "draw";
-  if (!player || (result !== "1-0" && result !== "0-1")) return "end";
-  return (result === "1-0") === (player === "w") ? "victory" : "defeat";
-}
-
+export type SoundName = SoundEvent;
+let preferences = { enabled: true, master: 0.7, audio: DEFAULT_EXPERIENCE.audio };
 let ctx: AudioContext | null = null;
 const buffers = new Map<string, AudioBuffer>();
-let loading: Promise<void> | null = null;
+const voices = new Set<AudioBufferSourceNode>();
+const seen = new Map<string, number>();
+let users = 0;
+let disposeListeners: (() => void) | null = null;
+let warmTimer: ReturnType<typeof setTimeout> | null = null;
 
 function audio(): AudioContext | null {
   if (typeof window === "undefined") return null;
   if (!ctx) {
-    const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const Ctor = window.AudioContext;
     if (!Ctor) return null;
-    ctx = new Ctor();
+    ctx = new Ctor({ latencyHint: "interactive" });
   }
   return ctx;
 }
-
-function load(): Promise<void> {
-  const c = audio();
-  if (!c) return Promise.resolve();
-  if (!loading) {
-    loading = Promise.all(
-      Object.entries(FILES).map(async ([name, url]) => {
-        try {
-          const data = await (await fetch(url)).arrayBuffer();
-          buffers.set(name, await c.decodeAudioData(data));
-        } catch {
-          // A missing sound must never break play.
-        }
-      }),
-    ).then(() => undefined);
-  }
-  return loading;
+function buffer(pack: SoundPack, event: SoundEvent): AudioBuffer | null {
+  const context = audio();
+  if (!context) return null;
+  const key = `${pack}:${event}`;
+  const existing = buffers.get(key);
+  if (existing) return existing;
+  const pcm = synthesize(pack, event);
+  const next = context.createBuffer(1, pcm.length, 22050);
+  next.getChannelData(0).set(pcm);
+  buffers.set(key, next);
+  if (buffers.size > 128) buffers.delete(buffers.keys().next().value!);
+  return next;
 }
-
-/** Call from a user gesture (iOS/Chrome autoplay policy). Also starts decoding. */
-export function unlockAudio(): void {
-  const c = audio();
-  if (!c) return;
-  if (c.state !== "running") {
-    void c.resume().catch(() => {});
-    // iOS only truly unlocks once something plays inside the gesture itself.
-    try {
-      const source = c.createBufferSource();
-      source.buffer = c.createBuffer(1, 1, 22050);
-      source.connect(c.destination);
-      source.start(0);
-    } catch {
-      // ignore
-    }
-  }
-  void load();
-}
-
-let unlockInstalled = false;
-
-/**
- * Unlock audio on the very first touch/click/key anywhere on the page, so the
- * opening move sounds even when it is made by dragging (pointerup alone does
- * not count as a gesture on iOS) or when Sherine moves first.
- */
-export function installAudioUnlock(): void {
-  if (unlockInstalled || typeof document === "undefined") return;
-  unlockInstalled = true;
-  const events = ["pointerdown", "touchend", "click", "keydown"] as const;
-  const onGesture = () => {
-    unlockAudio();
-    if (ctx?.state === "running") events.forEach((e) => document.removeEventListener(e, onGesture, true));
+function warm(pack: SoundPack) {
+  if (warmTimer) clearTimeout(warmTimer);
+  let index = 0;
+  const step = () => {
+    if (!preferences.enabled || typeof document === "undefined" || document.hidden) return;
+    buffer(pack, SOUND_EVENTS[index++]);
+    if (index < SOUND_EVENTS.length) warmTimer = setTimeout(step, 12);
   };
-  events.forEach((e) => document.addEventListener(e, onGesture, { capture: true, passive: true }));
+  warmTimer = setTimeout(step, 100);
 }
-
-// A sound that only becomes playable later (cold buffers, context still
-// resuming) is dropped once it is this late: a stale click is worse than none.
-const MAX_LATENCY_MS = 600;
-
-export function playSound(name: SoundName, volume = 0.7): void {
-  const entry = MAP[name];
-  const c = audio();
-  if (!entry || !c || volume <= 0) return;
-  const requested = Date.now();
-  const resumed = c.state === "running" ? Promise.resolve() : c.resume().catch(() => {});
-  const [file, level] = entry;
-  const start = () => {
-    const buffer = buffers.get(file);
-    if (!buffer || c.state !== "running" || Date.now() - requested > MAX_LATENCY_MS) return;
-    const source = c.createBufferSource();
-    source.buffer = buffer;
-    const gain = c.createGain();
-    gain.gain.value = Math.min(1, volume * level);
-    source.connect(gain).connect(c.destination);
+export function configureAudio(enabled: boolean, master: number, settings: Experience["audio"]): void {
+  const changedPack = preferences.audio.pack !== settings.pack;
+  preferences = { enabled, master, audio: settings };
+  if (!enabled || settings.pack === "silent") {
+    for (const voice of voices) { try { voice.stop(); } catch { /* Already stopped. */ } }
+    voices.clear();
+    if (warmTimer) clearTimeout(warmTimer);
+  } else if (changedPack || buffers.size === 0) warm(settings.pack);
+}
+export function unlockAudio(): void {
+  if (!preferences.enabled) return;
+  const context = audio();
+  if (!context) return;
+  if (context.state !== "running") {
+    void context.resume().catch(() => {});
+    try {
+      const source = context.createBufferSource();
+      source.buffer = context.createBuffer(1, 1, 22050);
+      source.connect(context.destination); source.start();
+      source.onended = () => source.disconnect();
+    } catch { /* Unsupported context never blocks a chess action. */ }
+  }
+}
+/** Shared listeners are installed once and removed when the last gameplay consumer unmounts. */
+export function installAudioUnlock(): () => void {
+  users++;
+  if (!disposeListeners && typeof document !== "undefined") {
+    const events = ["pointerdown", "touchend", "keydown"] as const;
+    const onGesture = () => unlockAudio();
+    const onVisibility = () => {
+      if (document.hidden) {
+        for (const voice of voices) { try { voice.stop(); } catch { /* Finished. */ } }
+      }
+    };
+    events.forEach((event) => document.addEventListener(event, onGesture, { capture: true, passive: true }));
+    document.addEventListener("visibilitychange", onVisibility);
+    disposeListeners = () => { events.forEach((event) => document.removeEventListener(event, onGesture, true)); document.removeEventListener("visibilitychange", onVisibility); };
+  }
+  return () => {
+    users = Math.max(0, users - 1);
+    if (!users) { disposeListeners?.(); disposeListeners = null; }
+  };
+}
+export function resultSound(result: string | null | undefined, player: Color | null, reason?: string | null): SoundName {
+  if (reason === "checkmate") return "checkmate";
+  if (reason === "stalemate") return "stalemate";
+  if (reason === "threefold" || reason === "repetition") return "repetition";
+  if (reason === "insufficient") return "insufficient";
+  if (result === "1/2-1/2") return "draw";
+  if (!player || (result !== "1-0" && result !== "0-1")) return "end";
+  return (result === "1-0") === (player === "w") ? "victory" : "defeat";
+}
+/** No fetch/decode on the move path; cached original PCM cues last at most 320ms. */
+export function playSound(name: SoundName, volume = preferences.master, options: { pack?: SoundPack; channel?: SoundChannel; key?: string; preview?: boolean } = {}): void {
+  if (!preferences.enabled || volume <= 0 || typeof document === "undefined" || document.hidden) return;
+  if (!options.preview && (preferences.audio.pack === "silent" || !preferences.audio[soundCategory(name)])) return;
+  const pack = options.pack ?? preferences.audio.overrides[name] ?? preferences.audio.pack;
+  if (pack === "silent") return;
+  if (options.key) {
+    if (seen.has(options.key)) return;
+    seen.set(options.key, Date.now());
+    if (seen.size > 256) seen.delete(seen.keys().next().value!);
+  }
+  const context = audio();
+  if (!context) return;
+  const requested = performance.now();
+  const play = () => {
+    if (context.state !== "running" || performance.now() - requested > 120 || !preferences.enabled || document.hidden) return;
+    const clip = buffer(pack, name);
+    if (!clip) return;
+    if (voices.size >= 6) { const oldest = voices.values().next().value; try { oldest?.stop(); } catch { /* Finished. */ } if (oldest) voices.delete(oldest); }
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    source.buffer = clip;
+    gain.gain.value = Math.max(0, Math.min(1, volume)) * preferences.audio[options.channel ?? soundChannel(name)];
+    source.connect(gain).connect(context.destination);
+    voices.add(source);
+    source.onended = () => { voices.delete(source); source.disconnect(); gain.disconnect(); };
     source.start();
   };
-  if (buffers.has(file) && c.state === "running") start();
-  else void Promise.all([resumed, load()]).then(start);
+  if (context.state === "running") play();
+  else void context.resume().then(play).catch(() => {});
 }
-
 export function haptic(pattern: number | number[]): void {
-  // iOS Safari has no Vibration API; this is a no-op there.
-  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-    try {
-      navigator.vibrate(pattern);
-    } catch {
-      // ignore
-    }
-  }
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) { try { navigator.vibrate(pattern); } catch { /* Unsupported. */ } }
 }

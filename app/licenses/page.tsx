@@ -30,7 +30,7 @@ export default function LicensesPage() {
             <li>blobatar (MIT) for avatars.</li>
             <li>Motion (MIT), Next.js (MIT), React (MIT), Convex client (Apache-2.0), Clerk SDK (MIT), mcp-handler and MCP SDK (Apache-2.0/MIT), zod (MIT), idb (ISC).</li>
             <li>Pieces: Classic/cburnett and Merida (GPL-2.0+), Chessnut (Apache-2.0), MP Chess (GPL-3.0+), Fantasy (MIT), from lichess-org/lila.</li>
-            <li>Result chimes: <a className="underline" href="https://kenney.nl/assets/interface-sounds">Kenney Interface Sounds</a>, CC0. <a className="underline" href="/sounds/results/LICENSE.txt">Sound licence</a>. Existing move, capture and utility recordings: Lichess Standard; upstream lists these as non-free asset exceptions. Exact sources and provenance are in THIRD_PARTY_NOTICES.md.</li>
+            <li>Current gameplay sound packs: original short synthesized effects, GPL-3.0, with source in this repository. No Chess.com recordings. Historical result chimes: <a className="underline" href="https://kenney.nl/assets/interface-sounds">Kenney Interface Sounds</a>, CC0. <a className="underline" href="/sounds/results/LICENSE.txt">Sound licence</a>. Earlier Lichess Standard recordings were removed from current builds because their upstream licence lists non-free exceptions. Historical provenance is recorded in THIRD_PARTY_NOTICES.md.</li>
             <li>qrcode (MIT) for card QR codes.</li>
             <li>Sherine pixel-art sprite: original artwork by the project owner, GPL-3.0. See THIRD_PARTY_NOTICES.md.</li>
           </ul>

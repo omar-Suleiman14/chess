@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { premoveMoves, resolvePremove, type PremovePosition, type QueuedPremove } from "../chess/premove";
 import { sideToMove } from "../chess/rules";
+import { playSound } from "./sound";
 
-export function usePremove(position: PremovePosition, onMove: (uci: string) => void | boolean | Promise<boolean | void>) {
+export function usePremove(position: PremovePosition, onMove: (uci: string) => void | boolean | Promise<boolean | void>, onExecution?: (active: boolean) => void) {
   const [queued, setQueued] = useState<QueuedPremove | null>(null);
   const pending = useRef<QueuedPremove | null>(null);
   const { context, fen, ply, active, player, ready } = position;
@@ -19,6 +20,7 @@ export function usePremove(position: PremovePosition, onMove: (uci: string) => v
     const next = { uci, context, fen, ply, player };
     pending.current = next;
     setQueued(next);
+    playSound("premove_set");
   }, [active, player, fen, context, ply, cancel]);
 
   useEffect(() => {
@@ -30,8 +32,11 @@ export function usePremove(position: PremovePosition, onMove: (uci: string) => v
     pending.current = null;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setQueued(null);
-    if (decision === "play") void Promise.resolve(onMove(queued.uci)).catch(() => {});
-  }, [queued, context, fen, ply, active, player, ready, onMove]);
+    if (decision === "play") {
+      onExecution?.(true);
+      void Promise.resolve(onMove(queued.uci)).catch(() => {}).finally(() => onExecution?.(false));
+    }
+  }, [queued, context, fen, ply, active, player, ready, onMove, onExecution]);
 
   useEffect(() => {
     if (!queued) return;

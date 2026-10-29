@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/shell/AppShell";
+import { PerformanceDashboard } from "@/components/performance/PerformanceDashboard";
 import { EngineController, ENGINE_BUILD, ENGINE_URL, type WorkerLike } from "@/lib/chess/engine/controller";
 
 // P02 engine benchmark. Run on the real device (iPhone Safari, Android Chrome,
@@ -33,16 +34,24 @@ async function measureFrames<T>(work: () => Promise<T>): Promise<{ value: T; max
     if (running) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
-  const value = await work();
-  running = false;
-  return { value, maxFrameGapMs: Math.round(maxGap), frames };
+  try {
+    const value = await work();
+    return { value, maxFrameGapMs: Math.round(maxGap), frames };
+  } finally { running = false; }
 }
 
 export default function BenchPage() {
   const [log, setLog] = useState<string[]>([]);
   const [result, setResult] = useState<Result | null>(null);
   const [running, setRunning] = useState(false);
-  const say = (line: string) => setLog((l) => [...l, line]);
+  const engines = useRef(new Set<EngineController>());
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    const activeEngines = engines.current;
+    return () => { mounted.current = false; for (const engine of activeEngines) engine.terminate(); activeEngines.clear(); };
+  }, []);
+  const say = (line: string) => { if (mounted.current) setLog((l) => [...l, line]); };
 
   const run = async () => {
     setRunning(true);
@@ -65,17 +74,20 @@ export default function BenchPage() {
       for (let i = 0; i < 3; i++) {
         const t0 = performance.now();
         const engine = new EngineController(() => new Worker(ENGINE_URL) as unknown as WorkerLike);
+        engines.current.add(engine);
         await engine.start();
         const ms = Math.round(performance.now() - t0);
         startups.push(ms);
         say(`worker ready #${i + 1}: ${ms} ms${i === 0 ? " (first in this tab)" : " (warm cache)"}`);
         engine.terminate();
+        engines.current.delete(engine);
       }
       out.workerReadyFirstMs = startups[0];
       out.workerReadyWarmMedianMs = median(startups.slice(1));
 
       // 2. Search latency/depth at the app's think presets.
       const engine = new EngineController(() => new Worker(ENGINE_URL) as unknown as WorkerLike);
+      engines.current.add(engine);
       await engine.start();
       const presets = [400, 1200, 3500];
       const searches: Result[] = [];
@@ -105,14 +117,16 @@ export default function BenchPage() {
       out.error = error instanceof Error ? error.message : String(error);
       say(`error: ${out.error}`);
     }
-    setResult(out);
-    setRunning(false);
+    for (const engine of engines.current) engine.terminate();
+    engines.current.clear();
+    if (mounted.current) { setResult(out); setRunning(false); }
   };
 
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-12">
-      <PageHeader title="Engine benchmark" />
+      <PageHeader title="Performance & benchmarks" />
       <div className="grid gap-4 px-4 text-sm">
+        <PerformanceDashboard />
         <p className="text-muted">
           Measures Stockfish 19 Lite on this device: worker start-up, search depth per thinking time, and whether the page stays smooth while Sherine thinks.
           Takes about 30 seconds. Keep this tab in front.

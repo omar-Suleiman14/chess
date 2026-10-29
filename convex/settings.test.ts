@@ -4,6 +4,7 @@ import rateLimiterTest from "@convex-dev/rate-limiter/test";
 import { describe, expect, it } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
+import { DEFAULT_EXPERIENCE } from "../lib/experience/config";
 
 const modules = import.meta.glob("./**/*.ts");
 const alice = { issuer: "https://test.clerk.accounts.dev", subject: "user_alice", tokenIdentifier: "https://test.clerk.accounts.dev|user_alice" };
@@ -16,6 +17,14 @@ function setup() {
 }
 
 describe("settings", () => {
+  it("syncs complete independent experience preferences and validates their bounds", async () => {
+    const t = setup(); const user = t.withIdentity(alice);
+    expect(await user.query(api.settings.capabilities, {})).toEqual({ experienceVersion: 1 });
+    const experience = { ...DEFAULT_EXPERIENCE, appearance: "expressive" as const, ambient: { ...DEFAULT_EXPERIENCE.ambient, mode: "ambient" as const }, audio: { ...DEFAULT_EXPERIENCE.audio, pack: "kalimba" as const } };
+    await user.mutation(api.settings.save, { settings: { experience }, changedAt: 300 });
+    expect((await user.query(api.settings.mine, {}))?.settings.experience).toEqual(experience);
+    await expect(user.mutation(api.settings.save, { settings: { experience: { ...experience, ambient: { ...experience.ambient, density: 99 } } }, changedAt: 301 })).rejects.toThrow();
+  });
   it("saves per player and needs sign-in", async () => {
     const t = setup();
     await expect(t.mutation(api.settings.save, { settings: { palette: "sage" }, changedAt: 1 })).rejects.toThrow();

@@ -13,7 +13,7 @@ export type CoachingPreferences = {
 
 const KEY = "cbc.coaching.v1";
 const EVENT = "cbc:coaching";
-const DEFAULTS: CoachingPreferences = { autoLanguage: false, frequency: "balanced", intensity: "playful", moveFeedback: false, explanations: false, hints: false };
+const DEFAULTS: CoachingPreferences = { autoLanguage: false, frequency: "balanced", intensity: "playful", moveFeedback: false, explanations: false, hints: true };
 let serialized: string | null = null;
 let snapshot = DEFAULTS;
 let memoryOnly = false;

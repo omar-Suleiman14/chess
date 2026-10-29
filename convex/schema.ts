@@ -1,12 +1,18 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { zodToConvex } from "convex-helpers/server/zod4";
+import { experienceSchema, audioSchema, soundPackSchema } from "../lib/experience/config";
 
 // Every chess table is owned by `owner` = Clerk identity tokenIdentifier,
 // derived server-side, never accepted from clients.
 
 export const colorValidator = v.union(v.literal("w"), v.literal("b"));
+export const rematchStatusValidator = v.union(v.literal("pending"), v.literal("declined"), v.literal("cancelled"), v.literal("expired"), v.literal("accepted"));
 /** Every app preference, each optional so older rows and partial saves stay valid. */
 export const settingsValidator = v.object({
+  experience: v.optional(zodToConvex(experienceSchema.omit({ audio: true })).extend({
+    audio: zodToConvex(audioSchema.omit({ overrides: true })).extend({ overrides: v.record(v.string(), zodToConvex(soundPackSchema)) }),
+  })),
   palette: v.optional(v.union(v.literal("ivory"), v.literal("sage"), v.literal("slate"), v.literal("blue"))),
   pieceSet: v.optional(v.union(v.literal("cburnett"), v.literal("merida"), v.literal("chessnut"), v.literal("mpchess"), v.literal("fantasy"))),
   sound: v.optional(v.boolean()),
@@ -88,6 +94,7 @@ export default defineSchema({
     gameKey: v.string(),
     mode: modeValidator,
     modeVersion: v.number(),
+    playerNames: v.optional(v.object({ white: v.string(), black: v.string() })),
     opponentId: v.string(),
     opponentVersion: v.number(),
     engineBuild: v.string(),
@@ -360,6 +367,11 @@ export default defineSchema({
     drawOfferBy: v.optional(colorValidator),
     rematchBy: v.optional(colorValidator),
     rematchCode: v.optional(v.string()),
+    rematchRequestedAt: v.optional(v.number()),
+    rematchExpiresAt: v.optional(v.number()),
+    rematchStatus: v.optional(rematchStatusValidator),
+    endedAt: v.optional(v.number()),
+    startedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_code_and_status", ["code", "status"]),

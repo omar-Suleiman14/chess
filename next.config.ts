@@ -14,13 +14,18 @@ function clerkHost(): string | null {
 
 function contentSecurityPolicy(): string {
   const clerk = clerkHost();
+  // Permit exactly the configured backend, including explicit local QA/dev URLs.
+  // No wildcard localhost allowance is added to hosted production builds.
+  const configuredConvex = process.env.NEXT_PUBLIC_CONVEX_URL;
+  const convexOrigin = configuredConvex ? new URL(configuredConvex).origin : "";
+  const convexSources = convexOrigin ? `${convexOrigin} ${convexOrigin.replace(/^http/, "ws")}` : "";
   const clerkSrc = clerk ? `https://${clerk}` : "https://*.clerk.accounts.dev";
   return [
     "default-src 'self'",
     // Next.js inline bootstrap scripts; WebAssembly for Stockfish.
     `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${clerkSrc} https://*.protect.clerk.com https://challenges.cloudflare.com`,
     "worker-src 'self' blob:",
-    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com`,
+    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${convexSources} ${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com`,
     "img-src 'self' data: blob: https://img.clerk.com",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
