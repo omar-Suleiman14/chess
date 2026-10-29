@@ -1,12 +1,22 @@
 "use client";
 
-import { motion } from "motion/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { Color } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
+import { Dialog } from "@/components/ui/Dialog";
 import { Piece } from "./Pieces";
 
+export type RematchState =
+  | "none"
+  | "requesting"
+  | "pending"
+  | "incoming"
+  | "declined"
+  | "cancelled"
+  | "expired"
+  | "accepted"
+  | "unavailable";
 type Props = {
   result?: string;
   reason?: string;
@@ -14,62 +24,332 @@ type Props = {
   description: string;
   reducedMotion: boolean;
   onRematch: () => void;
+  onReview?: () => void;
   reviewUrl?: string;
-  /** Who "they" are in the title (default Sherine). */
   opponentName?: string;
-  rematchLabel?: string;
+  kind?: "bot" | "human" | "spectator";
+  rematchState?: RematchState;
   rematchDisabled?: boolean;
+  extraActions?: ReactNode;
+  status?: string;
+  summary?: {
+    moves: number;
+    durationMs?: number;
+    timeControl?: string;
+    names?: { white: string; black: string };
+  };
+};
+const COPY = {
+  en: {
+    won: "You won",
+    lost: "You lost",
+    draw: "Draw",
+    ended: "Game over",
+    again: "Play again",
+    request: "Request rematch",
+    accept: "Accept rematch",
+    waiting: "Rematch requested",
+    sending: "Sending request…",
+    accepted: "Rematch accepted",
+    unavailable: "Opponent unavailable",
+    review: "Review game",
+    board: "Back to board",
+    close: "Close result",
+    newGame: "New game",
+    winner: "Winner",
+    you: "You",
+    white: "White",
+    black: "Black",
+    moves: "Moves",
+    elapsed: "Elapsed",
+    time: "Time control",
+    checkmate: "Checkmate",
+    stalemate: "Stalemate",
+    timeout: "Time expired",
+    resign: "Resignation",
+    agreed: "Draw agreed",
+    repetition: "Threefold repetition",
+    insufficient: "Insufficient material",
+    fifty: "Fifty-move rule",
+    aborted: "Game abandoned or aborted",
+  },
+  egy: {
+    won: "إنت كسبت",
+    lost: "إنت خسرت",
+    draw: "تعادل",
+    ended: "الدور خلص",
+    again: "العب تاني",
+    request: "اطلب ريفانش",
+    accept: "اقبل الريفانش",
+    waiting: "طلب الريفانش اتبعت",
+    sending: "بنبعت الطلب…",
+    accepted: "الريفانش اتقبل",
+    unavailable: "المنافس مش متاح",
+    review: "راجع الدور",
+    board: "ارجع للبورد",
+    close: "اقفل النتيجة",
+    newGame: "دور جديد",
+    winner: "الفايز",
+    you: "إنت",
+    white: "الأبيض",
+    black: "الأسود",
+    moves: "النقلات",
+    elapsed: "المدة",
+    time: "وقت اللعب",
+    checkmate: "كش مات",
+    stalemate: "تعادل بالخنق",
+    timeout: "الوقت خلص",
+    resign: "استسلام",
+    agreed: "تعادل بالاتفاق",
+    repetition: "تكرار الوضع ٣ مرات",
+    insufficient: "قطع مش كفاية للمات",
+    fifty: "قاعدة الخمسين نقلة",
+    aborted: "الدور اتلغى أو متكملش",
+  },
+  franco: {
+    won: "Enta kesebt",
+    lost: "Enta khesert",
+    draw: "Ta3adol",
+    ended: "El dor kheles",
+    again: "El3ab tany",
+    request: "Otlob revanche",
+    accept: "E2bal el revanche",
+    waiting: "Talab el revanche etba3at",
+    sending: "Beneb3at el talab…",
+    accepted: "El revanche et2ebel",
+    unavailable: "El monafes mesh mota7",
+    review: "Rage3 el dor",
+    board: "Erga3 lel board",
+    close: "E2fel el nateega",
+    newGame: "Dor gedid",
+    winner: "El fayez",
+    you: "Enta",
+    white: "Abyad",
+    black: "Eswed",
+    moves: "Na2lat",
+    elapsed: "El modda",
+    time: "Wa2t el le3b",
+    checkmate: "Kesh mate",
+    stalemate: "Ta3adol bel khan2",
+    timeout: "El wa2t kheles",
+    resign: "Esteslam",
+    agreed: "Ta3adol bel ettefa2",
+    repetition: "Tekrar el wad3 3 marrat",
+    insufficient: "2eta3 mesh kefaya lel mate",
+    fifty: "Qa3det el khamseen na2la",
+    aborted: "El dor etlagha aw makammelsh",
+  },
 };
 
-/** A finite end-of-game celebration; dismiss it to inspect the final board. */
-export function GameResult({ result, reason, human, description, reducedMotion, onRematch, reviewUrl, opponentName = "Sherine", rematchLabel = "Rematch", rematchDisabled = false }: Props) {
+/** The result is presentation only. Dismissing it never changes the match or request. */
+export function GameResult({
+  result,
+  reason,
+  human,
+  description,
+  onRematch,
+  onReview,
+  reviewUrl,
+  opponentName = "Sherine",
+  kind = "bot",
+  rematchState = "none",
+  rematchDisabled = false,
+  extraActions,
+  status,
+  summary,
+}: Props) {
   const [dismissed, setDismissed] = useState(false);
   const { settings } = useSettings();
   if (dismissed) return null;
+  const copy = COPY[settings.fatmaLanguage];
   const draw = result === "1/2-1/2";
-  const won = !!result && !draw && (result === "1-0") === (human === "w");
-  const resigned = reason === "resign";
-  const title = !result ? "Game ended" : draw ? "Draw" : won ? "You win!" : resigned ? "You resigned" : `${opponentName} wins`;
-  const score = result === "1-0" ? "1 – 0" : result === "0-1" ? "0 – 1" : draw ? "½ – ½" : "—";
-  const accent = won ? "#a3c96b" : draw ? "#d5c5a1" : "#b0b8ca";
-
-  // Fixed to the viewport so the card floats above the board instead of being clipped to it.
+  const validResult = result === "1-0" || result === "0-1" || draw;
+  const won = !draw && validResult && (result === "1-0") === (human === "w");
+  const title =
+    !validResult || kind === "spectator"
+      ? copy.ended
+      : draw
+        ? copy.draw
+        : won
+          ? copy.won
+          : copy.lost;
+  const reasons: Record<string, string> = {
+    checkmate: copy.checkmate,
+    stalemate: copy.stalemate,
+    timeout: copy.timeout,
+    fatma_timeout: copy.timeout,
+    resign: copy.resign,
+    agreed: copy.agreed,
+    agreement: copy.agreed,
+    threefold: copy.repetition,
+    repetition: copy.repetition,
+    insufficient: copy.insufficient,
+    fifty_move: copy.fifty,
+    aborted: copy.aborted,
+    abort: copy.aborted,
+    replaced: copy.aborted,
+  };
+  const why =
+    reasons[reason ?? ""] ?? (validResult ? description : copy.aborted);
+  const names = summary?.names ?? {
+    white: human === "w" ? copy.you : opponentName,
+    black: human === "b" ? copy.you : opponentName,
+  };
+  const primary =
+    kind === "bot"
+      ? copy.again
+      : kind === "spectator"
+        ? copy.newGame
+        : rematchState === "incoming"
+          ? copy.accept
+          : rematchState === "pending"
+            ? copy.waiting
+            : rematchState === "requesting"
+              ? copy.sending
+              : rematchState === "accepted"
+                ? copy.accepted
+                : rematchState === "unavailable"
+                  ? copy.unavailable
+                  : copy.request;
+  const score =
+    result === "1-0"
+      ? "1 – 0"
+      : result === "0-1"
+        ? "0 – 1"
+        : draw
+          ? "½ – ½"
+          : "—";
+  const duration =
+    summary?.durationMs !== undefined
+      ? Math.max(0, Math.round(summary.durationMs / 1000))
+      : null;
   return (
-    <div className="pointer-events-none fixed inset-0 z-[70] grid place-items-center p-4">
-      <motion.div
-        role="status"
-        className="pointer-events-auto relative max-h-[calc(100dvh-2rem)] w-[min(300px,100%)] overflow-y-auto rounded-3xl border border-line bg-surface px-5 pb-5 pt-6 text-center shadow-[0_18px_65px_rgba(0,0,0,0.45)]"
-        initial={reducedMotion ? false : { opacity: 0, y: 22, scale: 0.88 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 30, delay: resigned ? 0.15 : 0.45 }}
+    <Dialog
+      dir={settings.fatmaLanguage === "egy" ? "rtl" : "ltr"}
+      lang={settings.fatmaLanguage === "egy" ? "ar-EG" : "en"}
+      title={title}
+      description={why}
+      size="result"
+      focusTitle
+      onClose={() => setDismissed(true)}
+    >
+      <div
+        dir={settings.fatmaLanguage === "egy" ? "rtl" : "ltr"}
+        className="grid gap-4"
       >
-        <button onClick={() => setDismissed(true)} aria-label="Dismiss result" className="absolute end-1 top-1 grid h-11 w-11 place-items-center rounded-full text-muted">
-          <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+        <button
+          onClick={() => setDismissed(true)}
+          aria-label={copy.close}
+          className="absolute top-1 end-1 grid h-11 w-11 place-items-center rounded-full text-muted"
+        >
+          <span aria-hidden="true">×</span>
         </button>
-        <div className="relative mx-auto mb-3 grid h-20 w-20 place-items-center rounded-full" style={{ color: accent, backgroundColor: `${accent}20` }} aria-hidden="true">
-          {/* Rotates about its own centre so the icon stays centred in the disc. */}
-          <motion.div
-            className="grid h-12 w-12 origin-center place-items-center text-5xl font-semibold leading-none"
-            initial={reducedMotion ? false : { scale: 0.6, opacity: 0 }}
-            animate={{ rotate: resigned || (!won && !draw) ? -20 : 0, scale: 1, opacity: 1 }}
-            transition={{ duration: reducedMotion ? 0 : 0.35, delay: reducedMotion ? 0 : resigned ? 0.2 : 0.5 }}
-          >
-            {resigned ? (
-              <svg viewBox="0 0 64 64" className="h-12 w-12"><path d="M20 56V8m0 0h30l-7 11 7 11H20" stroke="currentColor" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            ) : draw ? "½" : (
-              <Piece type="k" color={won ? human : human === "w" ? "b" : "w"} set={settings.pieceSet} className="h-12 w-12" />
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl bg-surface-2 p-4">
+          {(["w", "b"] as const).map((color, index) => (
+            <div key={color} className="contents">
+              {index === 1 && (
+                <span
+                  dir="ltr"
+                  className="font-mono text-2xl font-bold tabular-nums"
+                >
+                  {score}
+                </span>
+              )}
+              <div className="grid min-w-0 justify-items-center gap-1 text-center">
+                <Piece
+                  type="k"
+                  color={color}
+                  set={settings.pieceSet}
+                  className="h-12 w-12"
+                />
+                <span className="max-w-full break-words text-sm font-semibold">
+                  {color === "w" ? names.white : names.black}
+                </span>
+                <span className="text-xs text-muted">
+                  {color === "w" ? copy.white : copy.black}
+                  {result === (color === "w" ? "1-0" : "0-1")
+                    ? ` · ${copy.winner}`
+                    : ""}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {summary && (
+          <dl className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-center text-xs text-muted">
+            <div>
+              <dt>{copy.moves}</dt>
+              <dd className="mt-1 font-mono text-sm font-semibold text-ink">
+                {summary.moves}
+              </dd>
+            </div>
+            {duration !== null && (
+              <div>
+                <dt>{copy.elapsed}</dt>
+                <dd
+                  dir="ltr"
+                  className="mt-1 font-mono text-sm font-semibold text-ink"
+                >
+                  {Math.floor(duration / 60)}:
+                  {String(duration % 60).padStart(2, "0")}
+                </dd>
+              </div>
             )}
-          </motion.div>
-        </div>
-        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
-        <p className="mt-1 text-sm text-muted">{description}</p>
-        <p className="my-3 font-mono text-xl font-semibold tabular-nums" aria-label={`Final score ${score}`}>{score}</p>
-        <div className="grid gap-2">
-          <button onClick={onRematch} disabled={rematchDisabled} className="min-h-11 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-text disabled:opacity-60">{rematchLabel}</button>
-          {reviewUrl && <Link href={reviewUrl} prefetch={false} className="grid min-h-11 place-items-center rounded-full bg-surface-2 px-3 py-2 text-sm">Review in Time Machine</Link>}
-          <button onClick={() => setDismissed(true)} className="min-h-11 rounded-full px-3 py-2 text-sm text-muted">View board</button>
-        </div>
-      </motion.div>
-    </div>
+            {summary.timeControl && (
+              <div>
+                <dt>{copy.time}</dt>
+                <dd
+                  dir="ltr"
+                  className="mt-1 font-mono text-sm font-semibold text-ink"
+                >
+                  {summary.timeControl}
+                </dd>
+              </div>
+            )}
+          </dl>
+        )}
+        <button
+          onClick={onRematch}
+          disabled={
+            rematchDisabled ||
+            ["requesting", "pending", "accepted", "unavailable"].includes(
+              rematchState,
+            )
+          }
+          className="min-h-14 w-full rounded-2xl bg-accent px-5 py-3 text-base font-bold text-accent-text disabled:opacity-60"
+        >
+          {primary}
+        </button>
+        {status && (
+          <p role="status" className="text-center text-sm text-muted">
+            {status}
+          </p>
+        )}
+        {extraActions}
+        {onReview && (
+          <button
+            onClick={onReview}
+            className="grid min-h-12 place-items-center rounded-2xl border border-line bg-surface-2 px-4 text-sm font-semibold"
+          >
+            {copy.review}
+          </button>
+        )}
+        {!onReview && reviewUrl && (
+          <Link
+            href={reviewUrl}
+            prefetch={false}
+            className="grid min-h-12 place-items-center rounded-2xl border border-line bg-surface-2 px-4 text-sm font-semibold"
+          >
+            {copy.review}
+          </Link>
+        )}
+        <button
+          onClick={() => setDismissed(true)}
+          className="min-h-11 px-4 text-sm text-muted"
+        >
+          {copy.board}
+        </button>
+      </div>
+    </Dialog>
   );
 }

@@ -1,0 +1,45 @@
+{
+  "metadata": {
+    "date": "2026-10-29T10:30:54.029Z",
+    "commit": "bb95452ba6841739144f1539e50a6f56a00eb154",
+    "browser": "154.0.8037.57",
+    "platform": "linux",
+    "cpu": "AMD EPYC 9V45 96-Core Processor",
+    "logicalCpus": 3,
+    "totalMemoryBytes": 10452471808,
+    "viewport": "1366x768 then 1280x800",
+    "runs": 5,
+    "durationMs": 1000,
+    "backgrounds": [
+      "minimal"
+    ],
+    "scrollMs": 0,
+    "reviewSteps": 0,
+    "fixture": "Local signed-out build; real browser/WASM; no signed-in account",
+    "limitations": "rAF gaps proxy scheduling, not actual presented/dropped compositor frames. Lab LCP/CLS are not field p75. Node-side drawer timings include automation transport. GPU power/battery unavailable."
+  },
+  "summary": [
+    {
+      "preset": "glass-balanced",
+      "background": "minimal",
+      "evaluation": false,
+      "runs": 5,
+      "moveP95Ms": 28.5,
+      "paintMedianMs": 27.297,
+      "drawerP95Ms": 71.69388900000013,
+      "clsMedian": 0.0092494595989491,
+      "errors": []
+    },
+    {
+      "preset": "glass-balanced",
+      "background": "minimal",
+      "evaluation": true,
+      "runs": 5,
+      "moveP95Ms": 21.299999997019768,
+      "paintMedianMs": 45.46000000000009,
+      "drawerP95Ms": 95.98929900000076,
+      "clsMedian": 0.000060375245763208426,
+      "errors": []
+    }
+  ]
+}

@@ -8,7 +8,7 @@ import { components, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { fail } from "./model/auth";
-import { colorValidator, onlineAvatarValidator } from "./schema";
+import { colorValidator, onlineAvatarValidator, rematchStatusValidator } from "./schema";
 import { applyUci, DEFAULT_POSITION, statusFromPath, timeoutOutcome, sideToMove, type Color, type Outcome } from "../lib/chess/rules";
 
 const rateLimiter = new RateLimiter(components.rateLimiter, {
@@ -115,6 +115,7 @@ async function finish(ctx: MutationCtx, room: Doc<"onlineRooms">, result: Outcom
     drawOfferBy: undefined,
     ...(clocks ? { clockW: clocks.w, clockB: clocks.b } : {}),
     updatedAt: Date.now(),
+    endedAt: Date.now(),
   });
 }
 
@@ -185,7 +186,7 @@ export const join = mutation({
     if (seat) return { roomId: room._id, color: seat };
     if (room.status !== "waiting") fail("full", "That game already has two players.");
     if (Date.now() - room.createdAt > WAITING_TTL_MS) fail("expired", "That invite has expired. Ask for a new one.");
-    await ctx.db.patch("onlineRooms", room._id, { guestToken: args.token, guestName: cleanName(args.name), guestAvatar: cleanAvatar(args.avatar), status: "active", updatedAt: Date.now() });
+    await ctx.db.patch("onlineRooms", room._id, { guestToken: args.token, guestName: cleanName(args.name), guestAvatar: cleanAvatar(args.avatar), status: "active", startedAt: Date.now(), updatedAt: Date.now() });
     return { roomId: room._id, color: other(room.hostColor) };
   },
 });
@@ -203,6 +204,7 @@ export const cancel = mutation({
 });
 
 export const move = mutation({
+  returns: v.union(v.object({ ok: v.literal(true), terminal: v.optional(v.boolean()) }), v.object({ ok: v.literal(false), reason: v.literal("flag") })),
   args: { roomId: v.id("onlineRooms"), token: v.string(), uci: v.string(), ply: v.number() },
   handler: async (ctx, args) => {
     const room = await requireRoom(ctx, args.roomId);
@@ -218,7 +220,7 @@ export const move = mutation({
     let clocks = liveClocks(room, now);
     if (clocks && room.turnStartedAt !== null && clocks[seat] <= 0) {
       await finish(ctx, room, timeoutOutcome(room.fen, seat), "timeout", clocks);
-      return { ok: false as const, reason: "flag" };
+      return { ok: false as const, reason: "flag" as const };
     }
     if (clocks) clocks = { ...clocks, [seat]: clocks[seat] + (room.ply > 0 ? (room.incrementMs ?? 0) : 0) };
 
@@ -245,7 +247,7 @@ export const move = mutation({
       const next = other(seat);
       await ctx.scheduler.runAfter(clocks[next] + 50, internal.online.checkFlag, { roomId: room._id, ply: room.ply + 1 });
     }
-    return { ok: true as const };
+    return { ok: true as const, terminal: status?.over === true };
   },
 });
 
@@ -318,20 +320,28 @@ export const declineDraw = mutation({
 /** Both players ask for a rematch: a new room with colours swapped. */
 export const rematch = mutation({
   args: { roomId: v.id("onlineRooms"), token: v.string() },
+  returns: v.object({ code: v.union(v.string(), v.null()) }),
   handler: async (ctx, args) => {
     const room = await requireRoom(ctx, args.roomId);
     const seat = requireSeat(room, args.token);
     if (room.status !== "finished") fail("not_finished", "The game is still going.");
     if (room.rematchCode) return { code: room.rematchCode };
-    if (room.rematchBy !== other(seat)) {
-      await ctx.db.patch("onlineRooms", room._id, { rematchBy: seat, updatedAt: Date.now() });
+    if (!room.guestToken) fail("unavailable", "There is no opponent to accept a rematch. Start a new game.");
+    const now = Date.now();
+    const pending = room.rematchStatus === "pending" || (room.rematchStatus === undefined && room.rematchBy !== undefined);
+    const fresh = room.rematchExpiresAt === undefined || room.rematchExpiresAt > now;
+    if (pending && fresh && room.rematchBy === seat) return { code: null };
+    if (room.rematchBy !== other(seat) || !pending || !fresh) {
+      const expires = now + 120_000;
+      await ctx.db.patch("onlineRooms", room._id, { rematchBy: seat, rematchStatus: "pending", rematchRequestedAt: now, rematchExpiresAt: expires, updatedAt: now });
+      await ctx.scheduler.runAt(expires, internal.online.expireRematch, { roomId: room._id, requestedAt: now });
       return { code: null };
     }
     const code = await freshCode(ctx);
-    const now = Date.now();
     await ctx.db.insert("onlineRooms", {
       code,
       status: "active",
+      startedAt: now,
       hostToken: room.hostToken,
       guestToken: room.guestToken,
       hostName: room.hostName,
@@ -349,8 +359,34 @@ export const rematch = mutation({
       createdAt: now,
       updatedAt: now,
     });
-    await ctx.db.patch("onlineRooms", room._id, { rematchCode: code, updatedAt: now });
+    await ctx.db.patch("onlineRooms", room._id, { rematchCode: code, rematchStatus: "accepted", updatedAt: now });
     return { code };
+  },
+});
+
+/** The scheduled deadline changes state; queries never invent expiry from the client clock. */
+export const expireRematch = internalMutation({
+  args: { roomId: v.id("onlineRooms"), requestedAt: v.number() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get("onlineRooms", args.roomId);
+    if (room && !room.rematchCode && room.rematchStatus === "pending" && room.rematchRequestedAt === args.requestedAt && (room.rematchExpiresAt ?? Infinity) <= Date.now()) {
+      await ctx.db.patch("onlineRooms", room._id, { rematchStatus: "expired", updatedAt: Date.now() });
+    }
+    return null;
+  },
+});
+
+export const respondRematch = mutation({
+  args: { roomId: v.id("onlineRooms"), token: v.string(), action: v.union(v.literal("decline"), v.literal("cancel")) }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const room = await requireRoom(ctx, args.roomId);
+    const seat = requireSeat(room, args.token);
+    if (room.status !== "finished") fail("not_finished", "The game is still going.");
+    if (room.rematchCode) return null;
+    if (room.rematchStatus !== "pending" || !room.rematchBy) return null;
+    if (args.action === "cancel" && room.rematchBy !== seat || args.action === "decline" && room.rematchBy === seat) fail("forbidden", "This action belongs to the other player.");
+    await ctx.db.patch("onlineRooms", room._id, { rematchStatus: args.action === "cancel" ? "cancelled" : "declined", updatedAt: Date.now() });
+    return null;
   },
 });
 
@@ -378,6 +414,12 @@ const roomView = v.object({
   drawOfferBy: v.union(colorValidator, v.null()),
   rematchBy: v.union(colorValidator, v.null()),
   rematchCode: v.union(v.string(), v.null()),
+  rematchV2: v.optional(v.boolean()),
+  rematchState: v.optional(v.union(rematchStatusValidator, v.literal("none"))),
+  rematchExpiresAt: v.optional(v.union(v.number(), v.null())),
+  createdAt: v.optional(v.number()),
+  startedAt: v.optional(v.union(v.number(), v.null())),
+  endedAt: v.optional(v.union(v.number(), v.null())),
   expired: v.boolean(),
   moves: v.array(v.object({ ply: v.number(), uci: v.string(), san: v.string() })),
 });
@@ -395,6 +437,7 @@ export const byCode = query({
       .withIndex("by_roomId_and_ply", (q) => q.eq("roomId", room._id))
       .take(MAX_PLIES);
     const hostIsWhite = room.hostColor === "w";
+    const rematchState: "none" | NonNullable<Doc<"onlineRooms">["rematchStatus"]> = room.rematchCode ? "accepted" : room.rematchStatus ?? (room.rematchBy ? "pending" : "none");
     return {
       roomId: room._id,
       code: room.code,
@@ -417,6 +460,12 @@ export const byCode = query({
       drawOfferBy: room.drawOfferBy ?? null,
       rematchBy: room.rematchBy ?? null,
       rematchCode: room.rematchCode ?? null,
+      rematchV2: true,
+      rematchState,
+      rematchExpiresAt: room.rematchExpiresAt ?? null,
+      createdAt: room.createdAt,
+      startedAt: room.startedAt ?? null,
+      endedAt: room.endedAt ?? null,
       // `now` comes from the client (queries must not read the clock); it only gates the join button.
       expired: room.status === "waiting" && args.now - room.createdAt > WAITING_TTL_MS,
       moves: moves.map((m) => ({ ply: m.ply, uci: m.uci, san: m.san })),

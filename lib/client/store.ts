@@ -12,6 +12,8 @@ export type LocalGameMeta = {
   gameKey: string;
   mode: "full_power" | "climb" | "timed" | "practice" | "import";
   opponentId: string;
+  /** Original PGN player tags when available; never inferred from the bot. */
+  playerNames?: { white: string; black: string };
   /** Missing on pre-v2 local games, which retain opponent version 1. */
   opponentVersion?: number;
   humanColor: Color;
@@ -48,6 +50,7 @@ export type CachedAnalysis = {
   score: WhiteScore;
   depth?: number;
   bestmove: string | null;
+  candidates?: Array<{ uci: string; score: WhiteScore; depth: number }>;
   pv: string[];
   computeMs: number;
   updatedAt: number;
@@ -116,6 +119,14 @@ async function safe<T>(fn: (d: IDBPDatabase<ChessDB>) => Promise<T>, fallback: T
 
 export const store = {
   saveGame: (game: LocalGame) => safe((d) => d.put("games", game).then(() => true), false),
+  markAssisted: (gameKey: string) => safe(async (d) => {
+    const tx = d.transaction("games", "readwrite");
+    const game = await tx.store.get(gameKey);
+    if (!game || game.meta.status !== "active") { await tx.done; return false; }
+    await tx.store.put({ ...game, meta: { ...game.meta, rated: game.meta.rated === "eligible" ? "ineligible" : game.meta.rated } });
+    await tx.done;
+    return true;
+  }, false),
   getGame: (gameKey: string) => safe((d) => d.get("games", gameKey), undefined),
   closePreviousGames: (keepKey: string, startedAt: number, clockNow: number) => safe(async (d) => {
     const tx = d.transaction("games", "readwrite");

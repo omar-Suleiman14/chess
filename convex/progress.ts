@@ -1,8 +1,27 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { CLIMB_OPPONENTS } from "../lib/chess/engine/opponents";
-import { interval, isProvisional } from "../lib/chess/ratings/glicko2";
-import { requireOwner } from "./model/auth";
+import { INITIAL_RATING, interval, isProvisional } from "../lib/chess/ratings/glicko2";
+import { optionalOwner, requireOwner } from "./model/auth";
+import { poolFor } from "./model/ratings";
+
+/** Small authoritative read for the current game's exact rating pool. */
+export const nameplate = query({
+  args: { gameKey: v.string() },
+  returns: v.union(v.null(), v.object({ pool: v.string(), rating: v.number(), rd: v.number(), volatility: v.number(), games: v.number(), provisional: v.boolean(), delta: v.union(v.number(), v.null()) })),
+  handler: async (ctx, { gameKey }) => {
+    const owner = await optionalOwner(ctx);
+    if (!owner) return null;
+    const game = await ctx.db.query("games").withIndex("by_owner_and_gameKey", (q) => q.eq("owner", owner).eq("gameKey", gameKey)).unique();
+    if (!game) return null;
+    const pool = poolFor(game);
+    if (!pool) return null;
+    const profile = await ctx.db.query("ratingProfiles").withIndex("by_owner_and_pool", (q) => q.eq("owner", owner).eq("pool", pool)).unique();
+    const ledger = game.status === "finished" ? await ctx.db.query("ratingLedger").withIndex("by_gameId", (q) => q.eq("gameId", game._id)).unique() : null;
+    const rating = profile ?? { ...INITIAL_RATING, games: 0 };
+    return { pool, rating: Math.round(rating.rating), rd: Math.round(rating.rd), volatility: rating.volatility, games: rating.games, provisional: isProvisional(rating), delta: ledger ? Math.round(ledger.after.rating) - Math.round(ledger.before.rating) : null };
+  },
+});
 
 /**
  * Separate, honest metrics: ratings per pool with uncertainty, Climb ladder

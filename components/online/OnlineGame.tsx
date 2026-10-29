@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useConvexConnectionState, useMutation } from "convex/react";
 import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
@@ -8,15 +8,15 @@ import { Board, type LastMove } from "@/components/chess/Board";
 import { CapturedPieces } from "@/components/chess/CapturedPieces";
 import { Dialog, KeyboardHelp } from "@/components/chess/GameScreen";
 import { ClockChip } from "@/components/chess/ClockChip";
-import { CharacterField } from "@/components/shell/CharacterField";
-import { GameResult } from "@/components/chess/GameResult";
+import { GameBackground } from "@/components/shell/GameBackground";
+import { GameResult, type RematchState } from "@/components/chess/GameResult";
 import { MoveList, MoveStrip } from "@/components/chess/MoveStrip";
 import { ReviewArrows } from "@/components/chess/ReviewArrows";
 import { MenuButton } from "@/components/shell/AppShell";
 import { Avatar } from "@/components/profile/ChessCard";
-import { GlassButton } from "@/components/ui/Glass";
+import { GlassButton, GlassLayer } from "@/components/ui/Glass";
 import { capturesAlongLine } from "@/lib/chess/captures";
-import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
+import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, statusFromPath, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
 import { haptic, installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
 import { avatarFromName, timeControlLabel, useServerOffset } from "@/lib/client/online";
@@ -54,6 +54,7 @@ function toLastMove(uci: string | null, key: string): LastMove {
 /** A live game against another person; the server is the referee. */
 export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const router = useRouter();
+  const connection = useConvexConnectionState();
   const { settings, reducedMotion, update } = useSettings();
   const offset = useServerOffset();
   const move = useMutation(api.online.move);
@@ -61,6 +62,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const offerDraw = useMutation(api.online.offerDraw);
   const declineDraw = useMutation(api.online.declineDraw);
   const rematch = useMutation(api.online.rematch);
+  const respondRematch = useMutation(api.online.respondRematch);
   const claimTimeout = useMutation(api.online.claimTimeout);
 
   const you = room.you;
@@ -71,8 +73,11 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const [confirmResign, setConfirmResign] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rematchAsked, setRematchAsked] = useState(false);
+  const [resultVersion, setResultVersion] = useState(0);
   const [showKeys, setShowKeys] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const executingPremove = useRef(false);
+  const onPremoveExecution = useCallback((active: boolean) => { executingPremove.current = active; }, []);
 
   useEffect(() => installAudioUnlock(), []);
 
@@ -107,7 +112,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       const next = Math.max(0, Math.min(line.length, at + delta));
       if (next === at) return;
       unlockAudio();
-      if (settings.sound) playSound("move", settings.volume);
+      if (settings.sound) playSound("select", settings.volume);
       setViewPly(next >= line.length ? null : next);
     },
     [viewPly, line.length, settings.sound, settings.volume],
@@ -126,13 +131,13 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         const applied = applyUci(prevFen.current, last.uci);
         const mover = sideToMove(prevFen.current);
         if (applied) setAnnouncement(`${(mover === "w" ? room.white : room.black) ?? "Opponent"}: ${describeMove(applied, mover)}`);
-        if (applied && !applied.checkmate && settings.sound) playSound(moveSound(applied), settings.volume);
+        if (applied && room.status !== "finished" && !positionStatus(applied.fen).over && settings.sound) playSound(moveSound(applied) === "move" ? "opponent_move" : moveSound(applied), settings.volume, { key: `move:${room.roomId}:${room.ply}` });
         if (settings.haptics) haptic(8);
       }
     }
     seenPly.current = room.ply;
     prevFen.current = room.fen;
-  }, [room.ply, room.fen, room.moves, room.white, room.black, you, settings.sound, settings.volume, settings.haptics]);
+  }, [room.roomId, room.status, room.ply, room.fen, room.moves, room.white, room.black, you, settings.sound, settings.volume, settings.haptics]);
 
   const ended = useRef(room.status === "finished");
   useEffect(() => {
@@ -142,9 +147,20 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
     }
     if (room.status === "finished" && !ended.current) {
       ended.current = true;
-      if (settings.sound) playSound(resultSound(room.result, you), settings.volume);
+      if (settings.sound) playSound(resultSound(room.result, you, room.resultReason), settings.volume, { key: `result:${room.roomId}` });
     }
-  }, [room.status, room.result, you, settings.sound, settings.volume]);
+  }, [room.status, room.result, room.resultReason, room.roomId, you, settings.sound, settings.volume]);
+
+  const previousRoomStatus = useRef(room.status);
+  useEffect(() => {
+    if (room.status === "active" && (previousRoomStatus.current === "waiting" || room.ply === 0 && room.startedAt != null && Date.now() - room.startedAt < 10_000) && settings.sound) playSound("start", settings.volume, { key: `start:${room.roomId}` });
+    previousRoomStatus.current = room.status;
+  }, [room.status, room.roomId, room.ply, room.startedAt, settings.sound, settings.volume]);
+  const previousDrawOffer = useRef(room.drawOfferBy);
+  useEffect(() => {
+    if (room.drawOfferBy && room.drawOfferBy !== you && room.drawOfferBy !== previousDrawOffer.current && settings.sound) playSound("draw_offer", settings.volume);
+    previousDrawOffer.current = room.drawOfferBy;
+  }, [room.drawOfferBy, you, settings.sound, settings.volume]);
 
   // Rematch accepted: both players follow the new room.
   useEffect(() => {
@@ -158,10 +174,12 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       const applied = applyUci(room.fen, uci);
       if (!applied) return false;
       setPending({ ply: room.ply, fen: applied.fen, uci });
-      if (!applied.checkmate && settings.sound) playSound(moveSound(applied), settings.volume);
       if (settings.haptics) haptic(applied.captured ? [8, 30, 8] : 8);
       try {
-        await move({ roomId: room.roomId, token, uci, ply: room.ply });
+        const acknowledgement = await move({ roomId: room.roomId, token, uci, ply: room.ply });
+        if (!acknowledgement.ok) { setPending(null); return false; }
+        const terminal = acknowledgement.terminal ?? statusFromPath(DEFAULT_POSITION, [...room.moves.map((move) => move.uci), uci])?.over ?? false;
+        if (!terminal && settings.sound) playSound(executingPremove.current && moveSound(applied) === "move" ? "premove_execute" : moveSound(applied), settings.volume, { key: `move:${room.roomId}:${room.ply + 1}` });
         setError(null);
       } catch (e) {
         setPending(null);
@@ -170,7 +188,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       }
       return true;
     },
-    [you, active, room.fen, room.ply, room.roomId, pending, move, token, settings.sound, settings.volume, settings.haptics],
+    [you, active, room.fen, room.ply, room.moves, room.roomId, pending, move, token, settings.sound, settings.volume, settings.haptics],
   );
 
   // Clocks tick locally from the server's turn start (corrected for clock drift).
@@ -226,13 +244,13 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const captures = useMemo(() => capturesAlongLine(DEFAULT_POSITION, reviewing ? room.moves.slice(0, viewPly!) : room.moves), [reviewing, viewPly, room.moves]);
   const status = useMemo(() => positionStatus(fen), [fen]);
   const checkSq = status.check ? kingSquare(fen, sideToMove(fen)) ?? null : null;
-  const lastMove: LastMove = reviewing
+  const lastMove = useMemo<LastMove>(() => reviewing
     ? viewPly && viewPly > 0
       ? toLastMove(room.moves[viewPly - 1]?.uci ?? null, `view-${viewPly}`)
       : null
     : livePending
       ? toLastMove(livePending.uci, `m${livePly}`)
-      : toLastMove(room.lastUci, `m${room.ply}`);
+      : toLastMove(room.lastUci, `m${room.ply}`), [reviewing, viewPly, room.moves, livePending, livePly, room.lastUci, room.ply]);
 
   const top: Color = orientation === "w" ? "b" : "w";
   const bottom: Color = orientation;
@@ -244,11 +262,22 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   const premove = usePremove({
     context: String(room.roomId), fen: room.fen, ply: room.ply, player: you,
     active: playing && active && !reviewing, ready: myTurn && !reviewing,
-  }, onMove);
+  }, onMove, onPremoveExecution);
   const finished = room.status === "finished";
   const theyOfferDraw = !!you && active && room.drawOfferBy === other(you);
   const iOfferedDraw = !!you && active && room.drawOfferBy === you;
-  const theyWantRematch = !!you && finished && room.rematchBy === other(you);
+  const pendingRematch = room.rematchState === "pending" || (room.rematchState === undefined && !!room.rematchBy);
+  const theyWantRematch = !!you && finished && pendingRematch && room.rematchBy === other(you);
+  const rematchState: RematchState = rematchAsked ? "requesting" : room.rematchCode ? "accepted" : theyWantRematch ? "incoming" : pendingRematch && room.rematchBy === you ? "pending" : room.rematchState === "declined" || room.rematchState === "cancelled" || room.rematchState === "expired" ? room.rematchState : !room.white || !room.black ? "unavailable" : "none";
+  const rematchCopy = {
+    en: { waiting: "Waiting for", expires: "Request expires at", declined: "Rematch declined. You can request again.", expired: "Rematch request expired. Your finished game is unchanged.", cancelled: "Rematch request cancelled.", decline: "Decline rematch", cancel: "Cancel request", offline: "Connection lost. Reconnecting; your finished game is safe." },
+    egy: { waiting: "مستنيين", expires: "الطلب هينتهي الساعة", declined: "الريفانش اترفض. تقدر تطلب تاني.", expired: "طلب الريفانش انتهى. دورك خلصان ومحفوظ زي ما هو.", cancelled: "طلب الريفانش اتلغى.", decline: "ارفض الريفانش", cancel: "الغي الطلب", offline: "الاتصال فصل. بنوصل تاني، ودورك محفوظ." },
+    franco: { waiting: "Mestaneyeen", expires: "El talab hayentahy el sa3a", declined: "El revanche etrafad. Momken totlob tany.", expired: "Talab el revanche entaha. Dorak ma7fooz zay ma howa.", cancelled: "Talab el revanche etlagha.", decline: "Erfod el revanche", cancel: "Elghy el talab", offline: "El etesal fasal. Benewsal tany, dorak ma7fooz." },
+  }[settings.fatmaLanguage];
+  useEffect(() => {
+    if (theyWantRematch && settings.sound) playSound("notification", settings.volume, { key: `rematch:${room.roomId}:${room.rematchExpiresAt ?? "legacy"}` });
+  }, [theyWantRematch, settings.sound, settings.volume, room.roomId, room.rematchExpiresAt]);
+
 
   const resultText = finished
     ? !room.result
@@ -267,7 +296,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         <div className="min-w-0">
           <span className="block truncate text-sm font-semibold">
             {nameOf(c)}
-            {c === you && <span className="font-normal text-muted"> · you</span>}
+            {c === you && <span className="font-normal text-muted"> · you</span>}<span className="font-normal text-muted"> · Unrated</span>
           </span>
           <CapturedPieces pieces={captures.captured[c]} color={other(c)} advantage={captures.advantage[c]} />
         </div>
@@ -279,12 +308,15 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   return (
     <>
     {/* Optional living background: only behind games (Settings → Display). */}
-    {settings.livingBackground && <CharacterField reducedMotion={reducedMotion} />}
+
     <main className="min-h-dvh w-full px-3 sm:px-6">
       <div
-        className="game-layout"
+        className="game-layout relative isolate"
       >
-        <header className="safe-top flex items-center justify-end gap-1.5 pb-2 [grid-area:header] lg:pt-0">
+        <GameBackground />
+        <header className="game-control-bar glass-panel safe-top flex flex-wrap items-center justify-end gap-1.5 pb-2 [grid-area:header] lg:pt-0">
+          <GlassLayer tier="navigation" radius={24} />
+          {finished && <GlassButton onClick={() => setResultVersion((version) => version + 1)} className="min-h-11 rounded-full px-3 text-sm" aria-label="Show game result">Result</GlassButton>}
           {playing && (
             <GlassButton
               disabled={!active || room.ply < 2 || iOfferedDraw}
@@ -392,22 +424,31 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
 
       {finished && !reviewing && resultText && (
         <GameResult
-          key={`${room.roomId}:${room.result ?? "aborted"}`}
+          key={`${room.roomId}:${room.result ?? "aborted"}:${resultVersion}`}
           result={room.result ?? undefined}
           reason={room.resultReason ?? undefined}
           human={you ?? "w"}
           description={resultText}
           reducedMotion={reducedMotion}
           opponentName={opponentName}
-          rematchLabel={!playing ? "New game" : theyWantRematch ? `${opponentName} wants a rematch · Accept` : rematchAsked || room.rematchBy === you ? `Waiting for ${opponentName}…` : "Rematch"}
-          rematchDisabled={playing && !theyWantRematch && (rematchAsked || room.rematchBy === you)}
+          kind={playing ? "human" : "spectator"}
+          onReview={line.length ? () => setViewPly(Math.max(0, line.length - 1)) : undefined}
+          rematchState={playing ? rematchState : "none"}
+          rematchDisabled={!connection.isWebSocketConnected}
+          summary={{ moves: Math.ceil(room.ply / 2), names: { white: room.white ?? "White", black: room.black ?? "Black" }, timeControl: timeControlLabel(room.initialMs, room.incrementMs), ...(room.endedAt != null && room.startedAt != null ? { durationMs: Math.max(0, room.endedAt - room.startedAt) } : {}) }}
+          status={error ?? (!connection.isWebSocketConnected ? rematchCopy.offline : rematchState === "pending" && room.rematchExpiresAt ? `${rematchCopy.waiting} ${opponentName}. ${rematchCopy.expires} ${new Date(room.rematchExpiresAt).toLocaleTimeString(settings.fatmaLanguage === "egy" ? "ar-EG" : "en")}.` : rematchState === "declined" ? rematchCopy.declined : rematchState === "expired" ? rematchCopy.expired : rematchState === "cancelled" ? rematchCopy.cancelled : undefined)}
+          extraActions={playing && room.rematchV2 && (rematchState === "pending" || rematchState === "incoming") ? <button disabled={rematchAsked} className="min-h-11 rounded-full bg-surface-2 px-4 text-sm" onClick={() => {
+            setRematchAsked(true);
+            void respondRematch({ roomId: room.roomId, token, action: rematchState === "incoming" ? "decline" : "cancel" }).catch((error) => setError(errorText(error))).finally(() => setRematchAsked(false));
+          }}>{rematchState === "incoming" ? rematchCopy.decline : rematchCopy.cancel}</button> : undefined}
           onRematch={() => {
             if (!playing) {
               router.push("/play");
               return;
             }
             setRematchAsked(true);
-            void rematch({ roomId: room.roomId, token }).catch((e) => setError(errorText(e)));
+            setError(null);
+            void rematch({ roomId: room.roomId, token }).catch((e) => setError(errorText(e))).finally(() => setRematchAsked(false));
           }}
         />
       )}

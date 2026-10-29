@@ -2,10 +2,14 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { fail, optionalOwner, requireOwner } from "./model/auth";
 import { settingsValidator } from "./schema";
+import { experienceSchema } from "../lib/experience/config";
+
+export const capabilities = query({ args: {}, returns: v.object({ experienceVersion: v.literal(1) }), handler: async () => ({ experienceVersion: 1 as const }) });
 
 /** The signed-in player's saved preferences, or null (signed out, or never saved). */
 export const mine = query({
   args: {},
+  returns: v.union(v.null(), v.object({ settings: settingsValidator, changedAt: v.number() })),
   handler: async (ctx) => {
     const owner = await optionalOwner(ctx);
     if (!owner) return null;
@@ -20,9 +24,11 @@ export const mine = query({
  */
 export const save = mutation({
   args: { settings: settingsValidator, changedAt: v.number() },
+  returns: v.object({ applied: v.boolean() }),
   handler: async (ctx, args) => {
     const owner = await requireOwner(ctx);
     const { volume } = args.settings;
+    if (args.settings.experience && !experienceSchema.safeParse(args.settings.experience).success) fail("bad_request", "Invalid experience preferences.");
     if (volume !== undefined && (!Number.isFinite(volume) || volume < 0 || volume > 1)) fail("bad_request", "Volume must be between 0 and 1.");
     if (!Number.isFinite(args.changedAt)) fail("bad_request", "Bad timestamp.");
     const now = Date.now();

@@ -185,10 +185,12 @@ export function rewindBranch(
   return { tree: next, preservedBranchKey };
 }
 
-export function moveLabel(node: Pick<TreeNode, "ply" | "san">): string {
+export function moveLabel(node: Pick<TreeNode, "ply" | "san"> & Partial<Pick<TreeNode, "fen">>): string {
   if (node.ply === 0) return "start";
-  const number = Math.ceil(node.ply / 2);
-  return node.ply % 2 === 1 ? `${number}. ${node.san}` : `${number}… ${node.san}`;
+  const fields = node.fen?.split(" ");
+  const lastWasWhite = fields ? fields[1] === "b" : node.ply % 2 === 1;
+  const number = fields ? Math.max(1, Number(fields[5]) - (lastWasWhite ? 0 : 1)) : Math.ceil(node.ply / 2);
+  return lastWasWhite ? `${number}. ${node.san}` : `${number}… ${node.san}`;
 }
 
 export function branchList(tree: GameTree): Branch[] {

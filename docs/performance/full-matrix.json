@@ -1,0 +1,133 @@
+{
+  "metadata": {
+    "date": "2026-10-29T10:21:12.259Z",
+    "commit": "3aa32ee1f2a90ed43308673e781f64f32a9c2ef7",
+    "browser": "154.0.8037.57",
+    "platform": "linux",
+    "cpu": "AMD EPYC 9V45 96-Core Processor",
+    "logicalCpus": 3,
+    "totalMemoryBytes": 10452471808,
+    "viewport": "1366x768 then 1280x800",
+    "runs": 5,
+    "durationMs": 1000,
+    "backgrounds": [
+      "minimal"
+    ],
+    "scrollMs": 0,
+    "reviewSteps": 0,
+    "fixture": "Local signed-out build; real browser/WASM; no signed-in account",
+    "limitations": "rAF gaps proxy scheduling, not actual presented/dropped compositor frames. Lab LCP/CLS are not field p75. Node-side drawer timings include automation transport. GPU power/battery unavailable."
+  },
+  "summary": [
+    {
+      "preset": "classic",
+      "background": "minimal",
+      "evaluation": false,
+      "runs": 5,
+      "moveP95Ms": 16.099999997764826,
+      "paintMedianMs": 22.664999999999996,
+      "drawerP95Ms": 65.84870100000012,
+      "clsMedian": 0.00938199052411561,
+      "errors": []
+    },
+    {
+      "preset": "classic",
+      "background": "minimal",
+      "evaluation": true,
+      "runs": 5,
+      "moveP95Ms": 20.300000000745058,
+      "paintMedianMs": 41.53900000000002,
+      "drawerP95Ms": 70.25264199999947,
+      "clsMedian": 0.000060375245763208426,
+      "errors": []
+    },
+    {
+      "preset": "expressive",
+      "background": "minimal",
+      "evaluation": false,
+      "runs": 5,
+      "moveP95Ms": 18.399999998509884,
+      "paintMedianMs": 26.927000000000007,
+      "drawerP95Ms": 73.33531099999527,
+      "clsMedian": 0.00938199052411561,
+      "errors": []
+    },
+    {
+      "preset": "expressive",
+      "background": "minimal",
+      "evaluation": true,
+      "runs": 5,
+      "moveP95Ms": 21.300000000745058,
+      "paintMedianMs": 44.66500000000007,
+      "drawerP95Ms": 71.72704599999997,
+      "clsMedian": 0.000060375245763208426,
+      "errors": []
+    },
+    {
+      "preset": "glass-full",
+      "background": "minimal",
+      "evaluation": false,
+      "runs": 5,
+      "moveP95Ms": 16.899999998509884,
+      "paintMedianMs": 24.20799999999999,
+      "drawerP95Ms": 70.59032699999807,
+      "clsMedian": 0.0092494595989491,
+      "errors": []
+    },
+    {
+      "preset": "glass-full",
+      "background": "minimal",
+      "evaluation": true,
+      "runs": 5,
+      "moveP95Ms": 22,
+      "paintMedianMs": 47.67200000000001,
+      "drawerP95Ms": 70.4297729999962,
+      "clsMedian": 0.000060375245763208426,
+      "errors": []
+    },
+    {
+      "preset": "glass-balanced",
+      "background": "minimal",
+      "evaluation": false,
+      "runs": 5,
+      "moveP95Ms": 58.599999997764826,
+      "paintMedianMs": 35.73999999999999,
+      "drawerP95Ms": 112.29791700000351,
+      "clsMedian": 0.0092494595989491,
+      "errors": []
+    },
+    {
+      "preset": "glass-balanced",
+      "background": "minimal",
+      "evaluation": true,
+      "runs": 5,
+      "moveP95Ms": 19.400000002235174,
+      "paintMedianMs": 36.50400000000002,
+      "drawerP95Ms": 102.46276900000521,
+      "clsMedian": 0.000060375245763208426,
+      "errors": []
+    },
+    {
+      "preset": "glass-minimal",
+      "background": "minimal",
+      "evaluation": false,
+      "runs": 5,
+      "moveP95Ms": 17.800000000745058,
+      "paintMedianMs": 27.625999999999998,
+      "drawerP95Ms": 61.58809900001506,
+      "clsMedian": 0.0092494595989491,
+      "errors": []
+    },
+    {
+      "preset": "glass-minimal",
+      "background": "minimal",
+      "evaluation": true,
+      "runs": 5,
+      "moveP95Ms": 16.800000000745058,
+      "paintMedianMs": 44.55300000000003,
+      "drawerP95Ms": 109.8111510000017,
+      "clsMedian": 0.000060375245763208426,
+      "errors": []
+    }
+  ]
+}

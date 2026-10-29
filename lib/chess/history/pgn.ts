@@ -30,12 +30,12 @@ function renderLine(tree: GameTree, fromKey: string, mainPath: Set<string>, forc
     const children = childrenOf(tree, cursorKey);
     if (children.length === 0) break;
     const main = children.find((c) => mainPath.has(c.key)) ?? children[0];
-    parts.push(moveText(main, needNumber));
+    parts.push(moveText(tree, main, needNumber));
     needNumber = false;
     for (const alt of children) {
       if (alt.key === main.key) continue;
       const rest = renderLine(tree, alt.key, mainPath, false);
-      parts.push(`(${moveText(alt, true)}${rest ? ` ${rest}` : ""})`);
+      parts.push(`(${moveText(tree, alt, true)}${rest ? ` ${rest}` : ""})`);
       needNumber = true;
     }
     cursorKey = main.key;
@@ -43,9 +43,11 @@ function renderLine(tree: GameTree, fromKey: string, mainPath: Set<string>, forc
   return parts.join(" ");
 }
 
-function moveText(node: TreeNode, forceNumber: boolean): string {
-  const number = Math.ceil(node.ply / 2);
-  if (node.ply % 2 === 1) return `${number}. ${node.san}`;
+function moveText(tree: GameTree, node: TreeNode, forceNumber: boolean): string {
+  const parent = tree.nodes[node.parentKey ?? ROOT_KEY];
+  const fields = parent.fen.split(" ");
+  const number = Number(fields[5]) || 1;
+  if (fields[1] === "w") return `${number}. ${node.san}`;
   return forceNumber ? `${number}... ${node.san}` : node.san;
 }
 
@@ -157,7 +159,14 @@ export function importPgn(text: string, makeKey: () => string, now: number): Imp
     if (depth0()) mainHeadKey = key;
   }
   if (stack.length > 0) throw new PgnError("Unclosed variation in PGN.");
-  tree = { ...tree, nodes, branches: { [mainBranchKey]: { ...tree.branches[mainBranchKey], headKey: mainHeadKey } } };
+  const parents = new Set(Object.values(nodes).map((node) => node.parentKey));
+  const branches = { [mainBranchKey]: { ...tree.branches[mainBranchKey], headKey: mainHeadKey } };
+  // Preserve imported variations as selectable lines, not unreachable orphan nodes.
+  for (const leaf of Object.values(nodes).filter((node) => node.key !== ROOT_KEY && node.key !== mainHeadKey && !parents.has(node.key))) {
+    const key = `variation-${leaf.key}`;
+    branches[key] = { key, headKey: leaf.key, label: `Alternative ending ${leaf.san}`, kind: "variation", forkedFromBranchKey: mainBranchKey, createdAt: now };
+  }
+  tree = { ...tree, nodes, branches };
   return { tree, headers, result, mainHeadKey };
 }
 

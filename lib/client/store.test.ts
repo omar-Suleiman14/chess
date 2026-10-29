@@ -164,3 +164,18 @@ describe("local indexed storage and analysis cache", () => {
     expect((await store.getGame("after-upgrade"))?.meta.gameKey).toBe("after-upgrade");
   });
 });
+
+it("commits assistance without changing moves and never re-rates the game", async () => {
+  const { store } = await import("./store");
+  const rated = game("assisted", 1);
+  rated.meta.mode = "climb"; rated.meta.rated = "eligible";
+  rated.tree = appendMove(rated.tree, "branch-assisted", "e2e4", "assisted-n1", 2).tree;
+  await store.saveGame(rated);
+  expect(await store.markAssisted("assisted")).toBe(true);
+  expect(await store.markAssisted("assisted")).toBe(true);
+  const saved = await store.getGame("assisted");
+  expect(saved?.meta.rated).toBe("ineligible");
+  expect(saved?.tree).toEqual(rated.tree);
+  await store.saveGame({ ...saved!, meta: { ...saved!.meta, status: "finished" } });
+  expect(await store.markAssisted("assisted")).toBe(false);
+});

@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-29T10:31:18.958Z",
+  "note": "Simulated lab throttling; these are not field p75 or presented-frame measurements.",
+  "rows": [
+    {
+      "formFactor": "desktop",
+      "performance": 0.64,
+      "accessibility": 1,
+      "lcpLabMs": 5214.4962,
+      "clsLab": 0.0000612690196326897,
+      "tbtLabMs": 206,
+      "initialTransferBytes": 2352270
+    },
+    {
+      "formFactor": "mobile",
+      "performance": 1,
+      "accessibility": 1,
+      "lcpLabMs": 914.7158,
+      "clsLab": 0.0003100449370755807,
+      "tbtLabMs": 82,
+      "initialTransferBytes": 2300588
+    }
+  ]
+}

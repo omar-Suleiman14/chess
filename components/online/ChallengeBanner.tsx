@@ -29,7 +29,7 @@ export function ChallengeBanner() {
   useEffect(() => {
     if (!challenge || announced.current === challenge.id) return;
     announced.current = challenge.id;
-    if (settings.sound) playSound("end", settings.volume * 0.7);
+    if (settings.sound) playSound("challenge", settings.volume);
   }, [challenge, settings.sound, settings.volume]);
 
   return (

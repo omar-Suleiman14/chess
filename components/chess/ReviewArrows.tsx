@@ -80,7 +80,7 @@ export function ReviewArrows({ onBack, onForward, backDisabled, forwardDisabled 
       aria-label="Review moves"
       dir="ltr"
     >
-      <GlassLayer radius="pill" glassThickness={40} bezelWidth={14} refraction={0.7} />
+      <GlassLayer radius="pill" />
       <button {...back} disabled={backDisabled} className={button} aria-label="Previous move (hold to rewind)" aria-keyshortcuts="ArrowLeft Home">
         <svg viewBox="0 0 24 24" className={chevron} aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>

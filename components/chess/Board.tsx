@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type KeyboardEvent, type PointerEvent } from "react";
 import { FILES, legalMoves, pieceName, piecesOf, type BoardPiece, type Color, type PromotionPiece, type Square } from "@/lib/chess/rules";
 import { premoveMoves } from "@/lib/chess/premove";
 import { useSettings } from "@/lib/client/settings";
@@ -30,6 +30,7 @@ type Props = {
   reducedMotion?: boolean;
   /** Extra squares to outline (lesson hints). */
   hintSquares?: Square[];
+  hintMove?: { from: Square; to: Square };
   label?: string;
   /** Animate this move instead of lastMove (e.g. a move played in reverse). null = no animation. */
   motionMove?: LastMove;
@@ -55,7 +56,7 @@ function coordsOf(square: Square, orientation: Color): { col: number; row: numbe
   return orientation === "w" ? { col: file, row: 7 - rank } : { col: 7 - file, row: rank };
 }
 
-export function Board({
+export const Board = memo(function Board({
   fen,
   orientation,
   movable,
@@ -69,6 +70,7 @@ export function Board({
   coordinates = true,
   reducedMotion = false,
   hintSquares = [],
+  hintMove,
   label = "Chess board",
   onSelect,
   motionMove,
@@ -107,7 +109,7 @@ export function Board({
     (from: Square) => {
       setIllegal({ squares: checkSquare && checkSquare !== from ? [from, checkSquare] : [from], key: Date.now() });
       if (settings.haptics) haptic([20, 40, 20]);
-      if (settings.sound) playSound("wrong", settings.volume);
+      if (settings.sound) playSound("illegal", settings.volume);
     },
     [checkSquare, settings.haptics, settings.sound, settings.volume],
   );
@@ -119,7 +121,6 @@ export function Board({
 
   // Drop selection whenever the position changes.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelected(null);
     setPromotion(null);
   }, [fen]);
@@ -229,9 +230,10 @@ export function Board({
     }
   };
 
+  const arrowId = useId();
   const selectedTargets = selected ? targets.get(selected) : undefined;
 
-  const cells = [];
+  const cells: ReactNode[] = [];
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const square = squareAt(col, row, orientation);
@@ -269,6 +271,8 @@ export function Board({
           key={square}
           id={`sq-${square}`}
           role="gridcell"
+          aria-rowindex={row + 1}
+          aria-colindex={col + 1}
           tabIndex={cursor === square ? 0 : -1}
           aria-label={description}
           aria-selected={isSelected}
@@ -282,10 +286,10 @@ export function Board({
           {shaking && <div key={`flash-${illegal!.key}`} className="illegal-flash absolute inset-0" style={{ background: "rgba(220, 60, 50, 0.45)" }} />}
           {isHint && <div className="absolute inset-[6%] rounded-md border-[3px] border-dashed" style={{ borderColor: "var(--hl-target)" }} />}
           {coordinates && col === 0 && (
-            <span className={`pointer-events-none absolute left-[3%] top-[2%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[1]}</span>
+            <span aria-hidden="true" className={`pointer-events-none absolute left-[3%] top-[2%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[1]}</span>
           )}
           {coordinates && row === 7 && (
-            <span className={`pointer-events-none absolute bottom-[1%] right-[4%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[0]}</span>
+            <span aria-hidden="true" className={`pointer-events-none absolute bottom-[1%] right-[4%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[0]}</span>
           )}
           {piece && !hidden && (
             <motion.div
@@ -347,6 +351,8 @@ export function Board({
         ref={boardRef}
         role="grid"
         aria-label={label}
+        aria-rowcount={8}
+        aria-colcount={8}
         className={`board relative grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[10px] shadow-[var(--shadow)] ${drag ? "[&_*]:!cursor-grabbing !cursor-grabbing" : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -355,8 +361,12 @@ export function Board({
         onKeyDown={onKeyDown}
         onContextMenu={(event) => { event.preventDefault(); setSelected(null); onPremove?.(null); }}
       >
-        {cells}
+        {Array.from({ length: 8 }, (_, row) => <div key={row} role="row" className="contents">{cells.slice(row * 8, row * 8 + 8)}</div>)}
       </div>
+      {hintMove && (() => {
+        const from = coordsOf(hintMove.from, orientation), to = coordsOf(hintMove.to, orientation);
+        return <svg aria-hidden="true" data-hint-arrow className="pointer-events-none absolute inset-0 z-30 h-full w-full" viewBox="0 0 8 8"><defs><marker id={arrowId} markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto"><path d="M0,0 L3,1.5 L0,3 Z" fill="var(--focus)" /></marker></defs><line x1={from.col + 0.5} y1={from.row + 0.5} x2={to.col + 0.5} y2={to.row + 0.5} stroke="var(--focus)" strokeWidth="0.14" strokeLinecap="round" markerEnd={`url(#${arrowId})`} /></svg>;
+      })()}
       <span className="sr-only" aria-live="polite">{premove ? `Premove queued: ${premove.slice(0, 2)} to ${premove.slice(2, 4)}. Press Escape to cancel.` : ""}</span>
       {ghost && drag && size > 0 && (
         <div
@@ -380,4 +390,4 @@ export function Board({
       )}
     </div>
   );
-}
+});

@@ -10,9 +10,9 @@ export type AnalysedMove = {
   san: string;
   ply: number;
   /** Saved evaluation of the position before the move (White POV), with the engine's best move. */
-  before?: { score: WhiteScore; bestmove?: string; depth?: number };
+  before?: { score: WhiteScore; bestmove?: string; depth?: number; candidates?: Array<{ uci: string; score: WhiteScore; depth: number }> };
   /** Saved evaluation after the move. */
-  after?: { score: WhiteScore; depth?: number };
+  after?: { score: WhiteScore; depth?: number; bestmove?: string | null };
 };
 
 export type MistakeClass = "blunder" | "mistake" | "missed_mate";

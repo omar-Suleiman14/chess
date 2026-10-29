@@ -1,11 +1,14 @@
 "use client";
 
+import { BotRatingBadge } from "@/components/chess/RatingBadge";
+import type { Opponent } from "@/lib/chess/engine/opponents";
 import { CapturedPieces } from "@/components/chess/CapturedPieces";
 import type { CapturedPiece } from "@/lib/chess/captures";
 import type { Color } from "@/lib/chess/rules";
-import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
-import { IOS_SPRING } from "@/components/ui/Switch";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSettings } from "@/lib/client/settings";
+import { unlockAudio } from "@/lib/client/sound";
+import { Dialog } from "@/components/ui/Dialog";
 import type { FatmaApi } from "@/lib/client/useFatma";
 import { FatmaSprite } from "./FatmaSprite";
 
@@ -15,33 +18,41 @@ import { FatmaSprite } from "./FatmaSprite";
  * With `showName` it is a player row: sprite, name/captures, then her bubble
  * right beside her.
  */
-export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, captures, capturedColor, advantage }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean; captures?: CapturedPiece[]; capturedColor?: Color; advantage?: number }) {
+export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, opponent, captures, capturedColor, advantage }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean; opponent?: Opponent; captures?: CapturedPiece[]; capturedColor?: Color; advantage?: number }) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const [greeting, setGreeting] = useState("");
   const expression = fatma.line ? fatma.expression : thinking ? "thinking" : "idle";
+  const text = fatma.enabled ? fatma.line?.text ?? "" : "";
+  const progress = useSpeechProgress(text, reducedMotion, fatma.utteranceId);
   const bubble = fatma.enabled && fatma.line && (
     <button
       onClick={fatma.dismiss}
       className="bubble-in pointer-events-auto max-w-[min(100%,280px)] rounded-2xl rounded-es-sm bg-surface px-3 py-1.5 text-start text-sm leading-snug shadow-[var(--shadow)]"
       aria-label={`Sherine says: ${fatma.line.text}. Tap to dismiss.`}
     >
-      <StreamedText key={fatma.line.text} text={fatma.line.text} instant={reducedMotion} />
+      <StreamedText text={text} visible={progress.visible} />
     </button>
   );
 
   if (showName) {
     return (
-      <div className="pointer-events-none flex h-14 w-full min-w-0 items-center gap-2">
+      <div className="pointer-events-none relative flex h-14 w-full min-w-0 items-center gap-2">
         {fatma.enabled && (
-          <button onClick={() => fatma.say("poke")} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label="Talk to Sherine" title="Talk to Sherine">
-            <FatmaSprite expression={expression} size={48} reducedMotion={reducedMotion} />
+          <button onClick={() => { unlockAudio(); fatma.say("poke"); setChatOpen((open) => !open); }} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label="Talk to Sherine" aria-expanded={chatOpen} title="Talk to Sherine">
+            <FatmaSprite expression={expression} speaking={progress.speaking} size={48} reducedMotion={reducedMotion} />
           </button>
         )}
-        <div className="min-w-0 max-w-[50%] shrink-0">
-          <span className="block text-sm font-semibold">Sherine</span>
+        <div className="min-w-0 max-w-[65%] shrink-0">
+          <div className="flex min-w-0 items-center gap-1"><span className="text-sm font-semibold">Sherine</span><BotRatingBadge opponent={opponent} /></div>
           <CapturedPieces pieces={captures} color={capturedColor} advantage={advantage} />
         </div>
         <div aria-live="polite" className="flex min-w-0 flex-1 items-center">
           {bubble}
         </div>
+        {chatOpen && fatma.enabled && <form className="pointer-events-auto absolute inset-x-0 top-full z-40 grid gap-2 rounded-2xl bg-surface p-3 shadow-[var(--shadow)]" onSubmit={(event) => { event.preventDefault(); fatma.say("poke", { text: greeting }); setGreeting(""); setChatOpen(false); }} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setChatOpen(false); } }}>
+          <label className="text-xs text-muted" htmlFor="sherine-greeting">Say hi in English, مصري or Franco. She replies with banter.</label>
+          <div className="flex gap-2"><input id="sherine-greeting" dir="auto" autoFocus maxLength={120} value={greeting} onChange={(event) => setGreeting(event.target.value)} className="min-h-11 min-w-0 flex-1 rounded-xl bg-surface-2 px-3" /><button disabled={!greeting.trim()} className="rounded-xl bg-accent px-3 text-accent-text disabled:opacity-40">Send</button><button type="button" onClick={() => setChatOpen(false)} className="px-2" aria-label="Close conversation">×</button></div>
+        </form>}
       </div>
     );
   }
@@ -51,7 +62,7 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, c
       {fatma.enabled && (
         <>
           <div className="absolute bottom-0 start-0">
-            <FatmaSprite expression={expression} size={56} reducedMotion={reducedMotion} />
+            <FatmaSprite expression={expression} speaking={progress.speaking} size={56} reducedMotion={reducedMotion} />
           </div>
           <div aria-live="polite" className="absolute bottom-3 start-14 end-0 flex items-end">
             {bubble}
@@ -63,25 +74,28 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, c
 }
 
 /** Types a line out like chat. The full text reserves the space so the bubble never resizes. */
-function StreamedText({ text, instant }: { text: string; instant: boolean }) {
-  const [shown, setShown] = useState(instant ? text.length : 0);
+function useSpeechProgress(text: string, instant: boolean, utteranceId: number) {
+  const characters = useMemo(() => Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text), (part) => part.segment), [text]);
+  const [progress, setProgress] = useState({ utteranceId: -1, shown: 0 });
+  const shown = instant ? characters.length : progress.utteranceId === utteranceId ? progress.shown : 0;
   useEffect(() => {
-    if (instant) return;
+    if (instant || !text) return;
+    const started = performance.now();
     const id = setInterval(() => {
-      setShown((n) => {
-        if (n >= text.length) {
-          clearInterval(id);
-          return n;
-        }
-        return n + 1;
-      });
+      const next = Math.min(characters.length, Math.floor((performance.now() - started) / 28));
+      setProgress({ utteranceId, shown: next });
+      if (next >= characters.length) clearInterval(id);
     }, 28);
     return () => clearInterval(id);
-  }, [text, instant]);
+  }, [text, instant, characters.length, utteranceId]);
+  return { visible: characters.slice(0, shown).join(""), speaking: !instant && shown < characters.length };
+}
+
+function StreamedText({ text, visible }: { text: string; visible: string }) {
   return (
     <span className="grid" dir="auto" aria-hidden="true">
       <span className="invisible col-start-1 row-start-1 line-clamp-2">{text}</span>
-      <span className="col-start-1 row-start-1 line-clamp-2">{text.slice(0, shown)}</span>
+      <span className="col-start-1 row-start-1 line-clamp-2">{visible}</span>
     </span>
   );
 }
@@ -91,6 +105,7 @@ function StreamedText({ text, instant }: { text: string; instant: boolean }) {
  * clearly labelled. Keeping her on softens her briefly.
  */
 export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
+  const { reducedMotion } = useSettings();
   const [asking, setAsking] = useState(false);
   const offButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -116,21 +131,10 @@ export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
         Turn Sherine off
       </button>
       {asking && (
-        <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setAsking(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <motion.div
-            initial={{ opacity: 0, y: 48, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={IOS_SPRING}
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="fatma-plea-title"
-            className="w-full max-w-sm rounded-3xl bg-surface p-5 shadow-[var(--shadow)]"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.key === "Escape" && setAsking(false)}
-          >
+        <Dialog title="Turn Sherine off?" onClose={() => { setAsking(false); fatma.dismiss(); }}>
             <div className="flex items-center gap-3">
-              <FatmaSprite expression="plea" size={64} />
-              <p id="fatma-plea-title" className="text-base font-medium">
+              <FatmaSprite expression="plea" size={64} reducedMotion={reducedMotion} />
+              <p  className="text-base font-medium">
                 Wait! Don&apos;t. I&apos;ll be cool. Promise.
               </p>
             </div>
@@ -155,8 +159,7 @@ export function FatmaToggle({ fatma }: { fatma: FatmaApi }) {
                 Keep her
               </button>
             </div>
-          </motion.div>
-        </motion.div>
+        </Dialog>
       )}
     </>
   );

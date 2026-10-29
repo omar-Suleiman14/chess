@@ -1,0 +1,456 @@
+{
+  "chromium": {
+    "date": "2026-10-29T10:29:46.560Z",
+    "browser": "154.0.8037.57",
+    "results": [
+      {
+        "appearance": "classic",
+        "colorMode": "light",
+        "passed": true,
+        "externalDiagnostics": [],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "classic",
+        "colorMode": "dark",
+        "passed": true,
+        "externalDiagnostics": [],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "expressive",
+        "colorMode": "light",
+        "passed": true,
+        "externalDiagnostics": [],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "expressive",
+        "colorMode": "dark",
+        "passed": true,
+        "externalDiagnostics": [],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "glass",
+        "colorMode": "light",
+        "passed": true,
+        "externalDiagnostics": [],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "glass",
+        "colorMode": "dark",
+        "passed": true,
+        "externalDiagnostics": [],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "feature": "time-machine",
+        "passed": true,
+        "checks": [
+          "manual navigation",
+          "row table",
+          "PGN names",
+          "no autoplay controls",
+          "scoped keyboard",
+          "branch confirmation"
+        ]
+      }
+    ]
+  },
+  "hints": {
+    "date": "2026-10-29T10:30:00.178Z",
+    "results": [
+      {
+        "appearance": "classic",
+        "checks": [
+          "real engine hint",
+          "three stages",
+          "legal arrow",
+          "never auto move",
+          "stale clear",
+          "consent dismissal preserves rating",
+          "saved unrated before hint",
+          "closing never re-rates",
+          "flip identities"
+        ]
+      },
+      {
+        "appearance": "expressive",
+        "checks": [
+          "real engine hint",
+          "three stages",
+          "legal arrow",
+          "never auto move",
+          "stale clear",
+          "consent dismissal preserves rating",
+          "saved unrated before hint",
+          "closing never re-rates",
+          "flip identities"
+        ]
+      },
+      {
+        "appearance": "glass",
+        "checks": [
+          "real engine hint",
+          "three stages",
+          "legal arrow",
+          "never auto move",
+          "stale clear",
+          "consent dismissal preserves rating",
+          "saved unrated before hint",
+          "closing never re-rates",
+          "flip identities"
+        ]
+      }
+    ]
+  },
+  "languages": {
+    "date": "2026-10-29T10:30:10.248Z",
+    "note": "CSS text scaling, not a physical browser zoom or screen-reader run.",
+    "results": [
+      {
+        "appearance": "classic",
+        "language": "en",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      },
+      {
+        "appearance": "classic",
+        "language": "egy",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      },
+      {
+        "appearance": "classic",
+        "language": "franco",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      },
+      {
+        "appearance": "expressive",
+        "language": "en",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      },
+      {
+        "appearance": "expressive",
+        "language": "egy",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      },
+      {
+        "appearance": "expressive",
+        "language": "franco",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      },
+      {
+        "appearance": "glass",
+        "language": "en",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      },
+      {
+        "appearance": "glass",
+        "language": "egy",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      },
+      {
+        "appearance": "glass",
+        "language": "franco",
+        "width": 390,
+        "textScale": 2,
+        "reducedMotion": true,
+        "passed": true
+      }
+    ]
+  },
+  "online": {
+    "target": "http://127.0.0.1:3210/",
+    "date": "2026-10-29T10:30:13.166Z",
+    "passed": [
+      "real legal move",
+      "resignation result",
+      "request",
+      "duplicate disabled",
+      "decline",
+      "cancel",
+      "accept",
+      "both clients follow same new room",
+      "original history preserved"
+    ]
+  },
+  "firefox": {
+    "date": "2026-10-29T09:54:25.483Z",
+    "browser": "157.0",
+    "results": [
+      {
+        "appearance": "classic",
+        "colorMode": "light",
+        "passed": true,
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "classic",
+        "colorMode": "dark",
+        "passed": true,
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "expressive",
+        "colorMode": "light",
+        "passed": true,
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "expressive",
+        "colorMode": "dark",
+        "passed": true,
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "glass",
+        "colorMode": "light",
+        "passed": true,
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "glass",
+        "colorMode": "dark",
+        "passed": true,
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "feature": "time-machine",
+        "passed": true,
+        "checks": [
+          "manual navigation",
+          "row table",
+          "PGN names",
+          "no autoplay controls",
+          "scoped keyboard",
+          "branch confirmation"
+        ]
+      }
+    ]
+  },
+  "webkit": {
+    "date": "2026-10-29T10:00:37.209Z",
+    "browser": "27.2",
+    "results": [
+      {
+        "appearance": "classic",
+        "colorMode": "light",
+        "passed": true,
+        "externalDiagnostics": [
+          "/1-lx5bswzxbgtariy5tv7msszyxu-soenag2c2sxolmk3o6j3ktdim4-p.client.protect.clerk.com/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-lx5bswzxbgtariy5tv7msszyxu-soenag2c2sxolmk3o6j3ktdim4-p.client.protect.clerk.com:8443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-lx5bswzxbgtariy5tv7msszyxu-soenag2c2sxolmk3o6j3ktdim4-p.client.protect.clerk.com:18443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-lx5bswzxbgtariy5tv7msszyxu-soenag2c2sxolmk3o6j3ktdim4-p.client.protect.clerk.com:2082/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-lx5bswzxbgtariy5tv7msszyxu-soenag2c2sxolmk3o6j3ktdim4-p.client.protect.clerk.com:992/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks."
+        ],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "classic",
+        "colorMode": "dark",
+        "passed": true,
+        "externalDiagnostics": [
+          "/1-ilroth7ozyvppxkbmzy7hfxf7u-5bisely5mqn22imo5thrtfpvci-p.client.protect.clerk.com/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-ilroth7ozyvppxkbmzy7hfxf7u-5bisely5mqn22imo5thrtfpvci-p.client.protect.clerk.com:8443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-ilroth7ozyvppxkbmzy7hfxf7u-5bisely5mqn22imo5thrtfpvci-p.client.protect.clerk.com:18443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-ilroth7ozyvppxkbmzy7hfxf7u-5bisely5mqn22imo5thrtfpvci-p.client.protect.clerk.com:2082/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-ilroth7ozyvppxkbmzy7hfxf7u-5bisely5mqn22imo5thrtfpvci-p.client.protect.clerk.com:992/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks."
+        ],
+        "appErrors": [
+          "ttp://127.0.0.1:3100/539193c7-006f-4706-a97a-f40753af02fe due to access control checks."
+        ],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "expressive",
+        "colorMode": "light",
+        "passed": true,
+        "externalDiagnostics": [
+          "/1-u3p3t5eakhqzkbbl5p65holcuy-o2tivcajukza2ssbgx73u753ei-p.client.protect.clerk.com/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-u3p3t5eakhqzkbbl5p65holcuy-o2tivcajukza2ssbgx73u753ei-p.client.protect.clerk.com:8443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-u3p3t5eakhqzkbbl5p65holcuy-o2tivcajukza2ssbgx73u753ei-p.client.protect.clerk.com:18443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-u3p3t5eakhqzkbbl5p65holcuy-o2tivcajukza2ssbgx73u753ei-p.client.protect.clerk.com:2082/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-u3p3t5eakhqzkbbl5p65holcuy-o2tivcajukza2ssbgx73u753ei-p.client.protect.clerk.com:992/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks."
+        ],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "expressive",
+        "colorMode": "dark",
+        "passed": true,
+        "externalDiagnostics": [
+          "/1-a5irdwy5xmrstqe6yj7haxeur4-qv6e3rmm5fxq3q5utajfwcehvy-p.client.protect.clerk.com/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-a5irdwy5xmrstqe6yj7haxeur4-qv6e3rmm5fxq3q5utajfwcehvy-p.client.protect.clerk.com:8443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-a5irdwy5xmrstqe6yj7haxeur4-qv6e3rmm5fxq3q5utajfwcehvy-p.client.protect.clerk.com:18443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-a5irdwy5xmrstqe6yj7haxeur4-qv6e3rmm5fxq3q5utajfwcehvy-p.client.protect.clerk.com:2082/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-a5irdwy5xmrstqe6yj7haxeur4-qv6e3rmm5fxq3q5utajfwcehvy-p.client.protect.clerk.com:992/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks."
+        ],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "glass",
+        "colorMode": "light",
+        "passed": true,
+        "externalDiagnostics": [
+          "/1-3u46ftkym5uvgbehuh6zbkspqe-cao55lxlh33ihkjarogrluicwe-p.client.protect.clerk.com/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-3u46ftkym5uvgbehuh6zbkspqe-cao55lxlh33ihkjarogrluicwe-p.client.protect.clerk.com:8443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-3u46ftkym5uvgbehuh6zbkspqe-cao55lxlh33ihkjarogrluicwe-p.client.protect.clerk.com:18443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-3u46ftkym5uvgbehuh6zbkspqe-cao55lxlh33ihkjarogrluicwe-p.client.protect.clerk.com:2082/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-3u46ftkym5uvgbehuh6zbkspqe-cao55lxlh33ihkjarogrluicwe-p.client.protect.clerk.com:992/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks."
+        ],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "appearance": "glass",
+        "colorMode": "dark",
+        "passed": true,
+        "externalDiagnostics": [
+          "/1-brhmbs56e3bzslmwxcmpgq5sg4-chmhekb2mapxbh5ibbdppdxbkm-p.client.protect.clerk.com/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-brhmbs56e3bzslmwxcmpgq5sg4-chmhekb2mapxbh5ibbdppdxbkm-p.client.protect.clerk.com:8443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-brhmbs56e3bzslmwxcmpgq5sg4-chmhekb2mapxbh5ibbdppdxbkm-p.client.protect.clerk.com:18443/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-brhmbs56e3bzslmwxcmpgq5sg4-chmhekb2mapxbh5ibbdppdxbkm-p.client.protect.clerk.com:2082/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks.",
+          "/1-brhmbs56e3bzslmwxcmpgq5sg4-chmhekb2mapxbh5ibbdppdxbkm-p.client.protect.clerk.com:992/ins_3KlAmRmyxX3y8k2GccmoB2POPFq/probe due to access control checks."
+        ],
+        "appErrors": [],
+        "widths": [
+          320,
+          390,
+          768,
+          1920
+        ]
+      },
+      {
+        "feature": "time-machine",
+        "passed": true,
+        "checks": [
+          "manual navigation",
+          "row table",
+          "PGN names",
+          "no autoplay controls",
+          "scoped keyboard",
+          "branch confirmation"
+        ]
+      }
+    ]
+  }
+}

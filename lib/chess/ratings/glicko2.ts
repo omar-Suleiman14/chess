@@ -1,7 +1,7 @@
 // Glicko-2 (Mark Glickman, "Example of the Glicko-2 system", 2012).
 // Used for The Climb and each Timed pool. Pure and deterministic.
 
-export const GLICKO2_VERSION = "glicko2-v1";
+export const GLICKO2_VERSION = "glicko2-v2-daily-idle";
 const SCALE = 173.7178;
 const TAU = 0.5;
 const EPSILON = 0.000001;
@@ -14,6 +14,15 @@ export const INITIAL_RATING: Rating = { rating: 1500, rd: 350, volatility: 0.06 
 export const PROVISIONAL_RD = 110;
 export const MIN_RD = 45;
 export const MAX_RD = 350;
+export const RATING_PERIOD_MS = 24 * 60 * 60 * 1000;
+
+/** One empty period per full idle day. Previewing never persists a rating change. */
+export function ratingAfterInactivity(player: Rating, updatedAt: number, now: number): Rating {
+  const periods = Math.max(0, Math.floor((now - updatedAt) / RATING_PERIOD_MS));
+  if (!periods) return player;
+  const phi = player.rd / SCALE;
+  return { ...player, rd: clampRd(Math.sqrt(phi * phi + periods * player.volatility * player.volatility) * SCALE) };
+}
 
 export function isProvisional(r: Pick<Rating, "rd">): boolean {
   return r.rd >= PROVISIONAL_RD;

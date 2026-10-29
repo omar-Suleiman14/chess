@@ -260,11 +260,45 @@ describe("games", () => {
     expect(created.originFen).toContain("4p3/4P3");
   });
 
+  it("reads the exact rating pool and committed delta without cross-owner access", async () => {
+    const t = setup();
+    const g = await newGame(t, alice, { mode: "climb", opponentId: "climb-01" });
+    expect(await g.user.query(api.progress.nameplate, { gameKey: g.gameKey })).toMatchObject({ pool: "climb", rating: 1500, games: 0, provisional: true, delta: null });
+    expect(await t.withIdentity(bob).query(api.progress.nameplate, { gameKey: g.gameKey })).toBeNull();
+    await g.user.mutation(api.games.finish, { opId: opId(), gameKey: g.gameKey, claim: "resign" });
+    const committed = await g.user.query(api.progress.nameplate, { gameKey: g.gameKey });
+    expect(committed?.games).toBe(1);
+    expect(committed?.delta).toBeLessThan(0);
+    await expect(g.user.mutation(api.games.markAssisted, { gameKey: g.gameKey, reason: "hint" })).rejects.toThrow();
+    expect(await g.user.query(api.progress.nameplate, { gameKey: g.gameKey })).toEqual(committed);
+    const timed = await newGame(t, alice, { mode: "timed", opponentId: "full-power-fast", timeControlId: "3+2" });
+    expect(await timed.user.query(api.progress.nameplate, { gameKey: timed.gameKey })).toMatchObject({ pool: "timed:3+2", games: 0, delta: null });
+    await timed.user.mutation(api.games.markAssisted, { gameKey: timed.gameKey, reason: "hint" });
+    await timed.user.mutation(api.games.finish, { opId: opId(), gameKey: timed.gameKey, claim: "resign" });
+    expect(await timed.user.query(api.progress.nameplate, { gameKey: timed.gameKey })).toMatchObject({ games: 0, delta: null });
+  });
+
+  it("loads a long imported line completely instead of exposing a missing head", async () => {
+    const t = setup();
+    const user = t.withIdentity(alice);
+    const pgn = Array.from({ length: 550 }, (_, i) => `${i * 2 + 1}. Nf3 Nf6 ${i * 2 + 2}. Ng1 Ng8`).join(" ") + " *";
+    await user.mutation(api.games.importGame, { opId: opId(), gameKey: "long-import", pgn, humanColor: "w" });
+    const snap = await user.query(api.games.get, { gameKey: "long-import" });
+    expect(snap?.nodes).toHaveLength(2201);
+    expect(snap?.truncated).toBe(false);
+    const head = snap?.branches.find((line) => line.branchKey === snap.game.activeBranchKey)?.headKey;
+    expect(snap?.nodes.some((node) => node.key === head)).toBe(true);
+  });
+
   it("imports PGN with variations", async () => {
     const t = setup();
     const user = t.withIdentity(alice);
-    const r = await user.mutation(api.games.importGame, { opId: opId(), gameKey: "imp-0001", pgn: "1. e4 (1. d4) 1... e5 2. Nf3 *", humanColor: "w" });
+    const r = await user.mutation(api.games.importGame, { opId: opId(), gameKey: "imp-0001", pgn: '[White "Ada"]\n[Black "Omar"]\n\n1. e4 (1. d4) 1... e5 2. Nf3 *', humanColor: "w" });
     expect(r.nodes).toBe(4);
+    const imported = await user.query(api.games.get, { gameKey: "imp-0001" });
+    expect(imported?.game.playerNames).toEqual({ white: "Ada", black: "Omar" });
+    expect(imported?.branches).toHaveLength(2);
+    expect(imported?.branches.some((line) => line.kind === "variation" && imported.nodes.find((node) => node.key === line.headKey)?.san === "d4")).toBe(true);
     await expect(user.mutation(api.games.importGame, { opId: opId(), gameKey: "imp-0002", pgn: "1. e5 *", humanColor: "w" })).rejects.toThrow();
   });
 });

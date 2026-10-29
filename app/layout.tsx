@@ -8,6 +8,8 @@ import { SettingsProvider } from "@/lib/client/settings";
 import { SyncProvider } from "@/lib/client/sync";
 import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { INDEXABLE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { THEME_BOOTSTRAP } from "@/lib/experience/theme";
+import { WebVitalsReporter } from "@/components/shell/WebVitalsReporter";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -38,11 +40,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ClerkProvider telemetry={false} appearance={{ layout: { privacyPageUrl: "/privacy", termsPageUrl: "/terms" } }}>
           <ConvexClientProvider>
             <SettingsProvider>
+              <WebVitalsReporter />
               <SyncProvider>
                 <NavigationProvider><AppShell>{children}</AppShell></NavigationProvider>
               </SyncProvider>

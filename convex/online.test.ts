@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
-import { describe, expect, it } from "vitest";
-import { api } from "./_generated/api";
+import { describe, expect, it, vi } from "vitest";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -25,6 +25,42 @@ async function startGame(t: ReturnType<typeof setup>, extra: { initialMs?: numbe
 const view = (t: ReturnType<typeof setup>, code: string, token: string) => t.query(api.online.byCode, { code, token, now: Date.now() });
 
 describe("online rooms", () => {
+  it("keeps duplicate requests idempotent, enforces cancel/decline ownership and preserves results", async () => {
+    const t = setup();
+    const { roomId, code } = await startGame(t);
+    await t.mutation(api.online.resign, { roomId, token: HOST });
+    await t.mutation(api.online.rematch, { roomId, token: HOST });
+    const pending = await view(t, code, HOST);
+    expect(pending).toMatchObject({ rematchState: "pending", rematchBy: "w", rematchV2: true });
+    await t.mutation(api.online.rematch, { roomId, token: HOST });
+    expect((await view(t, code, HOST))?.rematchExpiresAt).toBe(pending?.rematchExpiresAt);
+    await expect(t.mutation(api.online.respondRematch, { roomId, token: GUEST, action: "cancel" })).rejects.toThrow();
+    await expect(t.mutation(api.online.respondRematch, { roomId, token: HOST, action: "decline" })).rejects.toThrow();
+    await expect(t.mutation(api.online.respondRematch, { roomId, token: STRANGER, action: "decline" })).rejects.toThrow();
+    await t.mutation(api.online.respondRematch, { roomId, token: GUEST, action: "decline" });
+    expect(await view(t, code, HOST)).toMatchObject({ rematchState: "declined", status: "finished", resultReason: "aborted" });
+    await t.mutation(api.online.rematch, { roomId, token: HOST });
+    await t.mutation(api.online.respondRematch, { roomId, token: HOST, action: "cancel" });
+    expect((await view(t, code, HOST))?.rematchState).toBe("cancelled");
+  });
+  it("expires a request at its server deadline and never expires a later accepted rematch", async () => {
+    const t = setup();
+    const { roomId, code } = await startGame(t);
+    await t.mutation(api.online.resign, { roomId, token: HOST });
+    await t.mutation(api.online.rematch, { roomId, token: HOST });
+    const row = await t.run((ctx) => ctx.db.get("onlineRooms", roomId));
+    const now = vi.spyOn(Date, "now").mockReturnValue(row!.rematchExpiresAt! + 1);
+    try {
+      await t.mutation(internal.online.expireRematch, { roomId, requestedAt: row!.rematchRequestedAt! });
+      expect((await view(t, code, HOST))?.rematchState).toBe("expired");
+      await t.mutation(api.online.rematch, { roomId, token: HOST });
+      const accepted = await t.mutation(api.online.rematch, { roomId, token: GUEST });
+      expect(accepted.code).toMatch(/^\d{6}$/);
+      await t.mutation(internal.online.expireRematch, { roomId, requestedAt: row!.rematchRequestedAt! });
+      expect(await view(t, code, HOST)).toMatchObject({ rematchState: "accepted", rematchCode: accepted.code });
+      expect(await t.mutation(api.online.rematch, { roomId, token: HOST })).toEqual(accepted);
+    } finally { now.mockRestore(); }
+  });
   it("creates a 6-digit PIN and seats the guest on the other colour", async () => {
     const t = setup();
     const { code, joined } = await startGame(t);
@@ -79,6 +115,16 @@ describe("online rooms", () => {
     await expect(t.mutation(api.online.join, { code, token: STRANGER, name: "Late" })).rejects.toThrow(/two players/i);
     // A seated player can rejoin from the link.
     await expect(t.mutation(api.online.join, { code, token: GUEST, name: "x" })).resolves.toMatchObject({ color: "b" });
+  });
+
+  it("acknowledges repetition as terminal so the result cue can replace the move cue", async () => {
+    const t = setup();
+    const { roomId, code } = await startGame(t);
+    const line = ["g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"];
+    for (const [ply, uci] of line.entries()) {
+      expect(await t.mutation(api.online.move, { roomId, token: ply % 2 ? GUEST : HOST, uci, ply })).toEqual({ ok: true, terminal: ply === line.length - 1 });
+    }
+    expect(await view(t, code, HOST)).toMatchObject({ status: "finished", result: "1/2-1/2", resultReason: "threefold" });
   });
 
   it("ends on checkmate", async () => {

@@ -27,7 +27,7 @@ export type NewGameOptions = {
   label?: string;
 };
 
-export type MoveEvent = { applied: AppliedMove; by: "human" | "fatma"; node: TreeNode };
+export type MoveEvent = { applied: AppliedMove; by: "human" | "fatma"; node: TreeNode; terminal: boolean };
 
 export function monotonicNow(): number {
   // timeOrigin + performance.now() is monotonic within a page and close to epoch ms across reloads.
@@ -143,10 +143,12 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
       const status = statusFromPath(tree.originFen, pathTo(tree, node.key).map((n) => n.uci));
       if (status?.over) next = finishLocally(next, status.outcome, status.reason);
       commit(next);
-      callbacks.current.onMove?.({ applied, by, node });
+      callbacks.current.onMove?.({ applied, by, node, terminal: status?.over === true });
       const fatmaColor: Color = g.meta.humanColor === "w" ? "b" : "w";
-      if (applied.captured) callbacks.current.onFatma?.(by === "human" ? "human_capture" : "fatma_capture");
-      if (applied.check && !applied.checkmate) callbacks.current.onFatma?.(mover === fatmaColor ? "check_given" : "check_received");
+      if (!status?.over) {
+        if (applied.check) callbacks.current.onFatma?.(mover === fatmaColor ? "check_given" : "check_received");
+        else if (applied.captured) callbacks.current.onFatma?.(by === "human" ? "human_capture" : "fatma_capture");
+      }
       return true;
     },
     [commit, ensureCreated, finishLocally, sync],
@@ -216,6 +218,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
 
   const newGame = useCallback(
     async (opts: NewGameOptions) => {
+      const rematch = gameRef.current?.meta.status === "finished" && !opts.parentGameKey;
       const generation = ++newGameGeneration.current;
       replyGeneration.current++;
       if (supportsEngine()) getEngine().cancel("move");
@@ -248,7 +251,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
       if (generation !== newGameGeneration.current) return gameRef.current ?? g;
       commit(g);
       await store.setCurrent(g.meta.gameKey);
-      callbacks.current.onFatma?.("game_start");
+      callbacks.current.onFatma?.(rematch ? "rematch" : "game_start");
       // Preserve offline move order: close operations follow each old game's
       // queued moves, and precede the new session's create.
       for (const old of closed) if (old.meta.synced) await sync.enqueue(old.meta.gameKey, "finish", { gameKey: old.meta.gameKey, claim: "replace" });
@@ -312,14 +315,27 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
   }, [commit, ensureCreated, finishLocally, sync]);
 
   const markAssisted = useCallback(
-    (reason: "eval_bar" | "hint" | "engine_lines" | "pause") => {
+    async (reason: "eval_bar" | "hint" | "engine_lines" | "pause"): Promise<boolean> => {
       const g = gameRef.current;
-      if (!g || g.meta.rated !== "eligible") return;
-      const next = { ...g, meta: { ...g.meta, rated: "ineligible" as const } };
-      commit(next);
-      if (g.meta.synced) void sync.enqueue(g.meta.gameKey, "assisted", { gameKey: g.meta.gameKey, reason });
+      if (!g || g.meta.status !== "active") return false;
+      if (g.meta.rated !== "eligible") return true;
+      try {
+        if (g.meta.synced && sync.status.signedIn) {
+          if (!navigator.onLine) return false;
+          await sync.flush();
+          const rated = await convex.mutation(api.games.markAssisted, { gameKey: g.meta.gameKey, reason });
+          if (rated === "eligible") return false;
+        }
+        if (!await store.markAssisted(g.meta.gameKey)) return false;
+        // Queue before revealing help; offline guest outcomes cannot overtake it.
+        if (g.meta.synced) await sync.enqueue(g.meta.gameKey, "assisted", { gameKey: g.meta.gameKey, reason });
+        const current = gameRef.current;
+        if (current?.meta.gameKey !== g.meta.gameKey || current.meta.status !== "active") return false;
+        commit({ ...current, meta: { ...current.meta, rated: "ineligible" } });
+        return true;
+      } catch { return false; }
     },
-    [commit, sync],
+    [commit, sync, convex],
   );
 
   const switchBranch = useCallback(
@@ -443,6 +459,7 @@ export function fromSnapshot(snap: Snapshot, clock?: ClockState): LocalGame {
       mode: g.mode,
       opponentId: g.opponentId,
       opponentVersion: g.opponentVersion,
+      playerNames: g.playerNames,
       humanColor: g.humanColor,
       timeControlId: g.timeControlId,
       rated: g.rated,
