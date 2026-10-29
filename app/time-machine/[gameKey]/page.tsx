@@ -313,7 +313,8 @@ export default function ReplayPage({
       }),
     [path, scores, tree.nodes],
   );
-  const selectedReview = reviewed.find((move) => move.ply === node?.ply);
+  const reviewedByPly = useMemo(() => new Map(reviewed.map((move) => [move.ply, move])), [reviewed]);
+  const selectedReview = node ? reviewedByPly.get(node.ply) : undefined;
   const selectedStyle = selectedReview
     ? MOVE_QUALITY[selectedReview.quality]
     : null;
@@ -742,7 +743,7 @@ export default function ReplayPage({
                       const cell = row[side];
                       const review =
                         cell &&
-                        reviewed.find((move) => move.ply === cell.node.ply);
+                        reviewedByPly.get(cell.node.ply);
                       return (
                         <td key={side} className="p-0.5">
                           {cell ? (

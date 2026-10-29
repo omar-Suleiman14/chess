@@ -7,7 +7,7 @@ import { applyUci, checkFen, DEFAULT_POSITION, positionStatus, sideToMove, timeo
 import { ENGINE_BUILD } from "../../lib/chess/engine/controller";
 import { findOpponent, OPPONENT_POOL_VERSION, CLIMB_OPPONENTS } from "../../lib/chess/engine/opponents";
 import { findTimeControl } from "../../lib/chess/clock";
-import { ROOT_KEY } from "../../lib/chess/history/tree";
+import { MAX_TREE_NODES, ROOT_KEY } from "../../lib/chess/history/tree";
 import { checkKey, fail, type Owner } from "./auth";
 import { applyRating } from "./ratings";
 import { recordGameForFatma } from "./fatma";
@@ -494,7 +494,7 @@ async function bumpFatmaStat(ctx: MutationCtx, owner: Owner, stat: "undos"): Pro
   if (state) await ctx.db.patch("fatmaStates", state._id, { stats: { ...state.stats, [stat]: state.stats[stat] + 1 } });
 }
 
-export const NODE_PAGE_LIMIT = 2000;
+export const NODE_PAGE_LIMIT = MAX_TREE_NODES;
 
 export type GameSnapshot = {
   game: Doc<"games">;
@@ -512,7 +512,7 @@ export async function snapshot(ctx: QueryCtx, owner: Owner, gameKey: string, lim
   const branches = await ctx.db
     .query("gameBranches")
     .withIndex("by_gameId_and_branchKey", (q) => q.eq("gameId", game._id))
-    .take(200);
+    .take(MAX_TREE_NODES);
   return { game, branches, nodes: nodes.slice(0, limit), truncated: nodes.length > limit };
 }
 

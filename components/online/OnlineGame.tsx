@@ -16,7 +16,7 @@ import { MenuButton } from "@/components/shell/AppShell";
 import { Avatar } from "@/components/profile/ChessCard";
 import { GlassButton, GlassLayer } from "@/components/ui/Glass";
 import { capturesAlongLine } from "@/lib/chess/captures";
-import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
+import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, statusFromPath, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
 import { haptic, installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
 import { avatarFromName, timeControlLabel, useServerOffset } from "@/lib/client/online";
@@ -131,13 +131,13 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         const applied = applyUci(prevFen.current, last.uci);
         const mover = sideToMove(prevFen.current);
         if (applied) setAnnouncement(`${(mover === "w" ? room.white : room.black) ?? "Opponent"}: ${describeMove(applied, mover)}`);
-        if (applied && !positionStatus(applied.fen).over && settings.sound) playSound(moveSound(applied) === "move" ? "opponent_move" : moveSound(applied), settings.volume, { key: `move:${room.roomId}:${room.ply}` });
+        if (applied && room.status !== "finished" && !positionStatus(applied.fen).over && settings.sound) playSound(moveSound(applied) === "move" ? "opponent_move" : moveSound(applied), settings.volume, { key: `move:${room.roomId}:${room.ply}` });
         if (settings.haptics) haptic(8);
       }
     }
     seenPly.current = room.ply;
     prevFen.current = room.fen;
-  }, [room.roomId, room.ply, room.fen, room.moves, room.white, room.black, you, settings.sound, settings.volume, settings.haptics]);
+  }, [room.roomId, room.status, room.ply, room.fen, room.moves, room.white, room.black, you, settings.sound, settings.volume, settings.haptics]);
 
   const ended = useRef(room.status === "finished");
   useEffect(() => {
@@ -176,8 +176,10 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       setPending({ ply: room.ply, fen: applied.fen, uci });
       if (settings.haptics) haptic(applied.captured ? [8, 30, 8] : 8);
       try {
-        await move({ roomId: room.roomId, token, uci, ply: room.ply });
-        if (!positionStatus(applied.fen).over && settings.sound) playSound(executingPremove.current && moveSound(applied) === "move" ? "premove_execute" : moveSound(applied), settings.volume, { key: `move:${room.roomId}:${room.ply + 1}` });
+        const acknowledgement = await move({ roomId: room.roomId, token, uci, ply: room.ply });
+        if (!acknowledgement.ok) { setPending(null); return false; }
+        const terminal = acknowledgement.terminal ?? statusFromPath(DEFAULT_POSITION, [...room.moves.map((move) => move.uci), uci])?.over ?? false;
+        if (!terminal && settings.sound) playSound(executingPremove.current && moveSound(applied) === "move" ? "premove_execute" : moveSound(applied), settings.volume, { key: `move:${room.roomId}:${room.ply + 1}` });
         setError(null);
       } catch (e) {
         setPending(null);
@@ -186,7 +188,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       }
       return true;
     },
-    [you, active, room.fen, room.ply, room.roomId, pending, move, token, settings.sound, settings.volume, settings.haptics],
+    [you, active, room.fen, room.ply, room.moves, room.roomId, pending, move, token, settings.sound, settings.volume, settings.haptics],
   );
 
   // Clocks tick locally from the server's turn start (corrected for clock drift).

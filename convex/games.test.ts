@@ -278,6 +278,18 @@ describe("games", () => {
     expect(await timed.user.query(api.progress.nameplate, { gameKey: timed.gameKey })).toMatchObject({ games: 0, delta: null });
   });
 
+  it("loads a long imported line completely instead of exposing a missing head", async () => {
+    const t = setup();
+    const user = t.withIdentity(alice);
+    const pgn = Array.from({ length: 550 }, (_, i) => `${i * 2 + 1}. Nf3 Nf6 ${i * 2 + 2}. Ng1 Ng8`).join(" ") + " *";
+    await user.mutation(api.games.importGame, { opId: opId(), gameKey: "long-import", pgn, humanColor: "w" });
+    const snap = await user.query(api.games.get, { gameKey: "long-import" });
+    expect(snap?.nodes).toHaveLength(2201);
+    expect(snap?.truncated).toBe(false);
+    const head = snap?.branches.find((line) => line.branchKey === snap.game.activeBranchKey)?.headKey;
+    expect(snap?.nodes.some((node) => node.key === head)).toBe(true);
+  });
+
   it("imports PGN with variations", async () => {
     const t = setup();
     const user = t.withIdentity(alice);

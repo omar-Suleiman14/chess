@@ -204,6 +204,7 @@ export const cancel = mutation({
 });
 
 export const move = mutation({
+  returns: v.union(v.object({ ok: v.literal(true), terminal: v.optional(v.boolean()) }), v.object({ ok: v.literal(false), reason: v.literal("flag") })),
   args: { roomId: v.id("onlineRooms"), token: v.string(), uci: v.string(), ply: v.number() },
   handler: async (ctx, args) => {
     const room = await requireRoom(ctx, args.roomId);
@@ -219,7 +220,7 @@ export const move = mutation({
     let clocks = liveClocks(room, now);
     if (clocks && room.turnStartedAt !== null && clocks[seat] <= 0) {
       await finish(ctx, room, timeoutOutcome(room.fen, seat), "timeout", clocks);
-      return { ok: false as const, reason: "flag" };
+      return { ok: false as const, reason: "flag" as const };
     }
     if (clocks) clocks = { ...clocks, [seat]: clocks[seat] + (room.ply > 0 ? (room.incrementMs ?? 0) : 0) };
 
@@ -246,7 +247,7 @@ export const move = mutation({
       const next = other(seat);
       await ctx.scheduler.runAfter(clocks[next] + 50, internal.online.checkFlag, { roomId: room._id, ply: room.ply + 1 });
     }
-    return { ok: true as const };
+    return { ok: true as const, terminal: status?.over === true };
   },
 });
 

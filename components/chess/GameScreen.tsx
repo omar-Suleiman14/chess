@@ -76,7 +76,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const onPremoveExecution = useCallback((active: boolean) => { executingPremove.current = active; }, []);
 
   const onMove = useCallback(
-    ({ applied, by, node }: MoveEvent) => {
+    ({ applied, by, node, terminal }: MoveEvent) => {
       const castle = applied.flags.includes("k") || applied.flags.includes("q");
       let rookFrom: Square | undefined;
       let rookTo: Square | undefined;
@@ -90,7 +90,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       setAnnouncement(`${by === "fatma" ? "Sherine: " : ""}${describeMove(applied, mover)}`);
       if (settings.sound) {
         // The result effect plays the ending once, after the final move.
-        if (!positionStatus(applied.fen).over) playSound(applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : executingPremove.current ? "premove_execute" : by === "fatma" ? "opponent_move" : "move", settings.volume, { key: `move:${node.key}` });
+        if (!terminal) playSound(applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : executingPremove.current ? "premove_execute" : by === "fatma" ? "opponent_move" : "move", settings.volume, { key: `move:${node.key}` });
       }
       if (settings.haptics && by === "human") haptic(applied.captured ? [8, 30, 8] : 8);
       if (by === "human") {

@@ -1,4 +1,5 @@
 import lighthouse from "lighthouse";
+import { sanitizeEvidence } from "./sanitize-evidence.mjs";
 import { launch } from "chrome-launcher";
 import { mkdir, writeFile } from "node:fs/promises";
 
@@ -10,7 +11,7 @@ try {
   for (const formFactor of ["desktop", "mobile"]) {
     const result = await lighthouse(process.env.QA_URL ?? "http://127.0.0.1:3100", { port: chrome.port, output: "json", onlyCategories: ["performance", "accessibility"], formFactor, screenEmulation: formFactor === "desktop" ? { mobile: false, width: 1366, height: 768, deviceScaleFactor: 1, disabled: false } : undefined });
     if (!result) throw new Error("Lighthouse returned no report");
-    await writeFile(`${directory}/${formFactor}.json`, result.report);
+    await writeFile(`${directory}/${formFactor}.json`, JSON.stringify(sanitizeEvidence(JSON.parse(result.report))));
     const audits = result.lhr.audits;
     rows.push({ formFactor, performance: result.lhr.categories.performance.score, accessibility: result.lhr.categories.accessibility.score, lcpLabMs: audits["largest-contentful-paint"].numericValue, clsLab: audits["cumulative-layout-shift"].numericValue, tbtLabMs: audits["total-blocking-time"].numericValue, initialTransferBytes: audits["total-byte-weight"].numericValue });
     // Controlled lab regression ceiling, distinct from the stricter field goals.

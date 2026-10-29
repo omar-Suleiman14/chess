@@ -27,7 +27,7 @@ export type NewGameOptions = {
   label?: string;
 };
 
-export type MoveEvent = { applied: AppliedMove; by: "human" | "fatma"; node: TreeNode };
+export type MoveEvent = { applied: AppliedMove; by: "human" | "fatma"; node: TreeNode; terminal: boolean };
 
 export function monotonicNow(): number {
   // timeOrigin + performance.now() is monotonic within a page and close to epoch ms across reloads.
@@ -143,7 +143,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
       const status = statusFromPath(tree.originFen, pathTo(tree, node.key).map((n) => n.uci));
       if (status?.over) next = finishLocally(next, status.outcome, status.reason);
       commit(next);
-      callbacks.current.onMove?.({ applied, by, node });
+      callbacks.current.onMove?.({ applied, by, node, terminal: status?.over === true });
       const fatmaColor: Color = g.meta.humanColor === "w" ? "b" : "w";
       if (!status?.over) {
         if (applied.check) callbacks.current.onFatma?.(mover === fatmaColor ? "check_given" : "check_received");

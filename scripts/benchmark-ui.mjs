@@ -2,6 +2,7 @@ import { chromium } from "@playwright/test";
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import os from "node:os";
+import { sanitizeEvidence } from "./sanitize-evidence.mjs";
 
 const option = (name, fallback) => process.argv.includes(`--${name}`) ? process.argv[process.argv.indexOf(`--${name}`) + 1] : fallback;
 const label = option("label", "current");
@@ -15,7 +16,7 @@ const scrollMs = Number(option("scroll-ms", "0"));
 const reviewSteps = Number(option("review-steps", "0"));
 const directory = `.cache/performance/${label}`;
 await mkdir(directory, { recursive: true });
-const presets = matrix === "baseline" ? [
+const allPresets = matrix === "baseline" ? [
   { name: "classic", appearance: "classic", glass: "off" },
   { name: "legacy-glass", appearance: "glass", glass: "on", glassQuality: "full" },
 ] : [
@@ -23,6 +24,8 @@ const presets = matrix === "baseline" ? [
   { name: "expressive", appearance: "expressive", glass: "off" },
   ...["full", "balanced", "minimal"].map((glassQuality) => ({ name: `glass-${glassQuality}`, appearance: "glass", glass: "on", glassQuality })),
 ];
+const presets = allPresets.filter((preset) => option("preset", "all") === "all" || preset.name === option("preset", "all"));
+if (!presets.length) throw new Error("Unknown benchmark preset");
 let executablePath = process.env.CHROME_PATH;
 if (!executablePath) { try { await access("/usr/bin/chromium"); executablePath = "/usr/bin/chromium"; } catch { /* Playwright's installed browser. */ } }
 const browser = await chromium.launch({ executablePath, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"], proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: "localhost,127.0.0.1" } : undefined });
@@ -102,7 +105,7 @@ try {
       const times = (name) => events.filter((event) => event.name === name && event.ph === "X" && (main === undefined || event.tid === main)).map((event) => event.dur / 1000);
       const paint = times("Paint");
       const layout = times("Layout");
-      if (run === 0 || option("traces", "first") === "all") await writeFile(`${directory}/${preset.name}-${background}-eval-${evaluation}-run-${run}.trace.json`, trace);
+      if (run === 0 || option("traces", "first") === "all") await writeFile(`${directory}/${preset.name}-${background}-eval-${evaluation}-run-${run}.trace.json`, JSON.stringify(sanitizeEvidence(JSON.parse(trace))));
       const frames = result.frames.slice(5);
       samples.push({ preset: preset.name, background, evaluation, run, boardReadyMs, moveToRafMs: result.visibleMoveMs, drawerMedianMs: percentile(drawerTimes, 0.5), drawerP95Ms: percentile(drawerTimes, 0.95), frameGapP95Ms: percentile(frames, 0.95), rafGapsOver25msPercent: frames.length ? frames.filter((n) => n > 25).length / frames.length * 100 : null, paintMs: paint.reduce((a, b) => a + b, 0), paintP95Ms: percentile(paint, 0.95), layoutMs: layout.reduce((a, b) => a + b, 0), longTaskCount: result.longTasks.length, lcpLabMs: result.lcp, clsLab: result.cls, metrics: Object.fromEntries(metrics.metrics.filter((m) => ["JSHeapUsedSize", "TaskDuration", "LayoutDuration", "RecalcStyleDuration"].includes(m.name)).map((m) => [m.name, m.value])), errors });
       await context.close();

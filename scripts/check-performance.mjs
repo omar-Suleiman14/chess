@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-const current = JSON.parse(await readFile(".cache/performance/current/summary.json", "utf8"));
+const current = JSON.parse(await readFile(process.argv[2] ?? ".cache/performance/current/summary.json", "utf8"));
 const failures = [];
 for (const row of current.summary) {
   if (row.errors.length) failures.push(`${row.preset}: browser errors`);

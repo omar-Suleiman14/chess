@@ -117,6 +117,16 @@ describe("online rooms", () => {
     await expect(t.mutation(api.online.join, { code, token: GUEST, name: "x" })).resolves.toMatchObject({ color: "b" });
   });
 
+  it("acknowledges repetition as terminal so the result cue can replace the move cue", async () => {
+    const t = setup();
+    const { roomId, code } = await startGame(t);
+    const line = ["g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"];
+    for (const [ply, uci] of line.entries()) {
+      expect(await t.mutation(api.online.move, { roomId, token: ply % 2 ? GUEST : HOST, uci, ply })).toEqual({ ok: true, terminal: ply === line.length - 1 });
+    }
+    expect(await view(t, code, HOST)).toMatchObject({ status: "finished", result: "1/2-1/2", resultReason: "threefold" });
+  });
+
   it("ends on checkmate", async () => {
     const t = setup();
     const { roomId, code } = await startGame(t);
