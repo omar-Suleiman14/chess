@@ -21,7 +21,7 @@ import { installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/c
 import { haptic, type HapticEvent } from "@/lib/client/haptics";
 import { useSync } from "@/lib/client/sync";
 import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from "@/lib/client/useChessGame";
-import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
+import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useDisplayedEvaluation, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
 import { useFatma } from "@/lib/client/useFatma";
 import { usePremove } from "@/lib/client/usePremove";
 import { HINT_COPY } from "./HintPanel";
@@ -198,8 +198,12 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     const parent = node.parentKey ? tree?.nodes[node.parentKey] : undefined;
     return parent && sideToMove(parent.fen) === human;
   });
+  // Move feedback (Best, Inaccuracy, Blunder…) in every bot game, like chess.com's coach.
+  // It only grades a move already played; explanations of the better move still need consent in rated games.
   const coach = useMoveCoach(lastHumanMove, lastHumanMove?.parentKey ? tree?.nodes[lastHumanMove.parentKey]?.fen : undefined,
-    coachingAllowed && (coaching.moveFeedback || coaching.explanations) && (!active || turn === human));
+    (coaching.moveFeedback || (coachingAllowed && coaching.explanations)) && (!active || turn === human));
+  const feedback = coaching.moveFeedback && coach?.kind === "ready" && lastHumanMove ? MOVE_QUALITY[coach.review.quality] : null;
+  const moveBadge = useMemo(() => feedback && lastHumanMove ? { square: lastHumanMove.uci.slice(2, 4) as Square, symbol: feedback.symbol, label: `${lastHumanMove.san}: ${feedback.label}`, color: feedback.color } : undefined, [feedback, lastHumanMove]);
   const checkSq = status.check ? kingSquare(fen, sideToMove(fen)) ?? null : null;
   const viewLastMove = useMemo<LastMove>(() => reviewing
     ? viewNode && viewNode.ply > 0
@@ -318,10 +322,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     const timer = setTimeout(() => setHintTimedOut(hintContext), 8_000);
     return () => clearTimeout(timer);
   }, [hintContext, hintStage]);
-  const evaluation = useEvaluation(fen, viewNode?.key ?? "root", (evalAllowed || (coachingAllowed && hintStage !== null)) && !status.over, onFinalEval, hintStage ? 10 : 0);
+  const evaluationNow = useEvaluation(fen, viewNode?.key ?? "root", (evalAllowed || (coachingAllowed && hintStage !== null)) && !status.over, onFinalEval, hintStage ? 10 : 0);
+  const evaluation = evaluationNow;
+  const shownEval = useDisplayedEvaluation(evaluationNow, evalAllowed);
   const hintEvidence = useMemo(() => hintStage && evaluation?.final && evaluation.fen === fen ? buildHint(fen, evaluation.bestmove, evaluation.depth, "en") : null, [hintStage, evaluation, fen]);
   // Like chess.com: first tap lights up the piece to move, second tap shows the move, third clears it.
   const hintSquares = useMemo(() => hintStage && hintEvidence ? hintStage === 1 ? [hintEvidence.move.from] : [hintEvidence.move.from, hintEvidence.move.to] : [], [hintStage, hintEvidence]);
+  const hintArrow = useMemo(() => hintStage && hintStage >= 2 && hintEvidence ? { from: hintEvidence.move.from, to: hintEvidence.move.to } : undefined, [hintStage, hintEvidence]);
   const hintStatus = !hintStage ? null : !hintEvidence ? (hintTimedOut === hintContext ? "Hint unavailable" : "Finding a hint…") : hintStage === 1 ? `Hint · ${hintEvidence.highlight}` : `Hint · ${hintEvidence.move.san}`;
   const requestHint = async (consented = false) => {
     if (hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine()) return;
@@ -427,6 +434,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const forwardHold = useHoldRepeat(() => step(1), !reviewing);
   const hintDisabled = hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine();
   const resultText = game?.meta.status === "finished" ? resultLine(game.meta.result, game.meta.resultReason, human, botName) : null;
+  // Stable object: the board only re-renders when the result really changes.
+  const boardResult = useMemo(() => resultText && game && !reviewing ? { result: game.meta.result, reason: game.meta.resultReason } : undefined, [resultText, game?.meta.result, game?.meta.resultReason, reviewing]); // eslint-disable-line react-hooks/exhaustive-deps
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
 
   return (
@@ -464,11 +473,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="flex h-[calc(100%-44px)]" />
         </details>
         {hintFailure && <p role="alert" className="p-3 text-sm text-danger">{hintCopy.error}</p>}
-        {(coaching.moveFeedback || coaching.explanations) && <section aria-label="Optional coaching" className="shrink-0 border-t border-line bg-surface p-3 text-sm" aria-live="polite">
-          {!coachingAllowed ? <button onClick={() => { void chess.markAssisted("engine_lines").then((ok) => { if (!ok) setHintFailure(true); }); }} className="min-h-11 underline">Enable coaching · makes this game unrated</button> : <>
-            {coaching.moveFeedback && <p>{coach?.kind === "ready" ? `${lastHumanMove?.san}: ${MOVE_QUALITY[coach.review.quality].label}` : coach?.kind === "unavailable" ? "Move analysis unavailable at sufficient depth." : lastHumanMove ? "Analyzing move…" : "Play a move to start review."}</p>}
-            {coaching.explanations && coach?.kind === "ready" && <p className="mt-1 text-muted">{coach.review.quality === "best" ? "Matches the engine's best move." : `${coach.review.bestSan} was the engine alternative. Evaluation loss: ${(coach.review.lossCp / 100).toFixed(2)} pawns.`}</p>}
-          </>}
+        {coaching.explanations && <section aria-label="Coach explanation" className="shrink-0 rounded-2xl bg-surface p-3 text-sm lg:rounded-none lg:border-t lg:border-line" aria-live="polite">
+          {!coachingAllowed ? <button onClick={() => { void chess.markAssisted("engine_lines").then((ok) => { if (!ok) setHintFailure(true); }); }} className="min-h-11 underline">Show explanations · makes this game unrated</button>
+            : coach?.kind === "ready" ? <p className="text-muted">{coach.review.quality === "best" ? "Matches the engine's best move." : `${coach.review.bestSan} was better. Evaluation loss: ${(coach.review.lossCp / 100).toFixed(2)} pawns.`}</p>
+            : <p className="text-muted">{lastHumanMove ? "Reviewing your move…" : "Play a move to see the coach's take."}</p>}
         </section>}
       </div>
 
@@ -480,7 +488,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         <div className="game-position relative flex w-full flex-col items-stretch gap-1">
           {settings.evalBar && (evalAllowed ? (
             // Phones: inset from the screen edges with breathing room above the board.
-            <div className="max-lg:px-4 max-lg:pb-4 max-lg:pt-2"><EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} horizontal /></div>
+            <div className="max-lg:px-4 max-lg:pb-4 max-lg:pt-2"><EvalBar score={shownEval.evaluation?.score ?? null} stale={shownEval.stale} orientation={orientation} depth={shownEval.evaluation?.depth} reducedMotion={reducedMotion} horizontal /></div>
           ) : (
             <button
               onClick={() => {
@@ -493,7 +501,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           ))}
           <div className="relative min-w-0 w-full">
             <Board
-              result={resultText && game && !reviewing ? { result: game.meta.result, reason: game.meta.resultReason } : undefined}
+              result={boardResult}
+              moveBadge={moveBadge}
               fen={fen}
               orientation={orientation}
               movable={active && turn === human && !reviewing ? human : null}
@@ -504,7 +513,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               lastMove={reviewing ? viewLastMove : lastMove}
               checkSquare={checkSq}
               hintSquares={hintSquares}
-              hintMove={hintStage && hintStage >= 2 && hintEvidence ? { from: hintEvidence.move.from, to: hintEvidence.move.to } : undefined}
+              hintMove={hintArrow}
               showLegalDots={settings.legalDots}
               coordinates={settings.coordinates}
               reducedMotion={reducedMotion}
@@ -534,6 +543,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         {/* Fixed-height status line: nothing here can resize the layout. */}
         <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted empty:hidden [grid-area:status] max-lg:px-3 lg:justify-start" aria-live="polite">
           {shareNote && <span className="font-medium text-ok" role="status">{shareNote}</span>}
+          {feedback && lastHumanMove && !hintStatus && <span className="flex items-center gap-1.5 font-semibold" style={{ color: feedback.color }} role="status"><span className="grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] text-white" style={{ background: feedback.color }} aria-hidden="true">{feedback.symbol}</span>{lastHumanMove.san} · {feedback.label}</span>}
           {hintStatus && <span className="truncate font-medium text-ink" role="status">{hintStatus}</span>}
           {premove.uci && <button onClick={premove.cancel} className="shrink-0 underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
           {engineWaking && <span>{botName} is waking up…</span>}

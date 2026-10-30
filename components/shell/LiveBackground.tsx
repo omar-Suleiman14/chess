@@ -19,9 +19,12 @@ export function LiveBackground({ reducedMotion }: { reducedMotion: boolean }) {
     void import("@/lib/client/glyphWind").then(({ default: GlyphWind }) => {
       if (cancelled) return;
       // The renderer fills seed, look and field itself in the lab; here we pick a fresh pattern each game visit.
-      const settings = GlyphWind.defaults() as unknown as { seed: number; look: string; field: unknown; power: { frameMs: number } };
-      // Few cores, little memory or Data Saver: draw half as often.
-      if (isWeakDevice()) settings.power.frameMs = 80;
+      const settings = GlyphWind.defaults() as unknown as { seed: number; look: string; field: unknown; power: { frameMs: number; rippleFrameMs: number }; grid: { maxDpr?: number } };
+      // Phones: the faint glyphs don't need retina pixels or 25 fps; this cuts the GPU work about 8×.
+      const phone = matchMedia("(pointer: coarse)").matches;
+      if (phone) { settings.grid.maxDpr = 1.25; settings.power.frameMs = 66; settings.power.rippleFrameMs = 33; }
+      // Few cores, little memory or Data Saver: draw half as often again.
+      if (isWeakDevice()) settings.power.frameMs = phone ? 100 : 80;
       settings.seed = (Math.random() * 2 ** 32) >>> 0;
       settings.look = GlyphWind.chooseLook(settings.seed, []);
       settings.field = GlyphWind.pattern(settings.seed, settings.look);

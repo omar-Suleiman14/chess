@@ -331,7 +331,7 @@ button {
     grid-template-areas: "header" "strip" "group" "moves" "status" "footer";
     grid-template-rows: auto auto auto 1fr auto auto;
     /* Everything but the board: strip 44, two player rows (~66 each), eval 24, status 24, bar 60, plus safe areas. */
-    max-width: min(100%, max(300px, calc(100dvh - 336px - env(safe-area-inset-top) - env(safe-area-inset-bottom))));
+    max-width: min(100%, max(300px, calc(100dvh - 288px - env(safe-area-inset-top) - env(safe-area-inset-bottom))));
   }
   .game-strip { grid-area: strip; border-bottom: 1px solid var(--line); background: var(--bg); }
   .game-opponent, .game-player { min-height: 56px; margin: 0; padding-block: 6px; }
