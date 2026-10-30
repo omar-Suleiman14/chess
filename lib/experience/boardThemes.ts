@@ -1,4 +1,5 @@
-import type { PieceSet } from "@/components/chess/Pieces";
+/** Piece set ids (same as components/chess/Pieces); kept here so the backend can share this file. */
+export type ThemePieces = "cburnett" | "merida" | "chessnut" | "mpchess" | "fantasy";
 
 /**
  * Board themes: board colours, a matching piece set and a scene for the
@@ -10,7 +11,7 @@ export type BoardTheme = {
   name: string;
   light: string;
   dark: string;
-  pieces: PieceSet;
+  pieces: ThemePieces;
   /** CSS background for the picker row. */
   art: string;
 };

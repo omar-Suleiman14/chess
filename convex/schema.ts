@@ -28,6 +28,8 @@ export const settingsValidator = v.object({
   highContrast: v.optional(v.boolean()),
   glass: v.optional(v.union(v.literal("auto"), v.literal("on"), v.literal("off"))),
   livingBackground: v.optional(v.boolean()),
+  /** Board theme id (colours + pieces) or "" for the board palette; checked against the theme list on save. */
+  boardTheme: v.optional(v.string()),
 });
 
 /** A player's avatar in an online room: the same seed/hue pair as a chess profile. */

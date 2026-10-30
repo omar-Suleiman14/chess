@@ -35,6 +35,8 @@ export type Settings = {
   glass: "auto" | "on" | "off";
   /** Faint drifting characters behind the app that ripple when you tap empty space. */
   livingBackground: boolean;
+  /** Board theme id (colours + pieces), or "" to use the board palette. Synced with the account. */
+  boardTheme: string;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: Settings = {
   highContrast: false,
   glass: "off",
   livingBackground: false,
+  boardTheme: "",
 };
 
 const KEY = "cbc.settings.v1";
@@ -96,6 +99,7 @@ export function fromSaved(saved: unknown): Settings {
   if (!["ivory", "sage", "slate", "blue"].includes(next.palette)) next.palette = "ivory";
   if (!["system", "full", "reduced"].includes(next.motion)) next.motion = "system";
   if (!["en", "egy", "franco"].includes(next.fatmaLanguage)) next.fatmaLanguage = "en";
+  if (typeof next.boardTheme !== "string" || (next.boardTheme !== "" && !findBoardTheme(next.boardTheme))) next.boardTheme = "";
   if (!Number.isFinite(next.volume)) next.volume = DEFAULT_SETTINGS.volume;
   next.volume = Math.min(1, Math.max(0, next.volume));
   return next;
@@ -106,7 +110,10 @@ function load(): { settings: Settings; changedAt: number } {
     const raw = localStorage.getItem(KEY);
     const changedAt = Number(localStorage.getItem(CHANGED_KEY)) || 0;
     if (!raw) return { settings: DEFAULT_SETTINGS, changedAt };
-    const next = fromSaved(JSON.parse(raw));
+    const parsed: unknown = JSON.parse(raw);
+    const next = fromSaved(parsed);
+    // Themes used to be saved per device; carry that choice into synced settings.
+    if (!(parsed && typeof parsed === "object" && "boardTheme" in parsed)) next.boardTheme = findBoardTheme(localStorage.getItem(BOARD_THEME_KEY))?.id ?? "";
     try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* Keep readable preferences when writes are blocked. */ }
     return { settings: next, changedAt };
   } catch {
@@ -168,7 +175,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const experienceSupported = useRef(false);
   const [hapticStrength, setHapticStrength] = useState<Exclude<HapticLevel, "off">>("standard");
   const [chesscomSounds, setChesscomState] = useState(false);
-  const [boardTheme, setBoardThemeState] = useState("");
+  // Newer backends also store the board theme; older ones would reject the field.
+  const boardThemeSupported = useRef(false);
 
   const [hydrated, setHydrated] = useState(false);
   const changedAt = useRef(0);
@@ -185,7 +193,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
     setHapticStrength(loadHapticStrength());
     try { setChesscomState(localStorage.getItem(CHESSCOM_KEY) === "on"); } catch { /* Off. */ }
-    try { setBoardThemeState(findBoardTheme(localStorage.getItem(BOARD_THEME_KEY))?.id ?? ""); } catch { /* Palette. */ }
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setSystemReduced(media.matches);
     const onChange = () => setSystemReduced(media.matches);
@@ -204,10 +211,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useConvexAuth();
   const convex = useConvex();
   useEffect(() => {
-    if (!isAuthenticated) { experienceSupported.current = false; return; }
+    if (!isAuthenticated) { experienceSupported.current = false; boardThemeSupported.current = false; return; }
     let cancelled = false;
-    void convex.query(api.settings.capabilities, {}).then(() => {
-      if (!cancelled) { experienceSupported.current = true; setSyncsExperience(true); }
+    void convex.query(api.settings.capabilities, {}).then((capabilities) => {
+      if (!cancelled) { experienceSupported.current = true; boardThemeSupported.current = capabilities.boardTheme === true; setSyncsExperience(true); }
     }).catch(() => { /* Older deployments retain device-only experience preferences. */ });
     return () => { cancelled = true; };
   }, [convex, isAuthenticated]);
@@ -231,8 +238,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
       // Failures (offline) are fine: the next load sees the newer local copy and pushes again.
-      const { experience, ...legacy } = latest.current;
-      void saveRemote({ settings: experienceSupported.current ? { ...legacy, experience } : legacy, changedAt: changedAt.current }).catch(() => {});
+      const { experience, boardTheme, ...legacy } = latest.current;
+      void saveRemote({ settings: { ...legacy, ...(experienceSupported.current ? { experience } : {}), ...(boardThemeSupported.current ? { boardTheme } : {}) }, changedAt: changedAt.current }).catch(() => {});
     }, SAVE_DELAY_MS);
   }, [saveRemote]);
   useEffect(() => () => {
@@ -245,7 +252,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (decision.action === "pull") {
       changedAt.current = decision.changedAt;
       const accountHasExperience = remote?.settings && typeof remote.settings === "object" && "experience" in remote.settings;
-      const adopted = { ...decision.settings, experience: accountHasExperience ? decision.settings.experience : latest.current.experience };
+      const accountHasTheme = remote?.settings && typeof remote.settings === "object" && "boardTheme" in remote.settings;
+      const adopted = { ...decision.settings, experience: accountHasExperience ? decision.settings.experience : latest.current.experience, boardTheme: accountHasTheme ? decision.settings.boardTheme : latest.current.boardTheme };
       latest.current = adopted;
       store(adopted, decision.changedAt);
       // Adopting the account's settings: syncing with an external store.
@@ -278,12 +286,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     configureChesscomSounds(on);
     try { localStorage.setItem(CHESSCOM_KEY, on ? "on" : "off"); } catch { /* This visit only. */ }
   }, []);
+  const boardTheme = settings.boardTheme;
   const setBoardTheme = useCallback((id: string) => {
     const theme = findBoardTheme(id);
-    setBoardThemeState(theme?.id ?? "");
-    try { localStorage.setItem(BOARD_THEME_KEY, theme?.id ?? ""); } catch { /* This visit only. */ }
-    // Themes that match a synced palette keep other devices in step; every theme brings its pieces.
-    if (theme) update({ pieceSet: theme.pieces, ...(["ivory", "sage", "slate", "blue"].includes(theme.id) ? { palette: theme.id as Palette } : {}) });
+    // A theme brings its pieces; palette themes also set the palette for older devices.
+    update({ boardTheme: theme?.id ?? "", ...(theme ? { pieceSet: theme.pieces } : {}), ...(theme && ["ivory", "sage", "slate", "blue"].includes(theme.id) ? { palette: theme.id as Palette } : {}) });
   }, [update]);
   useEffect(() => {
     const root = document.documentElement;

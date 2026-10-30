@@ -3,8 +3,14 @@ import { mutation, query } from "./_generated/server";
 import { fail, optionalOwner, requireOwner } from "./model/auth";
 import { settingsValidator } from "./schema";
 import { experienceSchema } from "../lib/experience/config";
+import { findBoardTheme } from "../lib/experience/boardThemes";
 
-export const capabilities = query({ args: {}, returns: v.object({ experienceVersion: v.literal(1) }), handler: async () => ({ experienceVersion: 1 as const }) });
+/** What this backend can store. Clients only send newer fields once it says so. */
+export const capabilities = query({
+  args: {},
+  returns: v.object({ experienceVersion: v.literal(1), boardTheme: v.optional(v.literal(true)) }),
+  handler: async () => ({ experienceVersion: 1 as const, boardTheme: true as const }),
+});
 
 /** The signed-in player's saved preferences, or null (signed out, or never saved). */
 export const mine = query({
@@ -29,6 +35,8 @@ export const save = mutation({
     const owner = await requireOwner(ctx);
     const { volume } = args.settings;
     if (args.settings.experience && !experienceSchema.safeParse(args.settings.experience).success) fail("bad_request", "Invalid experience preferences.");
+    const { boardTheme } = args.settings;
+    if (boardTheme !== undefined && boardTheme !== "" && !findBoardTheme(boardTheme)) fail("bad_request", "Unknown board theme.");
     if (volume !== undefined && (!Number.isFinite(volume) || volume < 0 || volume > 1)) fail("bad_request", "Volume must be between 0 and 1.");
     if (!Number.isFinite(args.changedAt)) fail("bad_request", "Bad timestamp.");
     const now = Date.now();

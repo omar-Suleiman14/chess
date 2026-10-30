@@ -23,6 +23,14 @@ describe("isWeakDevice", () => {
 });
 
 describe("settings sync", () => {
+  it("keeps a known board theme, drops unknown ones, and pulls it from the account", () => {
+    expect(fromSaved(null).boardTheme).toBe("");
+    expect(fromSaved({ boardTheme: "walnut" }).boardTheme).toBe("walnut");
+    expect(fromSaved({ boardTheme: "neon" }).boardTheme).toBe("");
+    expect(fromSaved({ boardTheme: 4 }).boardTheme).toBe("");
+    expect(resolveSettingsSync(0, { settings: { boardTheme: "cosmos" }, changedAt: 5 })).toMatchObject({ action: "pull", settings: { boardTheme: "cosmos" } });
+  });
+
   it("resolves every retired Liquid Glass / Material choice to Classic", () => {
     expect(fromSaved(null).glass).toBe("off");
     expect(fromSaved({ glass: "auto" }).glass).toBe("off");
