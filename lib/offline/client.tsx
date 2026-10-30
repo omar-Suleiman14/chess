@@ -35,9 +35,10 @@ function start(): void {
   set({ state: "preparing", done: 0, total: 0 });
   navigator.serviceWorker.addEventListener("message", (event) => {
     const data = event.data ?? {};
-    if (data.type === "offline-progress") set({ state: "preparing", done: data.done, total: data.total });
-    else if (data.type === "offline-ready") set({ state: "ready", version: data.version, updateReady: !!waiting });
-    else if (data.type === "offline-error") set({ state: "error", message: data.message });
+    // Once ready, an update downloading (or failing) in the background never hides that the current version works offline.
+    if (data.type === "offline-progress") { if (status.state !== "ready") set({ state: "preparing", done: data.done, total: data.total }); }
+    else if (data.type === "offline-ready") { if (status.state !== "ready") set({ state: "ready", version: data.version, updateReady: !!waiting }); }
+    else if (data.type === "offline-error") { if (status.state !== "ready") set({ state: "error", message: data.message }); }
   });
   // Wait for the page to finish loading so caching never competes with first paint.
   const register = () => {
@@ -47,7 +48,7 @@ function start(): void {
         worker.addEventListener("statechange", () => {
           if (worker.state === "installed" && registration.active) { waiting = worker; if (status.state === "ready") set({ ...status, updateReady: true }); }
           if (worker.state === "activated") void ask(worker);
-          if (worker.state === "redundant" && status.state === "preparing") set({ state: "error", message: "Download interrupted. It will retry next time you're online." });
+          if (worker.state === "redundant" && status.state !== "ready") set({ state: "error", message: "Download interrupted. It will retry next time you're online." });
         });
       };
       if (registration.waiting && registration.active) waiting = registration.waiting;

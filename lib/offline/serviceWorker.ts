@@ -21,6 +21,8 @@ const SHELL = "cbc-shell-" + VERSION;
 const ASSETS = "cbc-assets-" + VERSION;
 const RUNTIME = "cbc-runtime";
 const READY = "/__offline_ready";
+const FILE_SET = new Set(FILES);
+const DYNAMIC_PAGE = /^\/(game|time-machine|learn)\/[^/]+$/;
 const NETWORK_ONLY = /^\/(api|mcp|trpc|sw\.js|__clerk|\.well-known|_next\/image|bench)(\/|$)/;
 let progress = { done: 0, total: PAGES.length + FILES.length, error: null };
 
@@ -53,13 +55,15 @@ async function precache() {
   const runtime = await caches.open(RUNTIME);
   const discovered = new Set();
   progress = { done: 0, total: PAGES.length + FILES.length, error: null };
-  for (const page of PAGES) {
-    const response = await fetchOk(page, { credentials: "omit", cache: "no-store", redirect: "follow" });
-    const html = await response.text();
-    for (const asset of assetsIn(html)) if (!FILES.includes(asset)) discovered.add(asset);
-    // Store a plain (non-redirected) copy: browsers refuse redirected responses for navigations.
-    await shell.put(page, new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }));
-    progress.done++;
+  for (let index = 0; index < PAGES.length; index += 4) {
+    await Promise.all(PAGES.slice(index, index + 4).map(async (page) => {
+      const response = await fetchOk(page, { credentials: "omit", cache: "no-store", redirect: "follow" });
+      const html = await response.text();
+      for (const asset of assetsIn(html)) if (!FILE_SET.has(asset)) discovered.add(asset);
+      // Store a plain (non-redirected) copy: browsers refuse redirected responses for navigations.
+      await shell.put(page, new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }));
+      progress.done++;
+    }));
     progress.total = PAGES.length + FILES.length + discovered.size;
     broadcast({ type: "offline-progress", done: progress.done, total: progress.total });
   }
@@ -74,7 +78,7 @@ async function precache() {
     }));
     broadcast({ type: "offline-progress", done: progress.done, total: progress.total });
   }
-  await assets.put(READY, new Response(JSON.stringify({ version: VERSION, at: Date.now(), files: progress.total }), { headers: { "Content-Type": "application/json" } }));
+  await assets.put(READY, new Response(JSON.stringify({ version: VERSION, at: Date.now(), files: progress.total, scripts: [...discovered] }), { headers: { "Content-Type": "application/json" } }));
   broadcast({ type: "offline-ready", version: VERSION });
 }
 
@@ -92,6 +96,13 @@ self.addEventListener("activate", (event) => {
     for (const name of await caches.keys()) {
       if ((name.startsWith("cbc-shell-") && name !== SHELL) || (name.startsWith("cbc-assets-") && name !== ASSETS)) await caches.delete(name);
     }
+    // Drop scripts from older deploys so storage doesn't grow forever (current ones re-cache on use).
+    try {
+      const meta = await (await caches.open(ASSETS)).match(READY);
+      const keep = new Set(meta ? (await meta.json()).scripts || [] : []);
+      const runtime = await caches.open(RUNTIME);
+      if (keep.size) for (const request of await runtime.keys()) if (!keep.has(new URL(request.url).pathname)) await runtime.delete(request);
+    } catch (error) { /* Pruning is best effort. */ }
     // First install: take over open pages so they work offline without a reload.
     await self.clients.claim();
   })());
@@ -111,18 +122,34 @@ async function fromCaches(request) {
   return (await caches.match(request, { ignoreSearch: false })) || null;
 }
 
+function rememberPage(path) {
+  // A signed-out copy of a visited game/review/lesson page, so it reopens offline. Bounded.
+  fetch(path, { credentials: "omit", cache: "no-store" }).then(async (response) => {
+    if (!response.ok || response.redirected) return;
+    const shell = await caches.open(SHELL);
+    await shell.put(path, new Response(await response.text(), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }));
+    const dynamic = (await shell.keys()).filter((request) => DYNAMIC_PAGE.test(new URL(request.url).pathname) && !PAGES.includes(new URL(request.url).pathname));
+    for (const request of dynamic.slice(0, Math.max(0, dynamic.length - 40))) await shell.delete(request);
+  }).catch(() => {});
+}
+
 async function navigation(request) {
   const url = new URL(request.url);
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 6000);
-    const response = await fetch(request, { signal: controller.signal });
-    clearTimeout(timer);
+  const path = url.pathname.replace(/\/$/, "") || "/";
+  const shell = await caches.open(SHELL);
+  const cached = await shell.match(path);
+  const network = fetch(request).then((response) => {
+    if (response.ok && DYNAMIC_PAGE.test(path) && !PAGES.includes(path)) rememberPage(path);
     return response;
+  });
+  network.catch(() => {});
+  try {
+    // Slow but working connections still get the live page; only a cached copy may win a long wait.
+    if (!cached) return await network;
+    return await Promise.race([network, new Promise((resolve) => setTimeout(() => resolve(cached), 8000))]);
   } catch (error) {
-    const shell = await caches.open(SHELL);
-    const path = url.pathname.replace(/\/$/, "") || "/";
-    return (await shell.match(path)) || (await shell.match("/")) || new Response("<!doctype html><meta name=viewport content='width=device-width'><title>Offline</title><body style='font-family:system-ui;padding:24px'><h1>Offline</h1><p>Open Chess by Chaos once with internet to get it ready for offline play.</p>", { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
+    // Unknown pages offline get an honest page with a way back, never another page's HTML.
+    return cached || new Response("<!doctype html><meta name=viewport content='width=device-width'><title>Offline</title><body style='font-family:system-ui;padding:24px'><h1>Offline</h1><p>This page hasn't been saved for offline use yet. Your games, bots and lessons still work.</p><p><a href='/'>Play</a> · <a href='/time-machine'>Review</a> · <a href='/learn'>Learn</a></p>", { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 }
 
@@ -146,6 +173,6 @@ self.addEventListener("fetch", (event) => {
   // Route data (RSC) is never cached; if it fails, Next.js falls back to a full navigation, which the shell serves.
   if (request.headers.get("RSC") || url.searchParams.has("_rsc")) return;
   if (url.pathname.startsWith("/_next/static/")) { event.respondWith(cacheFirst(request, RUNTIME)); return; }
-  if (FILES.includes(url.pathname)) event.respondWith(cacheFirst(request, ASSETS));
+  if (FILE_SET.has(url.pathname)) event.respondWith(cacheFirst(request, ASSETS));
 });
 `;

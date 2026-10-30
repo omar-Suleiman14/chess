@@ -191,7 +191,7 @@ export const Board = memo(function Board({
       const piece = bySquare.get(square);
       // Like chess.com: with a premove queued, tapping its squares (or any square
       // that doesn't start a new move) cancels it. Picking another piece re-plans.
-      if (premove && onPremove && !selected) {
+      if (premove && onPremove && !selected && !movable) {
         const startsNew = !!piece && !!selectableColor && piece.color === selectableColor && targets.has(square);
         if (square === premove.slice(0, 2) || square === premove.slice(2, 4) || !startsNew) {
           onPremove(null);
@@ -212,7 +212,7 @@ export const Board = memo(function Board({
         setSelected(null);
       }
     },
-    [bySquare, selected, tryMove, selectableColor, targets, onSelect, flagIllegal, premove, onPremove],
+    [bySquare, selected, tryMove, selectableColor, targets, onSelect, flagIllegal, premove, onPremove, movable],
   );
 
   const squareFromPoint = (clientX: number, clientY: number): Square | null => {

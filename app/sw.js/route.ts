@@ -26,9 +26,10 @@ function publicFiles(): string[] {
 export function GET() {
   const version = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ?? new Date().toISOString();
   const body = SERVICE_WORKER_SOURCE
-    .replace("__VERSION__", JSON.stringify(version))
-    .replace("__PAGES__", JSON.stringify(PAGES))
-    .replace("__FILES__", JSON.stringify([...publicFiles(), "/manifest.webmanifest"]));
+    // Replacer functions: "$&"-style patterns in file names must stay literal.
+    .replace("__VERSION__", () => JSON.stringify(version))
+    .replace("__PAGES__", () => JSON.stringify(PAGES))
+    .replace("__FILES__", () => JSON.stringify([...publicFiles(), "/manifest.webmanifest"]));
   return new Response(body, {
     headers: {
       "Content-Type": "application/javascript; charset=utf-8",
