@@ -14,9 +14,11 @@ Open **Settings → Sound & feel → Haptics** and choose **Off**, **Subtle** or
 
 Subtle shortens pulses and skips the opponent's quiet moves. Off stops feedback immediately. The strength is saved per device.
 
-## Phone navigation
+## Navigation
 
-On phones, five tabs sit above the home indicator: **Play**, **Bots**, **Learn**, **Review** and **More** (Settings, Profile, Friends and everything else). Each tab remembers the last page you had open; tap it again to go back to its start. Once a game is underway the tabs step aside for the game toolbar (**Options**, **Undo**, move arrows). **Options** includes **Go to** buttons to leave the game.
+On phones, five tabs sit above the home indicator: **Play**, **Bots**, **Learn**, **Review** and **More** (Timed games, Play a friend, Friends, Profile, Progress, Settings, help and your account). Each tab remembers the last page you had open; tap it again to go back to its start. Game screens are full screen with **Options · Hint · Back · Forward** at the bottom; **Options → Go to** leaves the game. On a computer the same destinations are in the left sidebar.
+
+**Hints** work like chess.com: tap **Hint** once to light up the piece to move, again to see the move, again to clear it. Hints are always in English; only Sherine's and Maya's chat follows the language you choose.
 
 ## Live background and board themes
 

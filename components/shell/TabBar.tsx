@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Link from "@/components/navigation/PrefetchLink";
-import type { ReactNode } from "react";
 import { haptic } from "@/lib/client/haptics";
 import { markTabNavigation } from "@/lib/client/navIntent";
+import { NavIcon } from "./NavIcon";
 
 export type TabId = "play" | "bots" | "learn" | "review" | "more";
 
@@ -16,10 +16,10 @@ export const TABS: Tab[] = [
   { id: "bots", label: "Bots", href: "/climb" },
   { id: "learn", label: "Learn", href: "/learn" },
   { id: "review", label: "Review", href: "/time-machine" },
-  { id: "more", label: "More", href: "/settings" },
+  { id: "more", label: "More", href: "/more" },
 ];
 
-/** Which tab a route belongs to. Anything that isn't a game, bot, lesson or review lives under More. */
+/** Which tab a route belongs to. Anything that isn't a game, bot, lesson or review lives under More (/more). */
 export function tabFor(pathname: string): TabId {
   const first = pathname.split("/")[1] ?? "";
   if (first === "" || first === "game" || first === "play" || first === "timed") return "play";
@@ -40,47 +40,6 @@ export function showsTabs(pathname: string): boolean {
 }
 
 const SPRING = { type: "spring" as const, stiffness: 520, damping: 40, mass: 0.8 };
-
-function Icon({ id, active }: { id: TabId; active: boolean }) {
-  const fill = active ? 0.16 : 0;
-  const common = { fill: "none", stroke: "currentColor", strokeWidth: active ? 2 : 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  const shapes: Record<TabId, ReactNode> = {
-    // A board corner: four squares, two of them filled.
-    play: <>
-      <rect x="4" y="4" width="16" height="16" rx="3" {...common} fill="currentColor" fillOpacity={fill} />
-      <path d="M4 12h16M12 4v16" {...common} />
-      <path d="M5.5 5.5h5v5h-5zM13.5 13.5h5v5h-5z" fill="currentColor" stroke="none" opacity={active ? 0.9 : 0.55} />
-    </>,
-    // A friendly machine face.
-    bots: <>
-      <rect x="4.5" y="7.5" width="15" height="12" rx="4" {...common} fill="currentColor" fillOpacity={fill} />
-      <path d="M12 7.5V4.5" {...common} />
-      <circle cx="12" cy="3.8" r="1.1" fill="currentColor" />
-      <circle cx="9.3" cy="13" r="1.35" fill="currentColor" />
-      <circle cx="14.7" cy="13" r="1.35" fill="currentColor" />
-      <path d="M10 16.4h4" {...common} />
-    </>,
-    // An open book.
-    learn: <>
-      <path d="M12 6.5C10 5 7 4.6 4 5v13c3-.4 6 0 8 1.5 2-1.5 5-1.9 8-1.5V5c-3-.4-6 0-8 1.5z" {...common} fill="currentColor" fillOpacity={fill} />
-      <path d="M12 6.5v13" {...common} />
-    </>,
-    // A clock turning back: Time Machine.
-    review: <>
-      <path d="M4.8 9A8 8 0 1 1 4 12" {...common} />
-      <path d="M4 5v4h4" {...common} />
-      <circle cx="12" cy="12" r="5.2" fill="currentColor" opacity={fill} />
-      <path d="M12 8v4l2.6 1.6" {...common} />
-    </>,
-    more: <>
-      <circle cx="12" cy="12" r="8.5" {...common} fill="currentColor" fillOpacity={fill} />
-      <circle cx="8.2" cy="12" r="1.15" fill="currentColor" />
-      <circle cx="12" cy="12" r="1.15" fill="currentColor" />
-      <circle cx="15.8" cy="12" r="1.15" fill="currentColor" />
-    </>,
-  };
-  return <svg viewBox="0 0 24 24" className="h-[25px] w-[25px]" aria-hidden="true">{shapes[id]}</svg>;
-}
 
 type Props = {
   visible: boolean;
@@ -123,7 +82,7 @@ export function TabBar({ visible, active, reducedMotion, hrefFor, onSelect }: Pr
                       animate={current && !reducedMotion ? { scale: [1, 1.12, 1] } : { scale: 1 }}
                       transition={{ duration: 0.28, ease: [0.3, 0.7, 0.2, 1] }}
                     >
-                      <Icon id={tab.id} active={current} />
+                      <NavIcon name={tab.id} active={current} />
                     </motion.span>
                   </span>
                   <span className={`text-[11px] leading-none tracking-[0.01em] ${current ? "font-semibold text-ink" : "font-medium"}`}>{tab.label}</span>
@@ -132,24 +91,18 @@ export function TabBar({ visible, active, reducedMotion, hrefFor, onSelect }: Pr
               const className = `flex h-full w-full touch-manipulation select-none flex-col items-center justify-center gap-[3px] transition-colors active:opacity-70 ${current ? "text-ink" : "text-muted"}`;
               return (
                 <li key={tab.id} className="min-w-0">
-                  {tab.id === "more" ? (
-                    <button type="button" onClick={(e) => onSelect(tab, e)} className={className} aria-haspopup="dialog" aria-current={current ? "page" : undefined}>
-                      {content}
-                    </button>
-                  ) : (
-                    <Link
-                      href={hrefFor(tab)}
-                      onClick={(e) => {
-                        haptic("select");
-                        markTabNavigation();
-                        onSelect(tab, e);
-                      }}
-                      className={className}
-                      aria-current={current ? "page" : undefined}
-                    >
-                      {content}
-                    </Link>
-                  )}
+                  <Link
+                    href={hrefFor(tab)}
+                    onClick={(e) => {
+                      haptic("select");
+                      markTabNavigation();
+                      onSelect(tab, e);
+                    }}
+                    className={className}
+                    aria-current={current ? "page" : undefined}
+                  >
+                    {content}
+                  </Link>
                 </li>
               );
             })}

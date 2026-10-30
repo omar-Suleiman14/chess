@@ -9,7 +9,7 @@ import { IOS_SPRING } from "@/components/ui/Switch";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 export { Dialog } from "@/components/ui/Dialog";
-import { MenuButton, useGameFocus, useShell } from "@/components/shell/AppShell";
+import { useGameFocus, useShell } from "@/components/shell/AppShell";
 import type { TabId } from "@/components/shell/TabBar";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, remaining } from "@/lib/chess/clock";
@@ -438,7 +438,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <Button onClick={() => game?.meta.status === "finished" ? setResultVersion((version) => version + 1) : setShowNew(true)} className="h-11 shrink-0 rounded-full px-4 text-sm font-semibold lg:px-3" aria-label={game?.meta.status === "finished" ? "Show game result" : "New game"} aria-keyshortcuts="n">
             {game?.meta.status === "finished" ? "Result" : "New"}
           </Button>
-          <MenuButton />
         </div>
       </header>
 
