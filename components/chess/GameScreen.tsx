@@ -9,8 +9,7 @@ import { IOS_SPRING } from "@/components/ui/Switch";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 export { Dialog } from "@/components/ui/Dialog";
-import { useGameFocus, useShell } from "@/components/shell/AppShell";
-import type { TabId } from "@/components/shell/TabBar";
+import { useGameFocus } from "@/components/shell/AppShell";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, remaining } from "@/lib/chess/clock";
 import { botPersona, findOpponent, PERSONA_NAMES, type BotPersona } from "@/lib/chess/engine/opponents";
@@ -36,7 +35,9 @@ import { ReviewArrows, useHoldRepeat } from "./ReviewArrows";
 import { ClockChip } from "./ClockChip";
 import { GameBackground } from "@/components/shell/GameBackground";
 import { PlayerIdentity } from "./PlayerIdentity";
-import { FriendsButton, FriendsDialog } from "@/components/friends/FriendsButton";
+import { FriendsButton, FriendsSheet } from "@/components/friends/FriendsButton";
+import { GameMenu, GameSettingsSheet } from "./GameMenu";
+import { exportPgn } from "@/lib/chess/history/pgn";
 import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
 import { useMoveCoach } from "@/lib/client/useMoveCoach";
 import { useOnline } from "@/lib/offline/client";
@@ -54,7 +55,7 @@ type Props = {
 };
 
 export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props) {
-  const { settings, reducedMotion, update, updateExperience } = useSettings();
+  const { settings, reducedMotion, update } = useSettings();
   const { coaching } = useCoachingPreferences();
   // Maya in full-strength games, Sherine otherwise; follows the loaded game once it's known.
   const [persona, setPersona] = useState<BotPersona>(() => botPersona({ id: defaults.opponentId }));
@@ -65,7 +66,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const [lastMove, setLastMove] = useState<LastMove>(null);
   const [orientationOverride, setOrientationOverride] = useState<Color | null>(null);
   const [showNew, setShowNew] = useState(false);
-  const [showActions, setShowActions] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<DOMRect | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [resultVersion, setResultVersion] = useState(0);
   const [confirmResign, setConfirmResign] = useState(false);
   const [confirmUndo, setConfirmUndo] = useState(false);
@@ -409,6 +411,17 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   // bottom bar (Options · Hint · Back · Forward) instead of the tab bar.
   useGameFocus(true);
   const [showFriends, setShowFriends] = useState(false);
+  const shareGame = async () => {
+    if (!game) return;
+    const result = game.meta.result ?? "*";
+    const pgn = exportPgn(game.tree, { White: human === "w" ? "You" : botNameRef.current, Black: human === "b" ? "You" : botNameRef.current, Result: result, Date: new Date(game.tree.nodes.root.createdAt).toISOString().slice(0, 10).replaceAll("-", ".") });
+    try {
+      if (typeof navigator.share === "function") await navigator.share({ title: "Chess by Chaos game", text: pgn });
+      else { await navigator.clipboard.writeText(pgn); setAnnouncement("Game copied as PGN."); setShareNote("Game copied as PGN"); }
+    } catch { /* Share sheet dismissed. */ }
+  };
+  const [shareNote, setShareNote] = useState<string | null>(null);
+  useEffect(() => { if (!shareNote) return; const t = setTimeout(() => setShareNote(null), 2200); return () => clearTimeout(t); }, [shareNote]);
   const online = useOnline();
   const backHold = useHoldRepeat(() => step(-1), moveCount === 0 || viewPly === 0);
   const forwardHold = useHoldRepeat(() => step(1), !reviewing);
@@ -520,6 +533,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
         <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted empty:hidden [grid-area:status] max-lg:px-3 lg:justify-start" aria-live="polite">
+          {shareNote && <span className="font-medium text-ok" role="status">{shareNote}</span>}
           {hintStatus && <span className="truncate font-medium text-ink" role="status">{hintStatus}</span>}
           {premove.uci && <button onClick={premove.cancel} className="shrink-0 underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
           {engineWaking && <span>{botName} is waking up…</span>}
@@ -549,7 +563,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       <footer className="game-footer safe-bottom w-full pt-2 [grid-area:footer] lg:pb-0" aria-label="Game controls">
         {/* Phones: one flat bar of four big targets. */}
         <div className="game-bar grid grid-cols-4 lg:hidden">
-          <button onClick={() => setShowActions(true)} aria-haspopup="dialog" className="game-bar__item">
+          <button onClick={(event) => setMenuAnchor(event.currentTarget.getBoundingClientRect())} aria-haspopup="dialog" className="game-bar__item">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" /><circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none" /><circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none" /></svg>
             Options
           </button>
@@ -575,7 +589,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
         <div className="hidden items-center gap-1.5 lg:flex">
         <Button
-          onClick={() => setShowActions(true)}
+          onClick={(event) => setMenuAnchor(event.currentTarget.getBoundingClientRect())}
           className="grid h-14 w-14 shrink-0 place-items-center rounded-full shadow-[var(--shadow)]"
           aria-label="Game options"
           aria-haspopup="dialog"
@@ -599,24 +613,26 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </div>
 
       {showKeys && <KeyboardHelp onClose={() => setShowKeys(false)} extra={[["U", "Undo (asks first)"], ["N", "New game"]]} />}
-      {showActions && <GameOptions
-        onClose={() => setShowActions(false)}
-        finished={game?.meta.status === "finished"}
-        canResign={!!active}
-        sound={settings.sound}
-        onNew={() => { setShowActions(false); if (game?.meta.status === "finished") setResultVersion((v) => v + 1); else setShowNew(true); }}
-        onFlip={() => { setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w")); setShowActions(false); }}
-        onSound={() => { unlockAudio(); update({ sound: !settings.sound }); if (!settings.sound) playSound("move", settings.volume); }}
-        onResign={() => { setShowActions(false); setConfirmResign(true); }}
-        canUndo={!!game && moveCount > 0}
-        onUndo={() => { setShowActions(false); setConfirmUndo(true); }}
-        onFriends={() => { setShowActions(false); setShowFriends(true); }}
-        evalBar={settings.evalBar}
-        onEval={() => update({ evalBar: !settings.evalBar })}
-        live={settings.experience.ambient.mode === "ambient"}
-        onLive={() => updateExperience({ ambient: { ...settings.experience.ambient, mode: settings.experience.ambient.mode === "ambient" ? "minimal" : "ambient" } })}
+      {menuAnchor && <GameMenu
+        anchor={menuAnchor}
+        onClose={() => setMenuAnchor(null)}
+        actions={{
+          finished: game?.meta.status === "finished",
+          canResign: !!active,
+          canUndo: !!game && moveCount > 0,
+          sound: settings.sound,
+          onNew: () => { if (game?.meta.status === "finished") setResultVersion((v) => v + 1); else setShowNew(true); },
+          onUndo: () => setConfirmUndo(true),
+          onResign: () => setConfirmResign(true),
+          onShare: () => void shareGame(),
+          onSettings: () => setShowSettings(true),
+          onFriends: () => setShowFriends(true),
+          onFlip: () => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w")),
+          onSound: () => { unlockAudio(); update({ sound: !settings.sound }); if (!settings.sound) playSound("move", settings.volume); },
+        }}
       />}
-      {showFriends && <FriendsDialog onClose={() => setShowFriends(false)} />}
+      {showSettings && <GameSettingsSheet onClose={() => setShowSettings(false)} />}
+      {showFriends && <FriendsSheet onClose={() => setShowFriends(false)} />}
 
       {confirmUndo && (
         <Dialog title="Undo your last move?" onClose={() => setConfirmUndo(false)}>
@@ -672,67 +688,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       )}
     </main>
     </>
-  );
-}
-
-type OptionRowProps = { icon: React.ReactNode; label: string; hint?: string; onClick: () => void; danger?: boolean; disabled?: boolean };
-
-function OptionRow({ icon, label, hint, onClick, danger, disabled }: OptionRowProps) {
-  return (
-    <button onClick={onClick} disabled={disabled} aria-keyshortcuts={hint} className={`press-overlay flex min-h-[52px] w-full items-center gap-3 px-4 text-start disabled:opacity-40 ${danger ? "text-danger" : ""}`}>
-      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${danger ? "bg-danger/10" : "bg-surface-2"}`} aria-hidden="true">{icon}</span>
-      <span className="min-w-0 flex-1 font-medium">{label}</span>
-      {hint && <kbd aria-hidden="true" className="hidden shrink-0 font-sans text-sm text-muted sm:inline">{hint}</kbd>}
-    </button>
-  );
-}
-
-const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-const GO_TO: Array<{ id: TabId; label: string }> = [
-  { id: "play", label: "Play" },
-  { id: "bots", label: "Bots" },
-  { id: "learn", label: "Learn" },
-  { id: "review", label: "Review" },
-  { id: "more", label: "More" },
-];
-
-/** One clear Options sheet: game actions first, then a way out to the rest of the app. */
-function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSound, onResign, canUndo, onUndo, onFriends, evalBar, onEval, live, onLive }: {
-  onClose: () => void; finished: boolean; canResign: boolean; sound: boolean;
-  onNew: () => void; onFlip: () => void; onSound: () => void; onResign: () => void;
-  canUndo: boolean; onUndo: () => void; onFriends: () => void; evalBar: boolean; onEval: () => void;
-  live: boolean; onLive: () => void;
-}) {
-  const { goToTab } = useShell();
-  return (
-    <Dialog title="Options" onClose={onClose}>
-      <div className="-mx-1 divide-y divide-line overflow-hidden rounded-2xl bg-surface-2/60 ring-1 ring-inset ring-line">
-        <OptionRow onClick={onNew} label={finished ? "Show result" : "New game"} icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M12 5v14M5 12h14" {...stroke} /></svg>} />
-        <OptionRow onClick={onUndo} disabled={!canUndo} label="Undo move" hint="U" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" {...stroke} /></svg>} />
-        <OptionRow onClick={onFriends} label="Friends & challenges" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><circle cx="9" cy="8" r="3" {...stroke} /><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2" {...stroke} /></svg>} />
-        <OptionRow onClick={onEval} label={evalBar ? "Hide evaluation bar" : "Show evaluation bar"} icon={<span className="text-sm font-semibold">±</span>} />
-        <OptionRow onClick={onLive} label={live ? "Turn off live background" : "Live background"} icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M3 8c3-2 5 2 8 0s5-2 8 0M3 13c3-2 5 2 8 0s5-2 8 0M3 18c3-2 5 2 8 0" {...stroke} /></svg>} />
-        <OptionRow onClick={onFlip} label="Flip board" hint="F" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" {...stroke} /></svg>} />
-        <OptionRow onClick={onSound} label={sound ? "Mute sounds" : "Turn sounds on"} hint="M" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" {...stroke} />{sound ? <path d="M15.5 9a4 4 0 0 1 0 6" {...stroke} /> : <path d="M16 9.5l5 5m0-5l-5 5" {...stroke} />}</svg>} />
-        <OptionRow onClick={onResign} disabled={!canResign} danger label="Resign" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M6 21V4m0 0h11l-2 4 2 4H6" {...stroke} /></svg>} />
-      </div>
-      <Link href="/settings/theme" className="press-overlay flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-medium ring-1 ring-inset ring-line">
-        Board theme
-        <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} /></svg>
-      </Link>
-      <Link href="/settings" className="press-overlay flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-medium ring-1 ring-inset ring-line">
-        Board, sound, haptics & characters
-        <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} /></svg>
-      </Link>
-      <nav aria-label="Go to" className="mt-1">
-        <p className="mb-1.5 px-1 text-xs font-medium uppercase tracking-wide text-muted">Go to</p>
-        <div className="grid grid-cols-5 gap-1.5">
-          {GO_TO.map((tab) => (
-            <button key={tab.id} onClick={() => { onClose(); goToTab(tab.id); }} className="press-overlay min-h-11 rounded-xl bg-surface-2 text-[13px] font-medium">{tab.label}</button>
-          ))}
-        </div>
-      </nav>
-    </Dialog>
   );
 }
 

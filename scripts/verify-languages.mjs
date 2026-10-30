@@ -17,9 +17,9 @@ try {
       await page.locator("#sq-e4").click();
       await expect(page.locator("#sq-e4")).toHaveAttribute("aria-label", /white pawn/, { timeout: 1000 });
     }).toPass();
-    // Phones: the bottom bar's Options opens the sheet with Resign.
+    // Phones: the bottom bar's Options opens the menu with Resign.
     await page.getByRole("button", { name: "Options", exact: true }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Resign", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Resign", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Resign", exact: true }).click();
     const result = page.getByRole("dialog", { name: title, exact: true });
     await expect(result).toBeVisible();

@@ -69,8 +69,9 @@ try {
       ).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
-      if (!await page.getByRole("button", { name: "Resign", exact: true }).isVisible()) await page.getByRole("button", { name: "Game options", exact: true }).click();
-      await page.getByRole("button", { name: "Resign", exact: true }).click();
+      // Options opens a chess.com-style menu; Resign asks to confirm.
+      await page.getByRole("button", { name: "Game options", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Resign", exact: true }).click();
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Resign", exact: true })

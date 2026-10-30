@@ -12,8 +12,12 @@ let users = 0;
 let disposeListeners: (() => void) | null = null;
 let warmTimer: ReturnType<typeof setTimeout> | null = null;
 
+/** True once audio has played this visit: a later non-running context means iOS suspended or interrupted it. */
+let wasRunning = false;
+
 function audio(): AudioContext | null {
   if (typeof window === "undefined") return null;
+  if (ctx?.state === "closed") ctx = null;
   if (!ctx) {
     const Ctor = window.AudioContext;
     if (!Ctor) return null;
@@ -138,10 +142,24 @@ export function configureAudio(enabled: boolean, master: number, settings: Exper
 }
 export function unlockAudio(): void {
   if (!preferences.enabled) return;
-  const context = audio();
+  let context = audio();
   if (!context) return;
-  if (context.state !== "running") {
-    void context.resume().catch(() => {});
+  if (context.state === "running") { wasRunning = true; return; }
+  // Back from the background on iPhone: the old context stays "interrupted" or
+  // silently suspended. A fresh one started inside this tap always plays, and
+  // decoded sounds (AudioBuffers) carry over to it.
+  if (wasRunning || (context.state as string) === "interrupted") {
+    const old = context;
+    ctx = null;
+    for (const voice of voices) { try { voice.stop(); } catch { /* Finished. */ } }
+    voices.clear();
+    context = audio();
+    void old.close().catch(() => {});
+    if (!context) return;
+  }
+  {
+    const fresh = context;
+    void fresh.resume().then(() => { if (fresh.state === "running") wasRunning = true; }).catch(() => {});
     try {
       const source = context.createBufferSource();
       source.buffer = context.createBuffer(1, 1, 22050);
@@ -157,7 +175,10 @@ export function installAudioUnlock(): () => void {
     const events = ["pointerdown", "touchend", "keydown"] as const;
     const onGesture = () => unlockAudio();
     const onVisibility = () => {
-      if (document.hidden) {
+      if (!document.hidden) {
+        // Coming back: try to wake audio right away (desktop/Android allow it; iPhone waits for the next tap).
+        void ctx?.resume().catch(() => {});
+      } else {
         for (const voice of voices) { try { voice.stop(); } catch { /* Finished. */ } }
         for (const clip of chesscomClips) clip.pause();
         chesscomClips.clear();

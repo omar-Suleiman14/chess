@@ -48,22 +48,6 @@ const PATTERNS: Record<HapticEvent, number | number[]> = {
   draw: [14, 60, 14],
 };
 
-/** iOS ticks: how many light taps (spaced) express each event. */
-const TICKS: Record<HapticEvent, number> = {
-  select: 1,
-  move: 1,
-  opponent: 1,
-  capture: 2,
-  check: 2,
-  castle: 2,
-  promote: 3,
-  premove: 1,
-  illegal: 3,
-  warning: 2,
-  success: 3,
-  defeat: 2,
-  draw: 2,
-};
 
 /** Native bridge names, for a future iOS shell. */
 const NATIVE: Record<HapticEvent, string> = {
@@ -85,7 +69,6 @@ const NATIVE: Record<HapticEvent, string> = {
 /** Events dropped at Subtle, so it really is quieter. */
 const SUBTLE_SKIPS = new Set<HapticEvent>(["opponent", "premove"]);
 const MIN_GAP_MS = 45;
-const TICK_GAP_MS = 90;
 
 let level: HapticLevel = "standard";
 let lastAt = 0;
@@ -140,22 +123,39 @@ export function scalePattern(pattern: number | number[], factor: number): number
   return pattern.map((ms, i) => (i % 2 === 0 ? Math.max(4, Math.round(ms * factor)) : ms));
 }
 
+// One real, rendered (but invisible) switch kept on the page. WebKit only
+// plays its tap for a switch that toggles during a genuine user gesture
+// (WebKit PR #38473), so this is clicked synchronously inside the tap handler.
+let switchLabel: HTMLLabelElement | null = null;
+function iosSwitch(): HTMLLabelElement | null {
+  if (switchLabel?.isConnected) return switchLabel;
+  if (typeof document === "undefined" || !document.body) return null;
+  const label = document.createElement("label");
+  label.setAttribute("aria-hidden", "true");
+  label.style.cssText = "position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;clip-path:inset(50%);";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.setAttribute("switch", "");
+  input.tabIndex = -1;
+  // Never let this click reach the app's own click handlers.
+  label.addEventListener("click", (event) => event.stopPropagation());
+  label.appendChild(input);
+  document.body.appendChild(label);
+  switchLabel = label;
+  return label;
+}
+
 function iosTick(): void {
   try {
-    const label = document.createElement("label");
-    label.ariaHidden = "true";
-    label.style.display = "none";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.setAttribute("switch", "");
-    input.tabIndex = -1;
-    label.appendChild(input);
-    document.head.appendChild(label);
-    label.click();
-    label.remove();
+    iosSwitch()?.click();
   } catch {
     // Never let feedback break a move.
   }
+}
+
+/** Create the switch early (first paint), so the first tap already has it. */
+export function prepareHaptics(): void {
+  if (hapticSupport() === "ios-tick") iosSwitch();
 }
 
 /**
@@ -181,9 +181,9 @@ export function haptic(event: HapticEvent, options: { key?: string; force?: bool
   } else if (kind === "vibrate") {
     try { navigator.vibrate(scalePattern(PATTERNS[event], level === "subtle" ? 0.6 : 1)); } catch { /* Blocked before a gesture. */ }
   } else if (kind === "ios-tick") {
-    const ticks = level === "subtle" ? 1 : TICKS[event];
+    // iOS gives one light tap per toggle and only during the tap itself, so one tick, now.
+    // (Extra ticks from a timer are refused by WebKit.)
     iosTick();
-    for (let i = 1; i < ticks; i++) setTimeout(iosTick, i * TICK_GAP_MS);
   }
 }
 
@@ -192,7 +192,7 @@ export function hapticSupportText(kind: HapticSupport): string {
   switch (kind) {
     case "native": return "Using this device's Taptic Engine.";
     case "vibrate": return "Supported on this device.";
-    case "ios-tick": return "iPhone: light taps on your own moves and taps (Safari limits web haptics).";
+    case "ios-tick": return "iPhone: a light tap when you move or tap (iOS 18+, with System Haptics on in iPhone Settings → Sounds & Haptics). Safari doesn't allow haptics for the opponent's moves.";
     default: return "This browser doesn't allow haptics. Sound and visuals still give feedback.";
   }
 }
