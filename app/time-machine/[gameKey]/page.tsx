@@ -1,5 +1,6 @@
 "use client";
 
+import { SanText } from "@/components/chess/MoveStrip";
 import { capturesAlongLine } from "@/lib/chess/captures";
 import { CapturedPieces } from "@/components/chess/CapturedPieces";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -755,7 +756,7 @@ export default function ReplayPage({
                               aria-label={`Move ${row.number}, ${side}, ${cell.node.san}${review ? `, ${MOVE_QUALITY[review.quality].label}` : ""}`}
                               className={`min-h-11 w-full rounded-xl px-2 text-start font-mono ${cursor === cell.cursor ? "bg-accent font-bold text-accent-text" : "bg-surface-2"}`}
                             >
-                              <bdi>{cell.node.san}</bdi>
+                              <bdi><SanText san={cell.node.san} white={side === "white"} /></bdi>
                               {review && (
                                 <span
                                   className="ms-1 text-xs"

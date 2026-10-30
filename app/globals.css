@@ -348,3 +348,6 @@ button {
 /* Live background field: the renderer reads this element's font and colour. */
 .live-background__field { contain: strict; font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace; color: #898781; }
 :root[data-tone="dark"] .live-background__field { color: #8d8a84; }
+
+/* Move-list figurines: black pieces keep a thin light edge on dark surfaces. */
+:root[data-tone="dark"] .san-piece--black { filter: drop-shadow(0 0 0.6px #f2f1ee) drop-shadow(0 0 0.6px #f2f1ee); }
