@@ -6,10 +6,11 @@ import Link from "@/components/navigation/PrefetchLink";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FatmaPanel } from "@/components/fatma/FatmaPanel";
 import { IOS_SPRING } from "@/components/ui/Switch";
-import { GlassButton, GlassLayer } from "@/components/ui/Glass";
+import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 export { Dialog } from "@/components/ui/Dialog";
-import { MenuButton } from "@/components/shell/AppShell";
+import { MenuButton, useGameFocus, useShell } from "@/components/shell/AppShell";
+import type { TabId } from "@/components/shell/TabBar";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, remaining } from "@/lib/chess/clock";
 import { findOpponent } from "@/lib/chess/engine/opponents";
@@ -17,7 +18,8 @@ import { headNode, moveLabel, pathTo } from "@/lib/chess/history/tree";
 import { describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useEngineState, usePrewarmEngine } from "@/lib/client/engine";
 import { useSettings } from "@/lib/client/settings";
-import { haptic, installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
+import { installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
+import { haptic, type HapticEvent } from "@/lib/client/haptics";
 import { useSync } from "@/lib/client/sync";
 import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from "@/lib/client/useChessGame";
 import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
@@ -30,7 +32,7 @@ import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
 import { GameResult } from "./GameResult";
 import { MoveList, MoveStrip } from "./MoveStrip";
-import { FOOTER_BUTTON_SIZE, ReviewArrows } from "./ReviewArrows";
+import { ReviewArrows } from "./ReviewArrows";
 import { ClockChip } from "./ClockChip";
 import { GameBackground } from "@/components/shell/GameBackground";
 import { PlayerIdentity } from "./PlayerIdentity";
@@ -92,14 +94,18 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         // The result effect plays the ending once, after the final move.
         if (!terminal) playSound(applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : executingPremove.current ? "premove_execute" : by === "fatma" ? "opponent_move" : "move", settings.volume, { key: `move:${node.key}` });
       }
-      if (settings.haptics && by === "human") haptic(applied.captured ? [8, 30, 8] : 8);
+      // Your own taps already felt their move on the board; feel the rest here.
+      if (by !== "human" || executingPremove.current) {
+        const event: HapticEvent = applied.check ? "check" : applied.captured ? "capture" : by === "human" ? "move" : "opponent";
+        haptic(event, { key: `move:${node.key}` });
+      }
       if (by === "human") {
         if (castle) fatma.say("human_castle");
         else if (applied.promotion) fatma.say("human_promote");
         else if (node.ply <= 2) fatma.say("opening");
       }
     },
-    [settings.sound, settings.volume, settings.haptics, fatma],
+    [settings.sound, settings.volume, fatma],
   );
 
   // Warm up audio on the first touch so the opening move is never silent.
@@ -147,8 +153,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const navigationFeedback = useCallback(() => {
     unlockAudio();
     if (settings.sound) playSound("move", settings.volume);
-    if (settings.haptics) haptic(8);
-  }, [settings.sound, settings.volume, settings.haptics]);
+    haptic("select");
+  }, [settings.sound, settings.volume]);
   const step = useCallback(
     (delta: number) => {
       const at = viewPly ?? line.length;
@@ -253,6 +259,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     // Loading an old result is silent; only an active game ending gets a cue.
     if (game.meta.status !== "finished" || previous?.key !== game.meta.gameKey || previous.status !== "active") return;
     if (settings.sound) playSound(resultSound(game.meta.result, game.meta.humanColor, game.meta.resultReason), settings.volume, { key: `result:${game.meta.gameKey}` });
+    const won = game.meta.result === (game.meta.humanColor === "w" ? "1-0" : "0-1");
+    haptic(game.meta.result === "1/2-1/2" || !game.meta.result ? "draw" : won ? "success" : "defeat", { key: `result:${game.meta.gameKey}` });
   }, [game, settings.sound, settings.volume]);
   const lowTimeWarned = useRef<string | null>(null);
   useEffect(() => {
@@ -262,6 +270,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       if (remaining(clock, human, monotonicNow()) > 20_000 || lowTimeWarned.current === game.meta.gameKey) return;
       lowTimeWarned.current = game.meta.gameKey;
       if (settings.sound) playSound("lowtime", settings.volume);
+      haptic("warning");
       fatma.say("time_pressure");
     };
     const timer = setInterval(checkTime, 500);
@@ -379,6 +388,9 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const clockFor = (c: Color) => (game?.clock ? remaining(game.clock, c, now) : null);
   const fatmaColor: Color = human === "w" ? "b" : "w";
   const moveCount = head?.ply ?? 0;
+  // A fresh board is "home": phone tabs stay. Once moves are on the board it's a
+  // game, and the in-game toolbar takes over (null while loading: no flicker).
+  useGameFocus(game ? !(active && moveCount === 0) : null);
   const resultText = game?.meta.status === "finished" ? resultLine(game.meta.result, game.meta.resultReason, human) : null;
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
 
@@ -397,50 +409,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       <GameBackground />
       <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2 [grid-area:header] lg:pt-0">
         <span className="sr-only">Chess</span>
-        <div className="game-control-bar glass-panel ms-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-0.5 min-[400px]:gap-1 lg:flex-nowrap lg:gap-0.5">
-          <GlassLayer tier="navigation" radius={24} />
+        <div className="game-control-bar ms-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 lg:flex-nowrap lg:gap-1">
           <FriendsButton />
-          {coaching.hints && <GlassButton disabled={hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine()} onClick={() => void requestHint()} aria-expanded={hintStage !== null} className="min-h-11 min-w-11 rounded-full px-3 text-sm font-medium lg:px-2 lg:text-xs">{hintCopy.hint}</GlassButton>}
-          <GlassButton onClick={() => update({ evalBar: !settings.evalBar })} aria-label={settings.evalBar ? "Hide evaluation" : "Show evaluation"} aria-pressed={settings.evalBar} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-semibold">±</GlassButton>
-          <GlassButton onClick={() => game?.meta.status === "finished" ? setResultVersion((version) => version + 1) : setShowNew(true)} className="h-11 shrink-0 rounded-full px-2.5 text-sm font-medium min-[400px]:px-3.5 lg:px-2" aria-label={game?.meta.status === "finished" ? "Show game result" : "New game"} aria-keyshortcuts="n">
+          {coaching.hints && <Button disabled={hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine()} onClick={() => void requestHint()} aria-expanded={hintStage !== null} className="min-h-11 min-w-11 rounded-full px-3 text-sm font-medium lg:px-2 lg:text-xs">{hintCopy.hint}</Button>}
+          <Button onClick={() => update({ evalBar: !settings.evalBar })} aria-label={settings.evalBar ? "Hide evaluation" : "Show evaluation"} aria-pressed={settings.evalBar} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-semibold">±</Button>
+          <Button onClick={() => game?.meta.status === "finished" ? setResultVersion((version) => version + 1) : setShowNew(true)} className="h-11 shrink-0 rounded-full px-4 text-sm font-semibold lg:px-3" aria-label={game?.meta.status === "finished" ? "Show game result" : "New game"} aria-keyshortcuts="n">
             {game?.meta.status === "finished" ? "Result" : "New"}
-          </GlassButton>
-          <GlassButton
-            onClick={() => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"))}
-            className="hidden h-11 w-11 shrink-0 place-items-center rounded-full min-[400px]:grid lg:hidden"
-            aria-label="Flip board"
-            aria-keyshortcuts="f"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-              <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </GlassButton>
-          <GlassButton
-            onClick={() => {
-              unlockAudio();
-              update({ sound: !settings.sound });
-              if (!settings.sound) playSound("move", settings.volume);
-            }}
-            className="hidden h-11 w-11 shrink-0 place-items-center rounded-full min-[400px]:grid lg:hidden"
-            aria-label={settings.sound ? "Mute sounds" : "Turn sounds on"}
-            aria-pressed={settings.sound}
-            title={settings.sound ? "Sound on" : "Sound off"}
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-              <path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinejoin="round" />
-              {settings.sound ? (
-                <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-              ) : (
-                <path d="M16 9.5l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-              )}
-            </svg>
-          </GlassButton>
-            <GlassButton disabled={!active} onClick={() => setConfirmResign(true)} className="hidden h-11 w-11 shrink-0 place-items-center rounded-full text-ink min-[400px]:grid lg:hidden" aria-label="Resign" title="Resign">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </GlassButton>
-          <GlassButton onClick={() => setShowActions(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full min-[400px]:hidden lg:grid" aria-label="Game controls" aria-haspopup="dialog">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" fill="var(--surface)" /><circle cx="15" cy="17" r="3" fill="var(--surface)" /></svg>
-          </GlassButton>
+          </Button>
           <MenuButton />
         </div>
       </header>
@@ -545,17 +520,26 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
 
 
-      <footer className="safe-bottom flex w-full items-center gap-3 pt-2 [grid-area:footer] lg:pb-0">
-        <GlassButton
+      {/* The in-game toolbar. On phones it replaces the tab bar once a game is underway. */}
+      <footer className="game-footer safe-bottom flex w-full items-center gap-2 pt-2 [grid-area:footer] lg:gap-1.5 lg:pb-0" aria-label="Game controls">
+        <Button
+          onClick={() => setShowActions(true)}
+          className="grid h-14 w-14 shrink-0 place-items-center rounded-full shadow-[var(--shadow)]"
+          aria-label="Game options"
+          aria-haspopup="dialog"
+        >
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="2.6" fill="var(--surface)" /><circle cx="15" cy="17" r="2.6" fill="var(--surface)" /></svg>
+        </Button>
+        <Button
           variant="tint"
           onClick={() => setConfirmUndo(true)}
           disabled={!game || moveCount === 0}
-          className={`flex ${FOOTER_BUTTON_SIZE} shrink-0 items-center justify-center gap-2 rounded-full text-base font-semibold`}
+          className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold lg:px-4"
           aria-keyshortcuts="u"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Undo
-        </GlassButton>
+        </Button>
         <div className="flex-1" />
         <ReviewArrows onBack={() => step(-1)} onForward={() => step(1)} backDisabled={moveCount === 0 || viewPly === 0} forwardDisabled={!reviewing} />
 
@@ -563,12 +547,16 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </div>
 
       {showKeys && <KeyboardHelp onClose={() => setShowKeys(false)} extra={[["U", "Undo (asks first)"], ["N", "New game"]]} />}
-      {showActions && <Dialog title="Game controls" onClose={() => setShowActions(false)}>
-        <button onClick={() => { setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w")); setShowActions(false); }} className="min-h-11 rounded-2xl bg-surface-2">Flip board</button>
-        <button onClick={() => { unlockAudio(); update({ sound: !settings.sound }); }} className="min-h-11 rounded-2xl bg-surface-2">{settings.sound ? "Mute sounds" : "Turn sounds on"}</button>
-        <button disabled={!active} onClick={() => { setShowActions(false); setConfirmResign(true); }} className="min-h-11 rounded-2xl bg-surface-2 text-danger">Resign</button>
-        <Link href="/settings" className="grid min-h-11 place-items-center rounded-2xl bg-surface-2">Coaching and Sherine settings</Link>
-      </Dialog>}
+      {showActions && <GameOptions
+        onClose={() => setShowActions(false)}
+        finished={game?.meta.status === "finished"}
+        canResign={!!active}
+        sound={settings.sound}
+        onNew={() => { setShowActions(false); if (game?.meta.status === "finished") setResultVersion((v) => v + 1); else setShowNew(true); }}
+        onFlip={() => { setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w")); setShowActions(false); }}
+        onSound={() => { unlockAudio(); update({ sound: !settings.sound }); if (!settings.sound) playSound("move", settings.volume); }}
+        onResign={() => { setShowActions(false); setConfirmResign(true); }}
+      />}
 
       {confirmUndo && (
         <Dialog title="Undo your last move?" onClose={() => setConfirmUndo(false)}>
@@ -624,6 +612,57 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       )}
     </main>
     </>
+  );
+}
+
+type OptionRowProps = { icon: React.ReactNode; label: string; hint?: string; onClick: () => void; danger?: boolean; disabled?: boolean };
+
+function OptionRow({ icon, label, hint, onClick, danger, disabled }: OptionRowProps) {
+  return (
+    <button onClick={onClick} disabled={disabled} aria-keyshortcuts={hint} className={`press-overlay flex min-h-[52px] w-full items-center gap-3 px-4 text-start disabled:opacity-40 ${danger ? "text-danger" : ""}`}>
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${danger ? "bg-danger/10" : "bg-surface-2"}`} aria-hidden="true">{icon}</span>
+      <span className="min-w-0 flex-1 font-medium">{label}</span>
+      {hint && <kbd aria-hidden="true" className="hidden shrink-0 font-sans text-sm text-muted sm:inline">{hint}</kbd>}
+    </button>
+  );
+}
+
+const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+const GO_TO: Array<{ id: TabId; label: string }> = [
+  { id: "play", label: "Play" },
+  { id: "bots", label: "Bots" },
+  { id: "learn", label: "Learn" },
+  { id: "review", label: "Review" },
+  { id: "more", label: "More" },
+];
+
+/** One clear Options sheet: game actions first, then a way out to the rest of the app. */
+function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSound, onResign }: {
+  onClose: () => void; finished: boolean; canResign: boolean; sound: boolean;
+  onNew: () => void; onFlip: () => void; onSound: () => void; onResign: () => void;
+}) {
+  const { goToTab } = useShell();
+  return (
+    <Dialog title="Options" onClose={onClose}>
+      <div className="-mx-1 divide-y divide-line overflow-hidden rounded-2xl bg-surface-2/60 ring-1 ring-inset ring-line">
+        <OptionRow onClick={onNew} label={finished ? "Show result" : "New game"} icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M12 5v14M5 12h14" {...stroke} /></svg>} />
+        <OptionRow onClick={onFlip} label="Flip board" hint="F" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" {...stroke} /></svg>} />
+        <OptionRow onClick={onSound} label={sound ? "Mute sounds" : "Turn sounds on"} hint="M" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" {...stroke} />{sound ? <path d="M15.5 9a4 4 0 0 1 0 6" {...stroke} /> : <path d="M16 9.5l5 5m0-5l-5 5" {...stroke} />}</svg>} />
+        <OptionRow onClick={onResign} disabled={!canResign} danger label="Resign" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M6 21V4m0 0h11l-2 4 2 4H6" {...stroke} /></svg>} />
+      </div>
+      <Link href="/settings" className="press-overlay flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-medium ring-1 ring-inset ring-line">
+        Board, sound, haptics & Sherine
+        <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} /></svg>
+      </Link>
+      <nav aria-label="Go to" className="mt-1">
+        <p className="mb-1.5 px-1 text-xs font-medium uppercase tracking-wide text-muted">Go to</p>
+        <div className="grid grid-cols-5 gap-1.5">
+          {GO_TO.map((tab) => (
+            <button key={tab.id} onClick={() => { onClose(); goToTab(tab.id); }} className="press-overlay min-h-11 rounded-xl bg-surface-2 text-[13px] font-medium">{tab.label}</button>
+          ))}
+        </div>
+      </nav>
+    </Dialog>
   );
 }
 
@@ -710,7 +749,10 @@ export function Segmented<T extends string>({ label, value, onChange, options }:
             role="radio"
             aria-checked={value === v}
             tabIndex={value === v ? 0 : -1}
-            onClick={() => onChange(v)}
+            onClick={() => {
+              if (v !== value) haptic("select");
+              onChange(v);
+            }}
             className="relative min-h-10 rounded-[11px] text-sm"
           >
             {value === v && (

@@ -10,17 +10,57 @@ import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter"
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSettings } from "@/lib/client/settings";
 import { playSound } from "@/lib/client/sound";
+import { haptic } from "@/lib/client/haptics";
+import { consumeTabNavigation, markTabNavigation, TAB_RESELECT_EVENT } from "@/lib/client/navIntent";
+import { TabBar, tabFor, showsTabs, TABS, type Tab, type TabId } from "./TabBar";
 import { useSync } from "@/lib/client/sync";
 import { SocialPrefetch } from "@/lib/client/socialCache";
-import { GlassButton, GlassLayer } from "@/components/ui/Glass";
+import { Button } from "@/components/ui/Button";
 
-type ShellCtx = { openMenu: () => void; closeMenu: () => void };
+type ShellCtx = {
+  openMenu: () => void;
+  closeMenu: () => void;
+  /** A game in progress hides the phone tab bar in favour of its own toolbar. */
+  setGameFocus: (focused: boolean) => void;
+  /** Go to a top-level destination the way its tab would (remembered page, or More's sheet). */
+  goToTab: (id: TabId) => void;
+};
 const Ctx = createContext<ShellCtx | null>(null);
 export const useShell = () => {
   const c = useContext(Ctx);
   if (!c) throw new Error("useShell outside AppShell");
   return c;
 };
+
+/** While mounted and `focused`, the phone tab bar steps aside for game controls. */
+export function useGameFocus(focused: boolean | null): void {
+  const shell = useContext(Ctx);
+  const setGameFocus = shell?.setGameFocus;
+  useEffect(() => {
+    // null = not known yet (still loading): keep whatever is showing, no flicker.
+    if (!setGameFocus || focused === null) return;
+    setGameFocus(focused);
+  }, [setGameFocus, focused]);
+  useEffect(() => () => setGameFocus?.(false), [setGameFocus]);
+}
+
+const TAB_MEMORY_KEY = "cbc.tabs.v1";
+
+function readTabMemory(): Partial<Record<TabId, string>> {
+  try {
+    const parsed: unknown = JSON.parse(sessionStorage.getItem(TAB_MEMORY_KEY) ?? "{}");
+    if (!parsed || typeof parsed !== "object") return {};
+    const memory: Partial<Record<TabId, string>> = {};
+    for (const tab of TABS) {
+      const value = (parsed as Record<string, unknown>)[tab.id];
+      // Only same-site paths: never a full URL.
+      if (typeof value === "string" && value.startsWith("/") && !value.startsWith("//")) memory[tab.id] = value;
+    }
+    return memory;
+  } catch {
+    return {};
+  }
+}
 
 const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: string; hint?: string }> }> = [
   {
@@ -64,9 +104,13 @@ const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: strin
 const SHEET_SPRING = { type: "spring" as const, stiffness: 400, damping: 38, mass: 1 };
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { reducedMotion, settings, glassOn } = useSettings();
+  const { reducedMotion, settings } = useSettings();
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [gameFocus, setGameFocus] = useState(false);
+  const tabsVisible = showsTabs(pathname) && !gameFocus;
+  const activeTab: TabId = open ? "more" : tabFor(pathname);
   const [height, setHeight] = useState(800);
   // Single source of truth: sheet translateY. Everything else derives from it.
   const sheetY = useMotionValue(800);
@@ -94,6 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     triggerRef.current = document.activeElement as HTMLElement | null;
     setOpen(true);
     if (settings.sound) playSound("sheet", settings.volume * 0.6);
+    haptic("select");
     if (reducedMotion) sheetY.set(0);
     else animate(sheetY, 0, SHEET_SPRING);
   }, [reducedMotion, sheetY, settings.sound, settings.volume]);
@@ -164,7 +209,51 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, closeMenu]);
 
-  const value = useMemo(() => ({ openMenu, closeMenu }), [openMenu, closeMenu]);
+  // Each tab remembers the last page you had open in it, like a native tab stack.
+  useEffect(() => {
+    const tab = tabFor(pathname);
+    if (tab === "more") return;
+    try {
+      sessionStorage.setItem(TAB_MEMORY_KEY, JSON.stringify({ ...readTabMemory(), [tab]: pathname }));
+    } catch {
+      // Storage unavailable: tabs open their start page.
+    }
+  }, [pathname]);
+  const hrefFor = useCallback((tab: Tab) => {
+    if (tab.id === tabFor(pathname)) return tab.href;
+    return readTabMemory()[tab.id] ?? tab.href;
+  }, [pathname]);
+
+  const selectTab = useCallback((tab: Tab, event?: React.MouseEvent) => {
+    if (tab.id === "more") {
+      if (open) closeMenu();
+      else openMenu();
+      return;
+    }
+    if (tab.id === tabFor(pathname)) {
+      // Re-tapping the current tab: back to its start page, or to the top.
+      if (pathname === tab.href) {
+        event?.preventDefault();
+        consumeTabNavigation();
+        window.dispatchEvent(new CustomEvent(TAB_RESELECT_EVENT, { detail: tab.href }));
+        window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+      }
+    }
+  }, [open, openMenu, closeMenu, pathname, reducedMotion]);
+
+  const goToTab = useCallback((id: TabId) => {
+    const tab = TABS.find((t) => t.id === id)!;
+    haptic("select");
+    if (id === "more") return openMenu();
+    const href = hrefFor(tab);
+    if (href === pathname) window.dispatchEvent(new CustomEvent(TAB_RESELECT_EVENT, { detail: tab.href }));
+    else {
+      markTabNavigation();
+      router.push(href);
+    }
+  }, [hrefFor, openMenu, pathname, router]);
+
+  const value = useMemo(() => ({ openMenu, closeMenu, setGameFocus, goToTab }), [openMenu, closeMenu, goToTab]);
 
   return (
     <Ctx.Provider value={value}>
@@ -172,6 +261,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="fixed inset-0 -z-10 bg-black" aria-hidden="true" />
       <motion.div
         className="isolate min-h-dvh origin-top overflow-hidden bg-bg"
+        data-tabbar={tabsVisible ? "on" : "off"}
         style={{ scale, borderRadius: radius, y: backY }}
         aria-hidden={open}
         inert={open}
@@ -179,6 +269,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </motion.div>
       <ChallengeBanner />
+      <TabBar visible={tabsVisible} active={activeTab} reducedMotion={reducedMotion} hrefFor={hrefFor} onSelect={selectTab} />
       {open && (
         <motion.div className="fixed inset-0 z-[60] bg-black" style={{ opacity: dim }} onClick={closeMenu} aria-hidden="true" />
       )}
@@ -199,23 +290,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           else animate(sheetY, 0, SHEET_SPRING);
         }}
       >
-        {/* With glass on, the header floats as a glass bar and the menu scrolls underneath
-            and bends through it; off, it is the original solid header. Either way there is
-            no visible close: swipe down, tap outside or Escape. Screen readers still get a button. */}
+        {/* No visible close: swipe down, tap outside or Escape. Screen readers still get a button. */}
         <div
-          className={glassOn ? "absolute inset-x-0 top-0 z-10 cursor-grab touch-none px-3 pt-2 active:cursor-grabbing" : "bg-surface cursor-grab touch-none px-5 pb-2 pt-3 active:cursor-grabbing"}
+          className="bg-surface cursor-grab touch-none px-5 pb-2 pt-3 active:cursor-grabbing"
           onPointerDown={(e) => dragControls.start(e)}
         >
           <div className="mx-auto h-1.5 w-10 rounded-full bg-line" />
-          <div className={glassOn ? "glass-panel mt-2 flex min-h-14 items-center rounded-full px-5" : "mt-3 flex min-h-11 items-center"}>
-            <GlassLayer radius="pill" tier="navigation" />
+          <div className="mt-3 flex min-h-11 items-center">
             <span className="text-lg font-semibold">Chess by Chaos</span>
             <button onClick={closeMenu} className="sr-only focus-visible:not-sr-only focus-visible:ms-auto focus-visible:rounded-full focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm" aria-label="Close menu">
               Close
             </button>
           </div>
         </div>
-        <nav className={`no-scrollbar flex-1 overflow-y-auto overscroll-contain bg-surface px-4 pb-4 ${glassOn ? "pt-[76px]" : ""}`}>
+        <nav className="no-scrollbar flex-1 overflow-y-auto overscroll-contain bg-surface px-4 pb-4">
           {SECTIONS.map((section) => (
             <div key={section.title} className="mt-3">
               <p className="px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted">{section.title}</p>
@@ -278,13 +366,13 @@ function AccountRow() {
 export function MenuButton() {
   const { openMenu } = useShell();
   return (
-    <GlassButton onClick={openMenu} aria-label="Open menu" aria-haspopup="dialog" className="grid h-11 w-11 shrink-0 place-items-center rounded-full">
+    <Button onClick={openMenu} aria-label="Open menu" aria-haspopup="dialog" className="grid h-11 w-11 shrink-0 place-items-center rounded-full">
       <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
         <circle cx="6" cy="12" r="1.8" fill="currentColor" />
         <circle cx="12" cy="12" r="1.8" fill="currentColor" />
         <circle cx="18" cy="12" r="1.8" fill="currentColor" />
       </svg>
-    </GlassButton>
+    </Button>
   );
 }
 
@@ -294,13 +382,15 @@ export function PageToolbar() {
 }
 
 export function PageHeader({ title, back = true }: { title: string; back?: boolean }) {
+  const topLevel = showsTabs(usePathname());
   return (
-    <header className="safe-top sticky top-0 z-30 flex items-center justify-between gap-3 bg-bg/95 px-4 pb-2">
-      <div className="flex items-center gap-2">
+    <header className="safe-top sticky top-0 z-30 flex min-h-[60px] items-center justify-between gap-3 bg-bg/95 px-4 pb-2">
+      <div className="flex min-w-0 items-center gap-2">
         {back && <BackButton />}
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight sm:text-3xl">{title}</h1>
+        <h1 className="truncate text-[28px] font-bold leading-tight tracking-[-0.02em] sm:text-3xl">{title}</h1>
       </div>
-      <MenuButton />
+      {/* Phones reach the menu from the More tab on top-level pages. */}
+      <div className={topLevel ? "max-lg:hidden" : undefined}><MenuButton /></div>
     </header>
   );
 }
@@ -327,18 +417,21 @@ function writeMenuReturn(path: string | null): void {
 /** Back: returns to where the menu was opened (with the menu open), else to the board. */
 function BackButton() {
   const router = useRouter();
+  const pathname = usePathname();
+  // Top-level pages on phones navigate with the tab bar; Back is for deeper pages and desktop.
+  const topLevel = showsTabs(pathname);
   return (
-    <GlassButton
+    <Button
       onClick={() => {
         if (readMenuReturn() !== null && window.history.length > 1) router.back();
         else router.push("/");
       }}
       aria-label="Back"
-      className="grid h-11 w-11 place-items-center rounded-full"
+      className={`${topLevel ? "max-lg:hidden" : ""} grid h-11 w-11 place-items-center rounded-full`}
     >
       <svg viewBox="0 0 24 24" className="h-5 w-5 rtl:rotate-180" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-    </GlassButton>
+    </Button>
   );
 }

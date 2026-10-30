@@ -9,7 +9,9 @@ import { Slider } from "@/components/ui/Slider";
 import { AppearanceSettings, BackgroundSettings, SoundSettings } from "@/components/settings/ExperienceSettings";
 import { FATMA_LANGUAGES } from "@/lib/chess/personality/lines";
 import { useSettings, type Palette } from "@/lib/client/settings";
-import { haptic, playSound, unlockAudio } from "@/lib/client/sound";
+import { playSound, unlockAudio } from "@/lib/client/sound";
+import { haptic, hapticSupport, hapticSupportText, type HapticLevel, type HapticSupport } from "@/lib/client/haptics";
+import { useEffect, useState } from "react";
 import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
 
 const PALETTES: Array<[Palette, string, string, string]> = [
@@ -29,7 +31,11 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function SettingsPage() {
-  const { settings, update } = useSettings();
+  const { settings, update, hapticLevel, setHapticLevel } = useSettings();
+  // Known only in the browser: render the neutral text first, then the truth.
+  const [support, setSupport] = useState<HapticSupport | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setSupport(hapticSupport()), []);
   const { coaching, updateCoaching } = useCoachingPreferences();
   const palette = PALETTES.find((p) => p[0] === settings.palette) ?? PALETTES[0];
   return (
@@ -127,20 +133,34 @@ export default function SettingsPage() {
                   playSound("capture", settings.volume);
                 }}
                 className="flex-1"
-                fill="#0a84ff"
+                fill="var(--switch-on)"
                 aria-label="Volume"
               />
               <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-muted" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z" fill="currentColor" /></svg>
             </div>
-            <SwitchRow
+          </div>
+          <div className="mt-3 grid gap-2">
+            <Segmented<HapticLevel>
               label="Haptics"
-              hint="Android only; iPhone browsers don't allow vibration."
-              checked={settings.haptics}
-              onChange={(v) => {
-                update({ haptics: v });
-                if (v) haptic(10);
+              value={hapticLevel}
+              onChange={(level) => {
+                setHapticLevel(level);
+                // Feel the new strength right away (Off stays silent).
+                if (level !== "off") haptic("capture");
               }}
+              options={[["off", "Off"], ["subtle", "Subtle"], ["standard", "Standard"]]}
             />
+            <div className="flex items-center justify-between gap-3 px-1">
+              <p className="text-xs text-muted" aria-live="polite">{support ? hapticSupportText(support) : "Checking this device…"}</p>
+              <button
+                type="button"
+                disabled={hapticLevel === "off" || support === "none"}
+                onClick={() => { haptic("select"); setTimeout(() => haptic("move"), 260); setTimeout(() => haptic("capture"), 560); }}
+                className="min-h-11 shrink-0 rounded-full bg-surface px-4 text-sm font-medium shadow-[var(--shadow)] ring-1 ring-inset ring-line disabled:opacity-40"
+              >
+                Test
+              </button>
+            </div>
           </div>
           <div className="mt-3">
             <Segmented label="Motion" value={settings.motion} onChange={(motion) => update({ motion })} options={[["system", "System"], ["full", "Full"], ["reduced", "Reduced"]]} />

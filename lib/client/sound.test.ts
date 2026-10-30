@@ -80,7 +80,4 @@ describe("gameplay sound dispatch", () => {
     const { installAudioUnlock } = await import("./sound"); const first = installAudioUnlock(); const second = installAudioUnlock();
     first(); expect(document.removeEventListener).not.toHaveBeenCalled(); second(); expect(document.removeEventListener).toHaveBeenCalledTimes(4);
   });
-  it("vibrates where supported and tolerates unsupported browsers", async () => {
-    const { haptic } = await import("./sound"); haptic(8); expect(vibrate).toHaveBeenCalledWith(8); vi.stubGlobal("navigator", {}); expect(() => haptic(8)).not.toThrow();
-  });
 });

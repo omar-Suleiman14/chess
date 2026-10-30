@@ -23,19 +23,24 @@
 .spinner-segment { animation: spinner-segment-fade 360ms linear infinite; }
 @keyframes spinner-segment-fade { 0% { opacity: 1; } 100% { opacity: .15; } }
 
-/* Warm neutral palette. */
+/* Classic palette (first paint; lib/experience/theme.ts applies the same tokens). */
 :root {
-  --bg: #f6f4ef;
+  --bg: #f7f6f3;
   --surface: #ffffff;
-  --surface-2: #efece5;
-  --text: #1d1c1a;
-  --muted: #6d6a64;
-  --line: #e2ded5;
-  --accent: #1d1c1a;
+  --surface-2: #efede8;
+  --text: #1f1e1b;
+  --muted: #67645e;
+  --line: #e1ded6;
+  --accent: #1f1e1b;
   --accent-text: #ffffff;
+  --brand: #a8691f;
   --danger: #b42318;
-  --ok: #1b7a4b;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.06);
+  --ok: #1b6e43;
+  --switch-on: #b97a2c;
+  --switch-off: #dddad3;
+  --shadow: 0 1px 2px #24221e0d, 0 6px 18px #24221e0a;
+  /* Height of the mobile tab bar when it is on screen (0 otherwise). */
+  --tabbar-space: 0px;
 
   --sq-light: #efe6d5;
   --sq-dark: #c3a982;
@@ -45,23 +50,24 @@
   --hl-select: rgb(29 28 26 / 0.22);
   --hl-target: rgb(29 28 26 / 0.28);
   --hl-check: rgb(214 48 49 / 0.55);
-  --focus: #2563eb;
+  --focus: #245ab4;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141412;
-    --surface: #1d1c1a;
-    --surface-2: #262522;
-    --text: #f3f1ec;
-    --muted: #a19d95;
-    --line: #34322e;
-    --accent: #f3f1ec;
-    --accent-text: #141412;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
-    --hl-select: rgb(255 255 255 / 0.18);
-    --focus: #60a5fa;
-  }
+:root[data-tone="dark"] {
+  --bg: #141413;
+  --surface: #1e1e1c;
+  --surface-2: #2a2927;
+  --text: #f2f1ee;
+  --muted: #aaa79f;
+  --line: #3a3935;
+  --accent: #f2f1ee;
+  --accent-text: #141413;
+  --brand: #e3ac63;
+  --switch-on: #d39a4c;
+  --switch-off: #4a4945;
+  --shadow: 0 1px 2px #0005, 0 8px 24px #0003;
+  --hl-select: rgb(255 255 255 / 0.18);
+  --focus: #8ab4ff;
 }
 
 :root[data-palette="sage"] { --sq-light: #e8ecdf; --sq-dark: #93a57f; --sq-coord-light: #6f8159; --sq-coord-dark: #f0f3ea; }
@@ -85,6 +91,7 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-accent-text: var(--accent-text);
+  --color-brand: var(--brand);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
   --font-sans: var(--font-geist-sans);
@@ -203,8 +210,8 @@ button {
 .illegal-flash { animation: illegal-flash 600ms ease-out both; pointer-events: none; }
 
 /* Quiet, overlay-like scrollbars (iOS feel on desktop). */
-:root { --switch-off: #e3e1dc; --scroll: rgb(0 0 0 / 0.18); }
-@media (prefers-color-scheme: dark) { :root { --switch-off: #3a3935; --scroll: rgb(255 255 255 / 0.18); } }
+:root { --scroll: rgb(0 0 0 / 0.18); }
+:root[data-tone="dark"] { --scroll: rgb(255 255 255 / 0.18); }
 * { scrollbar-width: thin; scrollbar-color: var(--scroll) transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -214,7 +221,6 @@ button {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
 
-/* Liquid Glass off: the original native iOS-style slider. */
 /* iOS-style slider. Set --pct on the element for the filled track. */
 .ios-range {
   -webkit-appearance: none;
@@ -300,50 +306,17 @@ button {
 @keyframes card-rise { from { opacity: 0; transform: translateY(24px); } }
 @media (prefers-reduced-motion: reduce) { .card-public__tilt > div { animation: none; transform: none; } .card-public__glare { display: none; } }
 
-/* Three material tiers. Dense text and sheets stay almost opaque. */
-:root { --switch-on: #2168d4; --switch-off: #d4d3cf; --material-blur: 8px; --material-alpha: .82; --material-border: #ffffffb3; --material-shadow: 0 3px 14px #24221e12; }
-:root[data-tone="dark"] { --material-border: #ffffff36; --material-shadow: 0 3px 16px #0004; }
-:root[data-glass-quality="full"] { --material-blur: 12px; --material-alpha: .7; }
-:root[data-glass-quality="minimal"] { --material-blur: 0px; --material-alpha: 1; }
-.glass-layer { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: color-mix(in srgb, var(--surface) calc(var(--material-alpha) * 100%), transparent); border: 1px solid var(--material-border); box-shadow: inset 0 1px 0 #ffffff80, var(--material-shadow); backdrop-filter: blur(var(--material-blur)); -webkit-backdrop-filter: blur(var(--material-blur)); }
-.glass-layer--navigation { backdrop-filter: blur(min(8px, var(--material-blur))); -webkit-backdrop-filter: blur(min(8px, var(--material-blur))); }
-.glass-layer--sheet { background: color-mix(in srgb, var(--surface) 97%, transparent); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: inset 0 1px 0 #ffffff66, 0 18px 48px #0002; }
-.glass-button { position: relative; isolation: isolate; color: var(--text); background: transparent; touch-action: manipulation; transition: transform 120ms, opacity 120ms; }
-.glass-button:enabled:active { transform: scale(.97); }
-.glass-button[data-variant="tint"] { color: var(--accent-text); }
-.glass-button[data-variant="tint"] > .glass-layer { background: var(--accent); backdrop-filter: none; -webkit-backdrop-filter: none; }
-.glass-panel { position: relative; isolation: isolate; }
-.glass-switch-thumb > .glass-layer, .glass-slider .glass-layer { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: inset 0 0 0 1px var(--line); }
-.glass-slider__input { -webkit-appearance: none; appearance: none; margin: 0; opacity: 0; background: transparent; }
-.glass-slider__input::-webkit-slider-thumb { -webkit-appearance: none; width: var(--thumb-w); height: 44px; }
-.glass-slider__input::-moz-range-thumb { width: var(--thumb-w); height: 44px; border: 0; }
-.glass-slider:has(.glass-slider__input:focus-visible) span:has(> .glass-layer) { outline: 2px solid var(--focus); outline-offset: 2px; }
-@supports not (backdrop-filter: blur(1px)) { .glass-layer { background: var(--surface); } }
-@media (prefers-reduced-transparency: reduce) { .glass-layer { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; } }
-:root[data-contrast="high"] .glass-layer { background: var(--surface); border-color: var(--line); backdrop-filter: none; -webkit-backdrop-filter: none; }
-
-/* Classic retains its layout and identity with Notion-like neutral paper. */
-:root { --bg: #ffffff; --surface: #f7f7f5; --surface-2: #efefed; --text: #37352f; --muted: #686660; --line: #d7d5d0; --accent: #37352f; --accent-text: #ffffff; }
-:root[data-tone="dark"] { --bg: #191919; --surface: #222222; --surface-2: #2c2c2c; --text: #f1f0ee; --muted: #b7b5b1; --line: #53504d; --accent: #f0efed; --accent-text: #171717; }
-:root[data-appearance="expressive"] { --shape-card: 28px; --shape-control: 18px; --expressive-speed: 220ms; }
-[data-appearance="expressive"] .bg-surface.rounded-2xl, [data-appearance="expressive"] .bg-surface.rounded-3xl { border-radius: var(--shape-card); border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent); }
-[data-appearance="expressive"] button.bg-accent, [data-appearance="expressive"] a.bg-accent { border-radius: var(--shape-control); font-weight: 650; letter-spacing: .015em; min-height: 48px; }
-[data-appearance="expressive"] .press-overlay { border-radius: var(--shape-control); transition: transform var(--expressive-speed) cubic-bezier(.2,.8,.2,1); }
-[data-appearance="expressive"] .press-overlay:enabled:active { transform: scale(.96); }
-[data-appearance="expressive"] h1 { font-weight: 750; letter-spacing: -.04em; }
-[data-appearance="expressive"] h2 { font-weight: 700; letter-spacing: -.02em; }
-[data-appearance="expressive"] [role="dialog"] { border-radius: 32px; border: 1px solid var(--line); }
-[data-appearance="expressive"] [role="switch"][aria-checked="true"] { background: var(--accent); }
-[data-appearance="expressive"] input[type="range"] { --range-fill: var(--accent) !important; }
-[data-appearance="glass"] :is(header.bg-bg\/95, .safe-top.bg-bg\/95) { background: color-mix(in srgb, var(--surface) 94%, transparent); border-bottom: 1px solid var(--line); }
-[data-appearance="glass"] [role="dialog"] { border: 1px solid var(--material-border); }
-[data-motion="reduced"] .glass-button:enabled:active, [data-motion="reduced"] .press-overlay:enabled:active { transform: none; }
+[data-motion="reduced"] .press-overlay:enabled:active { transform: none; }
 /* Layers are promoted only during an interaction. */
 .card-stack__art, .card-public__tilt > div { will-change: auto; }
 .card-stack__card:is(:hover,:active) .card-stack__art, .card-public__tilt:is(:hover,:active) > div { will-change: transform; }
 .card-public::before { filter: none; background: radial-gradient(ellipse at 20% 30%,var(--a),transparent 60%),radial-gradient(ellipse at 75% 70%,var(--b),transparent 60%); }
 
-/* Header controls share one navigation backdrop instead of overlapping blur layers. */
-[data-appearance="glass"] .game-control-bar .glass-layer--control { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: inset 0 1px 0 #ffffff40; }
-
-[data-glass-quality="minimal"] .glass-layer { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
+/* Phone tab bar: pages leave room for it, and a game hides its own toolbar
+   while the tabs show so there are never two bars at the bottom. */
+@media (max-width: 1023px) {
+  [data-tabbar="on"] { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+  [data-tabbar="on"] .game-layout { min-height: calc(100dvh - 56px - env(safe-area-inset-bottom)); }
+  [data-tabbar="on"] .game-footer { display: none; }
+}
+.tabbar { padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); box-shadow: 0 -1px 0 transparent, 0 -8px 24px rgb(0 0 0 / 0.04); }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_SETTINGS, fromSaved, isWeakDevice, isWebKit, resolveSettingsSync } from "./settings";
+import { DEFAULT_SETTINGS, fromSaved, isWeakDevice, resolveSettingsSync } from "./settings";
 
 describe("isWeakDevice", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -22,40 +22,15 @@ describe("isWeakDevice", () => {
   });
 });
 
-describe("isWebKit", () => {
-  const UA = {
-    iphoneSafari: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
-    iphoneChrome: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1",
-    iphoneEdge: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/130.0 Mobile/15E148 Safari/605.1.15",
-    macSafari: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
-    macChrome: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36",
-    androidChrome: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36",
-    firefox: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
-  };
-
-  it("counts Safari and every iPhone browser as WebKit", () => {
-    expect(isWebKit(UA.iphoneSafari)).toBe(true);
-    expect(isWebKit(UA.iphoneChrome)).toBe(true);
-    expect(isWebKit(UA.iphoneEdge)).toBe(true);
-    expect(isWebKit(UA.macSafari)).toBe(true);
-    // iPadOS reports a Mac user agent; touch points give it away.
-    expect(isWebKit(UA.macSafari, 5)).toBe(true);
-  });
-
-  it("does not count Chromium or Firefox", () => {
-    expect(isWebKit(UA.macChrome)).toBe(false);
-    expect(isWebKit(UA.androidChrome)).toBe(false);
-    expect(isWebKit(UA.firefox)).toBe(false);
-  });
-});
-
 describe("settings sync", () => {
-  it("defaults glass off, migrates legacy auto, and preserves an explicit opt-in", () => {
+  it("resolves every retired Liquid Glass / Material choice to Classic", () => {
     expect(fromSaved(null).glass).toBe("off");
     expect(fromSaved({ glass: "auto" }).glass).toBe("off");
-    expect(fromSaved({ glass: "on" }).glass).toBe("on");
-    const pulled = resolveSettingsSync(0, { settings: { glass: "auto" }, changedAt: 10 });
-    expect(pulled).toMatchObject({ action: "pull", settings: { glass: "off" } });
+    expect(fromSaved({ glass: "on" }).glass).toBe("off");
+    expect(fromSaved({ glass: "on", experience: { appearance: "glass" } }).experience.appearance).toBe("classic");
+    expect(fromSaved({ experience: { appearance: "expressive", colorMode: "dark" } }).experience).toMatchObject({ appearance: "classic", colorMode: "dark" });
+    const pulled = resolveSettingsSync(0, { settings: { glass: "on", experience: { appearance: "glass" } }, changedAt: 10 });
+    expect(pulled).toMatchObject({ action: "pull", settings: { glass: "off", experience: { appearance: "classic" } } });
   });
 
   it("adopts the account's settings when they are newer", () => {

@@ -14,11 +14,12 @@ import { MoveList, MoveStrip } from "@/components/chess/MoveStrip";
 import { ReviewArrows } from "@/components/chess/ReviewArrows";
 import { MenuButton } from "@/components/shell/AppShell";
 import { Avatar } from "@/components/profile/ChessCard";
-import { GlassButton, GlassLayer } from "@/components/ui/Glass";
+import { Button } from "@/components/ui/Button";
 import { capturesAlongLine } from "@/lib/chess/captures";
 import { applyUci, DEFAULT_POSITION, describeMove, kingSquare, positionStatus, statusFromPath, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useSettings } from "@/lib/client/settings";
-import { haptic, installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
+import { installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
+import { haptic } from "@/lib/client/haptics";
 import { avatarFromName, timeControlLabel, useServerOffset } from "@/lib/client/online";
 import { canSubmitMove, livePendingMove, type PendingMove } from "@/lib/client/onlineMoves";
 import { PLAY_STAGE } from "@/lib/client/viewTransition";
@@ -132,12 +133,12 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         const mover = sideToMove(prevFen.current);
         if (applied) setAnnouncement(`${(mover === "w" ? room.white : room.black) ?? "Opponent"}: ${describeMove(applied, mover)}`);
         if (applied && room.status !== "finished" && !positionStatus(applied.fen).over && settings.sound) playSound(moveSound(applied) === "move" ? "opponent_move" : moveSound(applied), settings.volume, { key: `move:${room.roomId}:${room.ply}` });
-        if (settings.haptics) haptic(8);
+        if (applied) haptic(applied.check ? "check" : applied.captured ? "capture" : "opponent", { key: `move:${room.roomId}:${room.ply}` });
       }
     }
     seenPly.current = room.ply;
     prevFen.current = room.fen;
-  }, [room.roomId, room.status, room.ply, room.fen, room.moves, room.white, room.black, you, settings.sound, settings.volume, settings.haptics]);
+  }, [room.roomId, room.status, room.ply, room.fen, room.moves, room.white, room.black, you, settings.sound, settings.volume]);
 
   const ended = useRef(room.status === "finished");
   useEffect(() => {
@@ -148,6 +149,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
     if (room.status === "finished" && !ended.current) {
       ended.current = true;
       if (settings.sound) playSound(resultSound(room.result, you, room.resultReason), settings.volume, { key: `result:${room.roomId}` });
+      haptic(room.result === "1/2-1/2" || !room.result || !you ? "draw" : room.result === (you === "w" ? "1-0" : "0-1") ? "success" : "defeat", { key: `result:${room.roomId}` });
     }
   }, [room.status, room.result, room.resultReason, room.roomId, you, settings.sound, settings.volume]);
 
@@ -158,7 +160,10 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
   }, [room.status, room.roomId, room.ply, room.startedAt, settings.sound, settings.volume]);
   const previousDrawOffer = useRef(room.drawOfferBy);
   useEffect(() => {
-    if (room.drawOfferBy && room.drawOfferBy !== you && room.drawOfferBy !== previousDrawOffer.current && settings.sound) playSound("draw_offer", settings.volume);
+    if (room.drawOfferBy && room.drawOfferBy !== you && room.drawOfferBy !== previousDrawOffer.current) {
+      if (settings.sound) playSound("draw_offer", settings.volume);
+      haptic("warning");
+    }
     previousDrawOffer.current = room.drawOfferBy;
   }, [room.drawOfferBy, you, settings.sound, settings.volume]);
 
@@ -174,7 +179,8 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       const applied = applyUci(room.fen, uci);
       if (!applied) return false;
       setPending({ ply: room.ply, fen: applied.fen, uci });
-      if (settings.haptics) haptic(applied.captured ? [8, 30, 8] : 8);
+      // Taps already felt their move on the board; a premove fires later, so feel it now.
+      if (executingPremove.current) haptic(applied.check ? "check" : applied.captured ? "capture" : "move");
       try {
         const acknowledgement = await move({ roomId: room.roomId, token, uci, ply: room.ply });
         if (!acknowledgement.ok) { setPending(null); return false; }
@@ -188,7 +194,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
       }
       return true;
     },
-    [you, active, room.fen, room.ply, room.moves, room.roomId, pending, move, token, settings.sound, settings.volume, settings.haptics],
+    [you, active, room.fen, room.ply, room.moves, room.roomId, pending, move, token, settings.sound, settings.volume],
   );
 
   // Clocks tick locally from the server's turn start (corrected for clock drift).
@@ -314,20 +320,19 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
         className="game-layout relative isolate"
       >
         <GameBackground />
-        <header className="game-control-bar glass-panel safe-top flex flex-wrap items-center justify-end gap-1.5 pb-2 [grid-area:header] lg:pt-0">
-          <GlassLayer tier="navigation" radius={24} />
-          {finished && <GlassButton onClick={() => setResultVersion((version) => version + 1)} className="min-h-11 rounded-full px-3 text-sm" aria-label="Show game result">Result</GlassButton>}
+        <header className="game-control-bar safe-top flex flex-wrap items-center justify-end gap-1.5 pb-2 [grid-area:header] lg:pt-0">
+          {finished && <Button onClick={() => setResultVersion((version) => version + 1)} className="min-h-11 rounded-full px-3 text-sm" aria-label="Show game result">Result</Button>}
           {playing && (
-            <GlassButton
+            <Button
               disabled={!active || room.ply < 2 || iOfferedDraw}
               onClick={() => void offerDraw({ roomId: room.roomId, token })}
               className="h-11 shrink-0 rounded-full px-3.5 text-sm font-medium"
               aria-label={iOfferedDraw ? "Draw offered" : "Offer a draw"}
             >
               {iOfferedDraw ? "Offered" : "Draw"}
-            </GlassButton>
+            </Button>
           )}
-          <GlassButton
+          <Button
             onClick={() => setOrientationOverride((o) => ((o ?? you ?? "w") === "w" ? "b" : "w"))}
             className="grid h-11 w-11 shrink-0 place-items-center rounded-full"
             aria-label="Flip board"
@@ -336,8 +341,8 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
               <path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </GlassButton>
-          <GlassButton
+          </Button>
+          <Button
             onClick={() => {
               unlockAudio();
               update({ sound: !settings.sound });
@@ -355,11 +360,11 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
                 <path d="M16 9.5l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
               )}
             </svg>
-          </GlassButton>
+          </Button>
           {playing && (
-            <GlassButton disabled={!active} onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full" aria-label={room.ply < 2 ? "Abort game" : "Resign"} title={room.ply < 2 ? "Abort" : "Resign"}>
+            <Button disabled={!active} onClick={() => setConfirmResign(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full" aria-label={room.ply < 2 ? "Abort game" : "Resign"} title={room.ply < 2 ? "Abort" : "Resign"}>
               <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path d="M5 21V4m0 0h11l-2 4 2 4H5" stroke="currentColor" strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </GlassButton>
+            </Button>
           )}
           <MenuButton />
         </header>

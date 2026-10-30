@@ -18,7 +18,7 @@ For Clerk issuer setup and optional MCP variables, follow [Getting started](docs
 1. Open the homepage and move a piece. Choose **The Climb** or **Timed** from the menu for a rated bot mode.
 2. Tap **Hint** for a clue, then a highlight, then a suggested move. Confirm the unrated change if the game is rating-eligible.
 3. Open **Time Machine** to inspect moves or import a PGN. **Explore from this position** creates a separate unrated game.
-4. Open **Settings** for Classic, Material 3 Expressive, or Liquid Glass; board-derived colors; game backgrounds; and event sound packs.
+4. Open **Settings** for light/dark mode, board colors, game backgrounds, event sound packs and haptics.
 
 [Gameplay](docs/GAMEPLAY.md) · [Time Machine](docs/TIME-MACHINE.md) · [Ratings and fair play](docs/RATINGS.md) · [Settings](docs/SETTINGS.md)
 

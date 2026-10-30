@@ -10,7 +10,14 @@ try {
     const page = await context.newPage();
     await page.goto("http://127.0.0.1:3100");
     await expect(page.getByRole("grid")).toBeVisible();
-    await page.getByRole("button", { name: "Game controls", exact: true }).click();
+    // Phones show the tab bar on a fresh board; the game toolbar appears once a move is played.
+    await expect(page.locator("#sq-e2")).toHaveAttribute("aria-label", /white pawn/);
+    await expect(async () => {
+      await page.locator("#sq-e2").click();
+      await page.locator("#sq-e4").click();
+      await expect(page.locator("#sq-e4")).toHaveAttribute("aria-label", /white pawn/, { timeout: 1000 });
+    }).toPass();
+    await page.getByRole("button", { name: "Game options", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Resign", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Resign", exact: true }).click();
     const result = page.getByRole("dialog", { name: title, exact: true });

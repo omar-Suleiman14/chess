@@ -46,7 +46,7 @@ try {
     await expect(page.getByText("Unrated · assistance used", { exact: true })).toBeVisible();
     await panel.getByRole("button", { name: "Close hint", exact: true }).click();
     await expect(page.getByText("Unrated · assistance used", { exact: true })).toBeVisible();
-    if (!await page.getByRole("button", { name: "Flip board", exact: true }).isVisible()) await page.getByRole("button", { name: "Game controls", exact: true }).click();
+    if (!await page.getByRole("button", { name: "Flip board", exact: true }).isVisible()) await page.getByRole("button", { name: "Game options", exact: true }).click();
     await page.getByRole("button", { name: "Flip board", exact: true }).click();
     await expect(page.locator(".game-opponent").getByLabel(/Player:/)).toBeVisible();
     await expect(page.locator(".game-player").getByRole("button", { name: /Bot strength:/ })).toBeVisible();

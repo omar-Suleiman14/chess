@@ -127,6 +127,3 @@ export function playSound(name: SoundName, volume = preferences.master, options:
   if (context.state === "running") play();
   else void context.resume().then(play).catch(() => {});
 }
-export function haptic(pattern: number | number[]): void {
-  if (typeof navigator !== "undefined" && "vibrate" in navigator) { try { navigator.vibrate(pattern); } catch { /* Unsupported. */ } }
-}

@@ -9,20 +9,16 @@ const label = option("label", "current");
 const baseURL = option("url", "http://127.0.0.1:3100");
 const runs = Number(option("runs", "5"));
 const duration = Number(option("duration", "1000"));
-const matrix = option("matrix", "current");
 const backgroundOption = option("background", "minimal");
 const backgrounds = backgroundOption === "all" ? ["minimal", "ambient", "off"] : [backgroundOption];
 const scrollMs = Number(option("scroll-ms", "0"));
 const reviewSteps = Number(option("review-steps", "0"));
 const directory = `.cache/performance/${label}`;
 await mkdir(directory, { recursive: true });
-const allPresets = matrix === "baseline" ? [
+// Classic is the only design; "legacy-glass" checks that an old stored choice costs nothing extra.
+const allPresets = [
   { name: "classic", appearance: "classic", glass: "off" },
   { name: "legacy-glass", appearance: "glass", glass: "on", glassQuality: "full" },
-] : [
-  { name: "classic", appearance: "classic", glass: "off" },
-  { name: "expressive", appearance: "expressive", glass: "off" },
-  ...["full", "balanced", "minimal"].map((glassQuality) => ({ name: `glass-${glassQuality}`, appearance: "glass", glass: "on", glassQuality })),
 ];
 const presets = allPresets.filter((preset) => option("preset", "all") === "all" || preset.name === option("preset", "all"));
 if (!presets.length) throw new Error("Unknown benchmark preset");

@@ -9,6 +9,7 @@ import type { FatmaLanguage } from "../chess/personality/lines";
 import { DEFAULT_EXPERIENCE, parseExperience, type Experience } from "../experience/config";
 import { themeTokens } from "../experience/theme";
 import { configureAudio, installAudioUnlock } from "./sound";
+import { configureHaptics, type HapticLevel } from "./haptics";
 
 export type Palette = "ivory" | "sage" | "slate" | "blue";
 
@@ -29,7 +30,7 @@ export type Settings = {
   /** English, Franco (Egyptian Arabic in Latin letters) or Egyptian Arabic. */
   fatmaLanguage: FatmaLanguage;
   highContrast: boolean;
-  /** Experimental Liquid Glass controls. Legacy "auto" now means off everywhere. */
+  /** Retired Liquid Glass flag. Kept only so older saves and account rows stay valid; always "off". */
   glass: "auto" | "on" | "off";
   /** Faint drifting characters behind the app that ripple when you tap empty space. */
   livingBackground: boolean;
@@ -63,10 +64,10 @@ type Ctx = {
   syncsExperience: boolean;
   reducedTransparency: boolean;
   reducedMotion: boolean;
-  /** Liquid Glass is enabled only by an explicit opt-in. */
-  glassOn: boolean;
-  /** Device limitations relevant when explicitly opting into glass. */
-  glassOffReason: GlassOffReason;
+  /** Effective haptics: "off" when Haptics is switched off, else this device's strength. */
+  hapticLevel: HapticLevel;
+  /** Off / Subtle / Standard. The strength is per device, since hardware differs. */
+  setHapticLevel: (level: HapticLevel) => void;
 };
 const SettingsContext = createContext<Ctx | null>(null);
 
@@ -82,7 +83,8 @@ export function fromSaved(saved: unknown): Settings {
     const value = (saved as Partial<Settings>)[key];
     if (Object.hasOwn(saved, key) && value !== undefined && value !== null) Object.assign(next, { [key]: value });
   }
-  if (next.glass === "auto") next.glass = "off";
+  // Classic is the only design: retired Liquid Glass / Material choices resolve to it.
+  next.glass = "off";
   next.experience = parseExperience("experience" in saved ? saved.experience : undefined, saved);
   if (!["ivory", "sage", "slate", "blue"].includes(next.palette)) next.palette = "ivory";
   if (!["system", "full", "reduced"].includes(next.motion)) next.motion = "system";
@@ -130,7 +132,7 @@ export function resolveSettingsSync(localChangedAt: number, remote: { settings: 
 
 /**
  * Few cores, little memory or Data Saver: the per-frame backdrop filters cost
- * more than they are worth, so glass starts off. Unknown values count as capable.
+ * more than they are worth, so the live background runs slower. Unknown values count as capable.
  */
 export function isWeakDevice(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -138,23 +140,14 @@ export function isWeakDevice(): boolean {
   return (nav.hardwareConcurrency > 0 && nav.hardwareConcurrency < 4) || (nav.deviceMemory !== undefined && nav.deviceMemory < 4) || nav.connection?.saveData === true;
 }
 
-/**
- * WebKit: Safari, and every browser on iPhone/iPad (Apple requires WebKit there,
- * so Chrome/Edge/Firefox on iOS count too). WebKit cannot render the refraction,
- * so glass would only ever be the fallback there.
- */
-export function isWebKit(ua: string, maxTouchPoints = 0): boolean {
-  const iOS = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && maxTouchPoints > 1);
-  if (iOS) return true;
-  return /AppleWebKit/.test(ua) && !/Chrome|Chromium|Edg|OPR|Android/.test(ua);
-}
+const HAPTIC_KEY = "cbc.haptics.level";
 
-export type GlassOffReason = "webkit" | "weak" | null;
-
-export function glassOffReason(): GlassOffReason {
-  if (typeof navigator === "undefined") return null;
-  if (isWebKit(navigator.userAgent, navigator.maxTouchPoints)) return "webkit";
-  return isWeakDevice() ? "weak" : null;
+function loadHapticStrength(): Exclude<HapticLevel, "off"> {
+  try {
+    return localStorage.getItem(HAPTIC_KEY) === "subtle" ? "subtle" : "standard";
+  } catch {
+    return "standard";
+  }
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -165,9 +158,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [reducedTransparency, setReducedTransparency] = useState(false);
   const [syncsExperience, setSyncsExperience] = useState(false);
   const experienceSupported = useRef(false);
-  // Until the device is known, render the plain controls: upgrading to glass
-  // after mount is less jarring than flashing glass on a device that turns it off.
-  const [offReason, setOffReason] = useState<GlassOffReason | "unknown">("unknown");
+  const [hapticStrength, setHapticStrength] = useState<Exclude<HapticLevel, "off">>("standard");
 
   const [hydrated, setHydrated] = useState(false);
   const changedAt = useRef(0);
@@ -182,7 +173,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSettings(saved.settings);
     setHydrated(true);
-    setOffReason(glassOffReason());
+    setHapticStrength(loadHapticStrength());
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setSystemReduced(media.matches);
     const onChange = () => setSystemReduced(media.matches);
@@ -265,40 +256,42 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
   const updateExperience = useCallback((patch: Partial<Experience>) => {
     const experience = parseExperience({ ...latest.current.experience, ...patch });
-    update({ experience, glass: experience.appearance === "glass" ? "on" : "off", livingBackground: experience.ambient.mode === "ambient" });
+    update({ experience, glass: "off", livingBackground: experience.ambient.mode === "ambient" });
   }, [update]);
 
   const reducedMotion = settings.motion === "reduced" || (settings.motion === "system" && systemReduced);
-  const glassOn = offReason !== "unknown" && settings.experience.appearance === "glass";
-  const glassOffReasonValue = offReason === "unknown" ? null : offReason;
+  const hapticLevel: HapticLevel = settings.haptics ? hapticStrength : "off";
+  useEffect(() => configureHaptics(hapticLevel), [hapticLevel]);
+  const setHapticLevel = useCallback((level: HapticLevel) => {
+    if (level !== "off") {
+      setHapticStrength(level);
+      try { localStorage.setItem(HAPTIC_KEY, level); } catch { /* This visit only. */ }
+    }
+    // Apply before the next tap so a preview plays at the new strength.
+    configureHaptics(level);
+    if ((level !== "off") !== latest.current.haptics) update({ haptics: level !== "off" });
+  }, [update]);
   useEffect(() => configureAudio(settings.sound, settings.volume, settings.experience.audio), [settings.sound, settings.volume, settings.experience.audio]);
 
   useEffect(() => {
     document.documentElement.dataset.palette = settings.palette;
     document.documentElement.dataset.contrast = settings.highContrast ? "high" : "normal";
     document.documentElement.dataset.motion = reducedMotion ? "reduced" : "full";
-    document.documentElement.dataset.glass = glassOn ? "on" : "off";
     const experience = settings.experience;
     const dark = experience.colorMode === "dark" || (experience.colorMode === "system" && systemDark);
     const root = document.documentElement;
-    root.dataset.appearance = experience.appearance;
+    root.dataset.appearance = "classic";
     root.dataset.colorMode = experience.colorMode;
     root.dataset.tone = dark ? "dark" : "light";
-    root.dataset.glassQuality = reducedTransparency || settings.highContrast ? "minimal" : experience.glassQuality;
     root.style.colorScheme = dark ? "dark" : "light";
-    for (const [key, value] of Object.entries(themeTokens(experience, settings.palette, dark))) root.style.setProperty(key, value);
-    try { localStorage.setItem("cbc.theme.v1", JSON.stringify({ fingerprint: JSON.stringify([experience.appearance, experience.colorSource, experience.customColor, settings.palette]), light: themeTokens(experience, settings.palette, false), dark: themeTokens(experience, settings.palette, true) })); } catch { /* Optional first-paint cache. */ }
+    for (const [key, value] of Object.entries(themeTokens(dark))) root.style.setProperty(key, value);
+    try { localStorage.setItem("cbc.theme.v1", JSON.stringify({ fingerprint: JSON.stringify(["classic", settings.palette]), light: themeTokens(false), dark: themeTokens(true) })); } catch { /* Optional first-paint cache. */ }
     if (settings.highContrast) { root.style.setProperty("--muted", dark ? "#eeeeee" : "#333333"); root.style.setProperty("--line", dark ? "#aaaaaa" : "#666666"); }
-  }, [settings.palette, settings.highContrast, settings.experience, systemDark, reducedTransparency, reducedMotion, glassOn]);
+  }, [settings.palette, settings.highContrast, settings.experience, systemDark, reducedMotion]);
 
 
-  const value = useMemo(() => ({ settings, update, updateExperience, syncsExperience: isAuthenticated && syncsExperience, reducedTransparency, reducedMotion, glassOn, glassOffReason: glassOffReasonValue }), [settings, update, updateExperience, isAuthenticated, syncsExperience, reducedTransparency, reducedMotion, glassOn, glassOffReasonValue]);
+  const value = useMemo(() => ({ settings, update, updateExperience, syncsExperience: isAuthenticated && syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel }), [settings, update, updateExperience, isAuthenticated, syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
-}
-
-/** Glass on/off without requiring a provider (defaults to off: the plain controls). */
-export function useGlassOn(): boolean {
-  return useContext(SettingsContext)?.glassOn ?? false;
 }
 
 export function useSettings(): Ctx {

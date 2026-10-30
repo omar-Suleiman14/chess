@@ -17,7 +17,7 @@ export function WebVitalsReporter() {
         const record = (metric: { id: string; name: "LCP" | "INP" | "CLS"; value: number }) => {
           if (cancelled) return;
           const s = current.current;
-          recordVital({ id: metric.id, name: metric.name, value: metric.value, at: Date.now(), appearance: s.experience.appearance, glassQuality: s.experience.appearance === "glass" ? s.experience.glassQuality : undefined, background: s.experience.ambient.mode, colorMode: s.experience.colorMode, evaluation: s.evalBar, device: innerWidth < 768 ? "mobile" : "desktop" });
+          recordVital({ id: metric.id, name: metric.name, value: metric.value, at: Date.now(), appearance: "classic", background: s.experience.ambient.mode, colorMode: s.experience.colorMode, evaluation: s.evalBar, device: innerWidth < 768 ? "mobile" : "desktop" });
         };
         onLCP(record); onINP(record); onCLS(record);
       }).catch(() => {});

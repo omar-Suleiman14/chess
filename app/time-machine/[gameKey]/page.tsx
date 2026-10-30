@@ -14,7 +14,7 @@ import { Board, type LastMove } from "@/components/chess/Board";
 import { Dialog, Segmented } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
 import { Select } from "@/components/ui/Select";
-import { GlassButton } from "@/components/ui/Glass";
+import { Button } from "@/components/ui/Button";
 import {
   ENGINE_BUILD,
   SearchCancelled,
@@ -660,7 +660,7 @@ export default function ReplayPage({
                 disabled: cursor >= path.length,
               },
             ].map((action) => (
-              <GlassButton
+              <Button
                 key={action.label}
                 onClick={() => selectPosition(action.at)}
                 disabled={action.disabled}
@@ -668,7 +668,7 @@ export default function ReplayPage({
                 className="min-h-12 rounded-xl bg-surface px-2 text-sm font-semibold disabled:opacity-40"
               >
                 {action.label}
-              </GlassButton>
+              </Button>
             ))}
           </nav>
           {!hintDismissed && (

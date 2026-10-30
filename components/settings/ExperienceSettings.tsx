@@ -15,7 +15,6 @@ import {
   type SoundEvent,
   type SoundPack,
 } from "@/lib/experience/config";
-import { BOARD_SEEDS } from "@/lib/experience/theme";
 import { PACK_LABELS } from "@/lib/experience/audio";
 import { SwitchRow } from "@/components/ui/Switch";
 
@@ -50,7 +49,7 @@ function Choice<T extends string>({
               className="absolute end-3 top-3 accent-[var(--accent)]"
             />
             <span
-              className={`mb-3 flex h-12 gap-1 rounded-xl p-2 ${option.id === "expressive" ? "bg-[var(--theme-seed)]/20" : option.id === "glass" ? "border border-line bg-linear-to-br from-white/40 to-surface-2" : "bg-surface-2"}`}
+              className={`mb-3 flex h-12 gap-1 rounded-xl p-2 ${option.id === "dark" ? "bg-[#1e1e1c]" : option.id === "system" ? "bg-linear-to-r from-[#efede8] from-50% to-[#1e1e1c] to-50%" : "bg-surface-2"}`}
               aria-hidden="true"
             >
               <span className="w-1/3 rounded-lg bg-accent/20" />
@@ -144,32 +143,8 @@ export function AppearanceSettings() {
   return (
     <section aria-labelledby="appearance-heading" className="grid gap-4">
       <h2 id="appearance-heading" className="text-lg font-semibold">
-        App appearance
+        Appearance
       </h2>
-      <Choice
-        label="Design"
-        value={e.appearance}
-        onChange={(appearance) => updateExperience({ appearance })}
-        options={[
-          {
-            id: "classic",
-            name: "Classic / Standard",
-            description:
-              "The original layout with neutral paper surfaces. Default.",
-          },
-          {
-            id: "expressive",
-            name: "Material 3 Expressive",
-            description: "Tonal color, bolder shapes and expressive controls.",
-          },
-          {
-            id: "glass",
-            name: "Liquid Glass",
-            description:
-              "Translucent controls, crisp content and opaque dialogs.",
-          },
-        ]}
-      />
       <Choice
         label="Color mode"
         value={e.colorMode}
@@ -180,86 +155,11 @@ export function AppearanceSettings() {
           { id: "system", name: "System" },
         ]}
       />
-      {e.appearance === "expressive" && (
-        <div className="grid gap-3 rounded-2xl bg-surface p-4">
-          <Choice
-            label="Material color source"
-            value={e.colorSource}
-            onChange={(colorSource) => updateExperience({ colorSource })}
-            options={[
-              {
-                id: "board",
-                name: "Board palette",
-                description:
-                  "App colors follow the selected chessboard palette.",
-              },
-              {
-                id: "custom",
-                name: "Choose a color",
-                description: "Keep an independent accent color.",
-              },
-            ]}
-          />
-          {e.colorSource === "custom" ? (
-            <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
-              Accent color
-              <input
-                aria-label="Material accent color"
-                type="color"
-                value={e.customColor}
-                onChange={(event) =>
-                  updateExperience({ customColor: event.target.value })
-                }
-                className="h-11 w-16 rounded-lg"
-              />
-            </label>
-          ) : (
-            <p className="flex items-center gap-2 text-sm text-muted">
-              <span
-                className="h-6 w-6 rounded-full"
-                style={{ background: BOARD_SEEDS[settings.palette] }}
-              />
-              Following {settings.palette}. Change the board colors below to
-              update the whole app.
-            </p>
-          )}
-        </div>
-      )}
-      {e.appearance === "glass" && (
-        <div className="grid gap-2">
-          <Choice
-            label="Glass effects"
-            value={e.glassQuality}
-            onChange={(glassQuality) => updateExperience({ glassQuality })}
-            options={[
-              {
-                id: "full",
-                name: "Full Glass",
-                description: "12px bounded blur and brighter reflections.",
-              },
-              {
-                id: "balanced",
-                name: "Balanced Glass",
-                description: "8px blur. Recommended for everyday play.",
-              },
-              {
-                id: "minimal",
-                name: "Minimal Effects",
-                description: "Opaque materials, no backdrop blur.",
-              },
-            ]}
-          />
-          <p className="text-xs text-muted">
-            Reduced transparency and high contrast use opaque materials.
-            Unsupported browsers keep the same layout with solid surfaces.
-          </p>
-        </div>
-      )}
       <p className="text-xs text-muted">
         {syncsExperience
           ? "Appearance, background and sound preferences sync with your account."
-          : "Saved on this device. Account sync becomes available with the updated backend."}{" "}
-        Switching designs keeps your game and clocks intact.
+          : "Saved on this device."}{" "}
+        Changing it keeps your game and clocks intact.
       </p>
     </section>
   );

@@ -1,7 +1,8 @@
 "use client";
 
 import { useConvexAuth, useQuery } from "convex/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { TAB_RESELECT_EVENT } from "@/lib/client/navIntent";
 import { api } from "@/convex/_generated/api";
 import { GameScreen } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
@@ -12,6 +13,12 @@ export default function ClimbPage() {
   const climb = useQuery(api.progress.climb, isAuthenticated ? {} : "skip");
   const [level, setLevel] = useState<string | null>(null);
   const unlocked = climb?.unlockedLevel ?? 0;
+  // Tapping the Bots tab again returns to the level list.
+  useEffect(() => {
+    const back = (event: Event) => { if ((event as CustomEvent<string>).detail === "/climb") setLevel(null); };
+    window.addEventListener(TAB_RESELECT_EVENT, back);
+    return () => window.removeEventListener(TAB_RESELECT_EVENT, back);
+  }, []);
 
   if (level) {
     return <GameScreen key={level} startFresh defaults={{ mode: "climb", opponentId: level, humanColor: "w" }} />;

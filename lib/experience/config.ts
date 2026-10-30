@@ -90,8 +90,13 @@ export const audioSchema = z.object({
 });
 export const experienceSchema = z.object({
   version: z.literal(1),
+  /**
+   * Classic is the only design. The retired values stay in the stored schema so
+   * older account rows remain valid; parseExperience always resolves to Classic.
+   */
   appearance: z.enum(["classic", "expressive", "glass"]),
   colorMode: z.enum(["light", "dark", "system"]),
+  /** Retired with Material / Liquid Glass; kept for stored-row compatibility. */
   colorSource: z.enum(["board", "custom"]),
   customColor: hex,
   glassQuality: z.enum(["full", "balanced", "minimal"]),
@@ -143,19 +148,15 @@ export const DEFAULT_EXPERIENCE: Experience = {
 /** Fill old/partial saves, then validate each dimension independently. */
 export function parseExperience(
   value: unknown,
-  legacy: { glass?: unknown; livingBackground?: unknown } = {},
+  legacy: { livingBackground?: unknown } = {},
 ): Experience {
   const data: Record<string, unknown> =
     value && typeof value === "object"
       ? Object.fromEntries(Object.entries(value))
       : {};
-  const defaults = {
-    ...DEFAULT_EXPERIENCE,
-    appearance: legacy.glass === "on" ? "glass" : "classic",
-  };
   const primitive = experienceSchema
     .omit({ ambient: true, audio: true })
-    .safeParse({ ...defaults, ...data });
+    .safeParse({ ...DEFAULT_EXPERIENCE, ...data });
   const ambient = ambientSchema.safeParse({
     ...DEFAULT_AMBIENT,
     ...(legacy.livingBackground === true ? { mode: "ambient" } : {}),
@@ -167,6 +168,10 @@ export function parseExperience(
   });
   return {
     ...(primitive.success ? primitive.data : DEFAULT_EXPERIENCE),
+    // Old Material / Liquid Glass selections resolve to Classic.
+    appearance: "classic",
+    colorSource: "board",
+    glassQuality: "balanced",
     ambient: ambient.success ? ambient.data : DEFAULT_AMBIENT,
     audio: audio.success ? audio.data : DEFAULT_EXPERIENCE.audio,
   };
