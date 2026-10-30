@@ -6,6 +6,7 @@ import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { Segmented } from "@/components/chess/GameScreen";
 import { PageHeader } from "@/components/shell/AppShell";
+import { NeedsInternet } from "@/components/shell/NeedsInternet";
 import { errorText, NameField, useDefaultName } from "@/components/online/OnlineShared";
 import { ONLINE_TIME_CONTROLS, playerToken, saveName, useOnlineAvatar, withAvatarFallback } from "@/lib/client/online";
 import { navigateWithTransition, PLAY_STAGE } from "@/lib/client/viewTransition";
@@ -54,6 +55,7 @@ export default function PlayPage() {
     <main className="mx-auto min-h-dvh max-w-xl pb-10">
       <PageHeader title="Play a friend" />
       <div className="grid gap-5 px-4">
+        <NeedsInternet what="Online games" />
         <p className="text-sm text-muted">Play someone on another phone or computer. Share a link, a QR code or a 6-digit PIN. No account needed.</p>
         <Segmented label="Mode" value={tab} onChange={(t) => { setTab(t); setError(null); }} options={[["invite", "Invite someone"], ["join", "Join with PIN"]]} />
 

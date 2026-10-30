@@ -3,6 +3,7 @@ for (const [script, ...args] of [
   ["verify-experience.mjs"],
   ["verify-hints.mjs"],
   ["verify-languages.mjs"],
+  ["verify-offline.mjs"],
   ["benchmark-ui.mjs", "--label", "current", "--runs", "5", "--background", "all"],
   ["check-performance.mjs"],
   ["lighthouse-ui.mjs"],

@@ -35,3 +35,9 @@ Short transforms and opacity communicate interactions. Reduced motion removes mo
 ## Verification
 
 Use actual screenshots and interactions in light/dark, languages, small phones, desktop, zoom, and reduced motion. Browser automation does not replace VoiceOver, TalkBack, tactile device tests, or usability sessions. See [release status](ROADMAP.md).
+
+## Launch screen and offline
+
+A CSS-only launch screen (`components/shell/LaunchSplash.tsx`) plays once per launch (~1.4 s): a 4×4 board in the current theme, a brass square hopping a knight's path, then the name. It is pointer-transparent, skipped on later pages via `sessionStorage`, and shortened under reduced motion.
+
+The offline service worker (`lib/offline/serviceWorker.ts`, served at `/sw.js`) precaches signed-out page shells, every public file and the scripts those pages reference. Navigation is network-first with the cached shell as the fallback; API, MCP, auth, RSC data and other origins are never cached. `scripts/verify-offline.mjs` proves an Airplane Mode cold start, an engine reply, a reload and route navigation.
