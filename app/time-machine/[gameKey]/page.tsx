@@ -35,6 +35,7 @@ import {
 import { findMistakes } from "@/lib/chess/lessons/adaptive";
 import {
   kingSquare,
+  legalUcis,
   positionStatus,
   sideToMove,
   type Square,
@@ -327,7 +328,7 @@ export default function ReplayPage({
       (n) =>
         !scores[n.key] ||
         (scores[n.key].depth ?? 0) < 10 ||
-        !scores[n.key].candidates,
+        (scores[n.key].candidates?.length ?? 0) < Math.min(2, legalUcis(n.fen).length),
     );
     setMessage(null);
     setAnalysing({ done: 0, total: nodes.length });
@@ -338,7 +339,8 @@ export default function ReplayPage({
         continue;
       }
       try {
-        const settingsHash = `review:mt${REVIEW_MOVETIME}:mpv2:v2`;
+        // v3: analyses before the MultiPV fix only ever held one line.
+        const settingsHash = `review:mt${REVIEW_MOVETIME}:mpv2:v3`;
         const cached = await readAnalysis(n.fen, settingsHash);
         if (run !== analysisRun.current) return;
         const result = cached

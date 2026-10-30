@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { ENGINE_BUILD, SearchCancelled } from "../chess/engine/controller";
 import type { WhiteScore } from "../chess/engine/uci";
 import { getEngine, supportsEngine } from "./engine";
-import { readAnalysis, writeAnalysis } from "./analysisCache";
+import { joinAnalysis, readAnalysis, shareAnalysis, writeAnalysis } from "./analysisCache";
 
 export const EVAL_MOVETIME_MS = 1500;
-export const EVAL_SETTINGS_HASH = `eval:mt${EVAL_MOVETIME_MS}:mpv1`;
+/** Two lines per position: the eval bar shows the first, move feedback reuses both. */
+export const EVAL_MULTIPV = 2;
+export const EVAL_SETTINGS_HASH = `eval:mt${EVAL_MOVETIME_MS}:mpv${EVAL_MULTIPV}`;
 const UPDATE_INTERVAL_MS = 250; // <= 4 repaints per second: smooth enough, light on phones
 
 export type Evaluation = { nodeKey: string; fen: string; score: WhiteScore; depth?: number; bestmove?: string | null; final: boolean };
@@ -38,11 +40,21 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
         finalRef.current?.(final);
         return;
       }
+      // Move feedback may already be analysing this exact position.
+      const joined = await joinAnalysis(fen, EVAL_SETTINGS_HASH);
+      if (cancelled) return;
+      if (joined && (joined.depth ?? 0) >= minimumDepth) {
+        const final: Evaluation = { nodeKey, fen, score: joined.score, depth: joined.depth, bestmove: joined.bestmove, final: true };
+        setEvaluation(final);
+        finalRef.current?.(final);
+        return;
+      }
       searching = true;
-      const result = await engine.search({
+      const result = await shareAnalysis(fen, EVAL_SETTINGS_HASH, engine.search({
         kind: "eval",
         fen,
         movetimeMs: EVAL_MOVETIME_MS,
+        multiPv: EVAL_MULTIPV,
         onInfo: (info) => {
           if (info.multipv !== 1) return;
           const now = performance.now();
@@ -50,7 +62,7 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
           lastPaint = now;
           setEvaluation({ nodeKey, fen, score: info.score, depth: info.depth, final: false });
         },
-      });
+      }));
       if (cancelled) return;
       if (result.score.cp === undefined && result.score.mate === undefined) {
         setEvaluation(null);
