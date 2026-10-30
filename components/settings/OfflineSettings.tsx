@@ -39,8 +39,8 @@ export function OfflineSettings() {
           <p className="text-sm text-muted">Offline play isn&apos;t available in this browser.</p>
         )}
         <dl className="mt-4 grid gap-1 border-t border-line pt-3 text-xs">
-          <div><dt className="inline font-semibold">Works offline: </dt><dd className="inline text-muted">Sherine and every bot, hints, evaluation, Time Machine, lessons, themes, sounds and your saved games.</dd></div>
-          <div><dt className="inline font-semibold">Needs internet: </dt><dd className="inline text-muted">online games, friends and challenges, account sync and Chess.com sounds.</dd></div>
+          <div><dt className="inline font-semibold">Works offline: </dt><dd className="inline text-muted">Sherine and every bot, hints, evaluation, Time Machine, lessons, themes, Chess.com sounds and your saved games.</dd></div>
+          <div><dt className="inline font-semibold">Needs internet: </dt><dd className="inline text-muted">online games, friends and challenges, and account sync.</dd></div>
         </dl>
       </div>
     </section>

@@ -5,7 +5,7 @@ export function Overview() {
     <h2 id="modes-title" className="text-2xl font-semibold">Ways to play</h2>
     <div className="grid gap-4 sm:grid-cols-2">
       {[
-        { href: "/", title: "Full Power", text: "Play Sherine, powered by Stockfish 19 Lite on your device. Undo, explore another line, and try again." },
+        { href: "/", title: "Full Power", text: "Play Maya, the strongest bot: Stockfish 19 Lite on your device. Undo, explore another line, and try again." },
         { href: "/climb", title: "The Climb", text: "Work through 11 levels, from beginner bots to full-power Stockfish. Strength labels are estimates." },
         { href: "/learn", title: "Learn", text: "Short interactive lessons on pieces, rules, tactics, endgames, and openings." },
         { href: "/timed", title: "Timed", text: "Practise with 3+2, 5+3, 10+5, or 15+10 clocks." },

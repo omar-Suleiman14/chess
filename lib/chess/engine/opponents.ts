@@ -12,6 +12,17 @@ export const THINK_TIME_MS: Record<ThinkPreset, number> = {
 
 export const FULL_POWER_LABEL = 3000;
 
+/**
+ * Who you're playing: Maya is the strongest bot (Stockfish at full strength,
+ * Full Power and the top Climb level); Sherine plays every weaker level and
+ * stays the app's companion.
+ */
+export type BotPersona = "maya" | "sherine";
+export const PERSONA_NAMES: Record<BotPersona, string> = { maya: "Maya", sherine: "Sherine" };
+export function botPersona(opponent?: { id: string } | null): BotPersona {
+  return opponent && (opponent.id.startsWith("full-power-") || opponent.id === "climb-11") ? "maya" : "sherine";
+}
+
 export type OpponentPolicy =
   | { kind: "beginner"; policy: "random" | "greedy" | "careful"; blunderRate: number }
   | { kind: "stockfish"; options: EngineOptions; movetimeMs: number; depth?: number };
@@ -46,7 +57,7 @@ const CLIMB_V1: Opponent[] = [
   { id: "climb-08", version: 1, name: "Sherine (focused)", rating: 1750, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 1750 }, movetimeMs: 600 } },
   { id: "climb-09", version: 1, name: "Sherine (serious)", rating: 2050, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 2050 }, movetimeMs: 800 } },
   { id: "climb-10", version: 1, name: "Sherine (ruthless)", rating: 2400, ratingDeviation: 300, calibrated: false, policy: { kind: "stockfish", options: { UCI_LimitStrength: true, UCI_Elo: 2400 }, movetimeMs: 1000 } },
-  { id: "climb-11", version: 1, name: "Sherine · Full Power", rating: FULL_POWER_LABEL, ratingDeviation: 350, calibrated: false, policy: { kind: "stockfish", options: {}, movetimeMs: THINK_TIME_MS.standard } },
+  { id: "climb-11", version: 1, name: "Maya · Full Power", rating: FULL_POWER_LABEL, ratingDeviation: 350, calibrated: false, policy: { kind: "stockfish", options: {}, movetimeMs: THINK_TIME_MS.standard } },
 ];
 
 // Keep historical policies available to games already started on v1. The v1
@@ -63,7 +74,7 @@ export function fullPowerOpponent(preset: ThinkPreset): Opponent {
   return {
     id: `full-power-${preset}`,
     version: 1,
-    name: "Sherine",
+    name: "Maya",
     rating: FULL_POWER_LABEL,
     ratingDeviation: 350,
     calibrated: false,

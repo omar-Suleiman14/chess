@@ -117,7 +117,7 @@ export default function SettingsPage() {
             />
             <SwitchRow
               label="Chess.com sounds"
-              hint="Personal use: your browser loads them from chess.com. Built-in sounds play if they can't load."
+              hint="The official Chess.com move, capture, check and game sounds. Built-in sounds play only if they can't load."
               checked={chesscomSounds}
               onChange={(on) => {
                 unlockAudio();
@@ -173,10 +173,10 @@ export default function SettingsPage() {
         </Group>
 
 
-        <Group title="Sherine">
-          <SwitchRow label="Dialogue sounds" hint="A quiet chime when Sherine speaks. No voice." checked={settings.fatmaSound} onChange={(fatmaSound) => { unlockAudio(); update({ fatmaSound }); }} />
+        <Group title="Sherine & Maya">
+          <SwitchRow label="Dialogue sounds" hint="A quiet chime when Sherine or Maya speaks. No voice." checked={settings.fatmaSound} onChange={(fatmaSound) => { unlockAudio(); update({ fatmaSound }); }} />
           <SwitchRow label="Auto language" hint="Browser language initially; follows Arabic, English or Arabizi when you say hi." checked={coaching.autoLanguage} onChange={(autoLanguage) => updateCoaching({ autoLanguage })} />
-          <Segmented label="Sherine speaks" value={settings.fatmaLanguage} onChange={(fatmaLanguage) => update({ fatmaLanguage })} options={FATMA_LANGUAGES} />
+          <Segmented label="They speak" value={settings.fatmaLanguage} onChange={(fatmaLanguage) => update({ fatmaLanguage })} options={FATMA_LANGUAGES} />
           <div className="mt-3 grid gap-3">
             <Segmented label="Banter frequency" value={coaching.frequency} onChange={(frequency) => updateCoaching({ frequency })} options={[["quiet", "Quiet"], ["balanced", "Balanced"], ["chatty", "Chatty"]]} />
             <Segmented label="Personality" value={coaching.intensity} onChange={(intensity) => updateCoaching({ intensity })} options={[["gentle", "Gentle"], ["playful", "Playful"], ["spicy", "Spicy"]]} />
@@ -185,9 +185,9 @@ export default function SettingsPage() {
           <p className="mt-2 px-1 text-xs text-muted">Franco is Egyptian Arabic in Latin letters (3 = ع, 7 = ح, 2 = ء). Tap Sherine during a game to talk to her.</p>
         </Group>
 
-        <Group title="Sherine (Full Power)">
+        <Group title="Maya (Full Power)">
           <Segmented label="Thinking time" value={settings.think} onChange={(think) => update({ think })} options={[["fast", "Fast · 0.4s"], ["standard", "Standard · 1.2s"], ["deep", "Deep · 3.5s"]]} />
-          <p className="mt-2 px-1 text-xs text-muted">Stockfish 19 Lite runs on this device. Strength is never artificially limited in Full Power.</p>
+          <p className="mt-2 px-1 text-xs text-muted">Maya is the strongest bot: Stockfish 19 Lite on this device, never artificially limited. Sherine plays the weaker levels.</p>
         </Group>
       </div>
     </main>

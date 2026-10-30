@@ -66,7 +66,7 @@ const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: strin
   {
     title: "Play",
     items: [
-      { href: "/", label: "Full Power", hint: "Sherine · 3000" },
+      { href: "/", label: "Full Power", hint: "Maya · 3000" },
       { href: "/climb", label: "The Climb", hint: "Rated ladder" },
       { href: "/timed", label: "Timed", hint: "Clock presets" },
       { href: "/play", label: "Play a friend", hint: "Link · QR · PIN" },

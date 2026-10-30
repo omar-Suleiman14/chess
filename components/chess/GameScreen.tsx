@@ -13,7 +13,7 @@ import { MenuButton, useGameFocus, useShell } from "@/components/shell/AppShell"
 import type { TabId } from "@/components/shell/TabBar";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, remaining } from "@/lib/chess/clock";
-import { findOpponent } from "@/lib/chess/engine/opponents";
+import { botPersona, findOpponent, PERSONA_NAMES, type BotPersona } from "@/lib/chess/engine/opponents";
 import { headNode, moveLabel, pathTo } from "@/lib/chess/history/tree";
 import { describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useEngineState, usePrewarmEngine } from "@/lib/client/engine";
@@ -25,7 +25,7 @@ import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from 
 import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
 import { useFatma } from "@/lib/client/useFatma";
 import { usePremove } from "@/lib/client/usePremove";
-import { HintPanel, HINT_COPY } from "./HintPanel";
+import { HINT_COPY } from "./HintPanel";
 import { buildHint } from "@/lib/chess/hints";
 import { supportsEngine } from "@/lib/client/engine";
 import { Board, type LastMove } from "./Board";
@@ -56,7 +56,9 @@ type Props = {
 export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props) {
   const { settings, reducedMotion, update, updateExperience } = useSettings();
   const { coaching } = useCoachingPreferences();
-  const fatma = useFatma();
+  // Maya in full-strength games, Sherine otherwise; follows the loaded game once it's known.
+  const [persona, setPersona] = useState<BotPersona>(() => botPersona({ id: defaults.opponentId }));
+  const fatma = useFatma(persona);
   const sync = useSync();
   const engineState = useEngineState();
   const [announcement, setAnnouncement] = useState("");
@@ -76,6 +78,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const evals = useRef(new Map<string, Evaluation>());
   const evaluatedGame = useRef<string | undefined>(undefined);
   const executingPremove = useRef(false);
+  const botNameRef = useRef("Sherine");
   const onPremoveExecution = useCallback((active: boolean) => { executingPremove.current = active; }, []);
 
   const onMove = useCallback(
@@ -90,7 +93,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       }
       setLastMove({ from: applied.from, to: applied.to, rookFrom, rookTo, key: node.key });
       const mover: Color = node.ply % 2 === 1 ? "w" : "b";
-      setAnnouncement(`${by === "fatma" ? "Sherine: " : ""}${describeMove(applied, mover)}`);
+      setAnnouncement(`${by === "fatma" ? `${botNameRef.current}: ` : ""}${describeMove(applied, mover)}`);
       if (settings.sound) {
         // The result effect plays the ending once, after the final move.
         if (!terminal) playSound(applied.promotion ? "promote" : castle ? "castle" : applied.check ? "check" : applied.captured ? "capture" : executingPremove.current ? "premove_execute" : by === "fatma" ? "opponent_move" : "move", settings.volume, { key: `move:${node.key}` });
@@ -180,6 +183,11 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const status = useMemo(() => positionStatus(fen), [fen]);
   const turn = sideToMove(liveFen);
   const opponent = game ? findOpponent(game.meta.opponentId, game.meta.opponentVersion ?? 1) : undefined;
+  const botName = PERSONA_NAMES[botPersona(opponent ?? { id: defaults.opponentId })];
+  useEffect(() => { botNameRef.current = botName; }, [botName]);
+  const gamePersona = botPersona(opponent ?? { id: defaults.opponentId });
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setPersona(gamePersona), [gamePersona]);
   const active = game?.meta.status === "active";
   const ratedEligible = game?.meta.rated === "eligible";
   const evalAllowed = settings.evalBar && (!active || !ratedEligible);
@@ -301,17 +309,22 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const hintContextRef = useRef(hintContext);
   useEffect(() => { hintContextRef.current = hintContext; hintOperation.current++; }, [hintContext]);
   const hintStage = hintRequest?.context === hintContext && active && turn === human && !reviewing && !chess.thinking ? hintRequest.stage : null;
-  const hintCopy = HINT_COPY[settings.fatmaLanguage];
+  // Hints are app UI: always plain English. Only Sherine and Maya speak Arabic or Franco.
+  const hintCopy = HINT_COPY.en;
   useEffect(() => {
     if (!hintStage) return;
     const timer = setTimeout(() => setHintTimedOut(hintContext), 8_000);
     return () => clearTimeout(timer);
   }, [hintContext, hintStage]);
   const evaluation = useEvaluation(fen, viewNode?.key ?? "root", (evalAllowed || (coachingAllowed && hintStage !== null)) && !status.over, onFinalEval, hintStage ? 10 : 0);
-  const hintEvidence = useMemo(() => hintStage && evaluation?.final && evaluation.fen === fen ? buildHint(fen, evaluation.bestmove, evaluation.depth, settings.fatmaLanguage) : null, [hintStage, evaluation, fen, settings.fatmaLanguage]);
-  const hintSquares = useMemo(() => hintStage && hintStage >= 2 && hintEvidence ? hintStage === 2 ? [hintEvidence.move.from] : [hintEvidence.move.from, hintEvidence.move.to] : [], [hintStage, hintEvidence]);
+  const hintEvidence = useMemo(() => hintStage && evaluation?.final && evaluation.fen === fen ? buildHint(fen, evaluation.bestmove, evaluation.depth, "en") : null, [hintStage, evaluation, fen]);
+  // Like chess.com: first tap lights up the piece to move, second tap shows the move, third clears it.
+  const hintSquares = useMemo(() => hintStage && hintEvidence ? hintStage === 1 ? [hintEvidence.move.from] : [hintEvidence.move.from, hintEvidence.move.to] : [], [hintStage, hintEvidence]);
+  const hintStatus = !hintStage ? null : !hintEvidence ? (hintTimedOut === hintContext ? "Hint unavailable" : "Finding a hint…") : hintStage === 1 ? `Hint · ${hintEvidence.highlight}` : `Hint · ${hintEvidence.move.san}`;
   const requestHint = async (consented = false) => {
     if (hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine()) return;
+    if (hintStage === 1 && hintEvidence) { haptic("select"); setHintRequest({ context: hintContext, stage: 2 }); return; }
+    if (hintStage) { setHintRequest(null); return; }
     if (ratedEligible && !consented) { setHintConsent(hintContext); return; }
     const context = hintContext;
     const operation = ++hintOperation.current;
@@ -400,7 +413,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const backHold = useHoldRepeat(() => step(-1), moveCount === 0 || viewPly === 0);
   const forwardHold = useHoldRepeat(() => step(1), !reviewing);
   const hintDisabled = hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine();
-  const resultText = game?.meta.status === "finished" ? resultLine(game.meta.result, game.meta.resultReason, human) : null;
+  const resultText = game?.meta.status === "finished" ? resultLine(game.meta.result, game.meta.resultReason, human, botName) : null;
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
 
   return (
@@ -438,7 +451,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Move history</summary>
           <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="flex h-[calc(100%-44px)]" />
         </details>
-        {hintStage && <HintPanel stage={hintStage} evidence={hintEvidence} unavailable={hintTimedOut === hintContext} language={settings.fatmaLanguage} onNext={() => { if (hintEvidence && hintStage < 3) setHintRequest({ context: hintContext, stage: hintStage === 1 ? 2 : 3 }); }} onClose={() => setHintRequest(null)} />}
         {hintFailure && <p role="alert" className="p-3 text-sm text-danger">{hintCopy.error}</p>}
         {(coaching.moveFeedback || coaching.explanations) && <section aria-label="Optional coaching" className="shrink-0 border-t border-line bg-surface p-3 text-sm" aria-live="polite">
           {!coachingAllowed ? <button onClick={() => { void chess.markAssisted("engine_lines").then((ok) => { if (!ok) setHintFailure(true); }); }} className="min-h-11 underline">Enable coaching · makes this game unrated</button> : <>
@@ -480,11 +492,11 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               lastMove={reviewing ? viewLastMove : lastMove}
               checkSquare={checkSq}
               hintSquares={hintSquares}
-              hintMove={hintStage === 3 && hintEvidence ? { from: hintEvidence.move.from, to: hintEvidence.move.to } : undefined}
+              hintMove={hintStage && hintStage >= 2 && hintEvidence ? { from: hintEvidence.move.from, to: hintEvidence.move.to } : undefined}
               showLegalDots={settings.legalDots}
               coordinates={settings.coordinates}
               reducedMotion={reducedMotion}
-              label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : "Sherine to move.") : "Game over."}`}
+              label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : `${botName} to move.`) : "Game over."}`}
               onSelect={onSelectSound}
             />
           </div>
@@ -496,6 +508,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               human={human}
               description={resultText}
               reducedMotion={reducedMotion}
+              opponentName={botName}
               onRematch={() => void chess.newGame({ ...defaults, opponentId: game.meta.opponentId })}
               reviewUrl={`/time-machine/${game.meta.gameKey}`}
               summary={{ moves: Math.ceil(moveCount / 2), durationMs: Math.max(0, game.meta.updatedAt - game.tree.nodes.root.createdAt), timeControl: tc?.label ?? "Untimed" }}
@@ -508,9 +521,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
         <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted empty:hidden [grid-area:status] max-lg:px-3 lg:justify-start" aria-live="polite">
+          {hintStatus && <span className="truncate font-medium text-ink" role="status">{hintStatus}</span>}
           {premove.uci && <button onClick={premove.cancel} className="shrink-0 underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
-          {engineWaking && <span>Sherine is waking up…</span>}
-          {chess.thinking && !engineWaking && <span>Sherine is thinking…</span>}
+          {engineWaking && <span>{botName} is waking up…</span>}
+          {chess.thinking && !engineWaking && <span>{botName} is thinking…</span>}
           {chess.engineError && (
             <span className="text-danger">
               {chess.engineError}{" "}
@@ -622,7 +636,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </Dialog>
       )}
 
-      {hintConsent === hintContext && <Dialog dir={settings.fatmaLanguage === "egy" ? "rtl" : "ltr"} lang={settings.fatmaLanguage === "egy" ? "ar-EG" : "en"} title={hintCopy.hint} description={hintCopy.consent} onClose={() => { hintOperation.current++; setHintConsent(null); setHintBusy(false); }} focusTitle>
+      {hintConsent === hintContext && <Dialog title={hintCopy.hint} description={hintCopy.consent} onClose={() => { hintOperation.current++; setHintConsent(null); setHintBusy(false); }} focusTitle>
         <button disabled={hintBusy} onClick={() => void requestHint(true)} className="min-h-12 rounded-xl bg-accent px-4 font-semibold text-accent-text disabled:opacity-50">{hintCopy.accept}</button>
         <button disabled={hintBusy} onClick={() => { hintOperation.current++; setHintConsent(null); setHintBusy(false); }} className="min-h-11 rounded-xl bg-surface-2 px-4">{hintCopy.cancel}</button>
       </Dialog>}
@@ -708,7 +722,7 @@ function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSou
         <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} /></svg>
       </Link>
       <Link href="/settings" className="press-overlay flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-medium ring-1 ring-inset ring-line">
-        Board, sound, haptics & Sherine
+        Board, sound, haptics & characters
         <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} /></svg>
       </Link>
       <nav aria-label="Go to" className="mt-1">
@@ -723,7 +737,7 @@ function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSou
   );
 }
 
-function resultLine(result: string | undefined, reason: string | undefined, human: Color): string {
+function resultLine(result: string | undefined, reason: string | undefined, human: Color, botName: string): string {
   if (!result) return "Game aborted.";
   const humanWon = (result === "1-0") === (human === "w") && result !== "1/2-1/2";
   const why: Record<string, string> = {
@@ -737,7 +751,7 @@ function resultLine(result: string | undefined, reason: string | undefined, huma
     threefold: "threefold repetition",
   };
   if (result === "1/2-1/2") return `Draw · ${why[reason ?? ""] ?? reason ?? ""}`;
-  return `${humanWon ? "You win" : "Sherine wins"} ${why[reason ?? ""] ?? ""}`.trim();
+  return `${humanWon ? "You win" : `${botName} wins`} ${why[reason ?? ""] ?? ""}`.trim();
 }
 
 
@@ -764,9 +778,9 @@ function NewGameDialog({
     <Dialog title="New game" onClose={onClose}>
       <Segmented label="Play as" value={color} onChange={setColor} options={[["w", "White"], ["random", "Random"], ["b", "Black"]]} />
       {defaults.mode === "full_power" && (
-        <Segmented label="Sherine thinks" value={think} onChange={onThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
+        <Segmented label="Maya thinks" value={think} onChange={onThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
       )}
-      <p className="text-xs text-muted">Full strength in every setting. Thinking time changes how long she searches, not a fake Elo.</p>
+      <p className="text-xs text-muted">Maya plays at full strength in every setting. Thinking time changes how long she searches, not a fake Elo.</p>
       <button onClick={start} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text">
         Start
       </button>

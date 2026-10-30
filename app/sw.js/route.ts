@@ -2,6 +2,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { ALL_STATIC_LESSONS } from "@/lib/chess/lessons/curriculum";
 import { SERVICE_WORKER_SOURCE } from "@/lib/offline/serviceWorker";
+import { CHESSCOM_BASE, CHESSCOM_FILES } from "@/lib/client/sound";
 
 // Built once per deploy: the worker carries its own version and file list.
 export const dynamic = "force-static";
@@ -29,7 +30,8 @@ export function GET() {
     // Replacer functions: "$&"-style patterns in file names must stay literal.
     .replace("__VERSION__", () => JSON.stringify(version))
     .replace("__PAGES__", () => JSON.stringify(PAGES))
-    .replace("__FILES__", () => JSON.stringify([...publicFiles(), "/manifest.webmanifest"]));
+    .replace("__FILES__", () => JSON.stringify([...publicFiles(), "/manifest.webmanifest"]))
+    .replace("__OPTIONAL__", () => JSON.stringify([...new Set(Object.values(CHESSCOM_FILES))].map((file) => `${CHESSCOM_BASE}${file}.mp3`)));
   return new Response(body, {
     headers: {
       "Content-Type": "application/javascript; charset=utf-8",

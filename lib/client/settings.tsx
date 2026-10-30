@@ -174,7 +174,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [syncsExperience, setSyncsExperience] = useState(false);
   const experienceSupported = useRef(false);
   const [hapticStrength, setHapticStrength] = useState<Exclude<HapticLevel, "off">>("standard");
-  const [chesscomSounds, setChesscomState] = useState(false);
+  // Chess.com's official sounds are the default; "off" is remembered per device.
+  const [chesscomSounds, setChesscomState] = useState(true);
   // Newer backends also store the board theme; older ones would reject the field.
   const boardThemeSupported = useRef(false);
   /** Capabilities answered (or failed): pushes wait for it so newer fields aren't skipped. */
@@ -194,7 +195,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(saved.settings);
     setHydrated(true);
     setHapticStrength(loadHapticStrength());
-    try { setChesscomState(localStorage.getItem(CHESSCOM_KEY) === "on"); } catch { /* Off. */ }
+    try { setChesscomState(localStorage.getItem(CHESSCOM_KEY) !== "off"); } catch { /* Default on. */ }
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setSystemReduced(media.matches);
     const onChange = () => setSystemReduced(media.matches);

@@ -384,3 +384,17 @@ button {
   .launch-splash__board, .launch-splash__stage, .launch-splash__name { animation: none; opacity: 1; }
   .launch-splash__runner { animation: none; opacity: 1; transform: translate(var(--cell), calc(var(--cell) * 3)); }
 }
+
+/* Maya's avatar: an occasional blink, and a mouth that moves while she talks. */
+.maya-avatar__eyes { animation: maya-blink 4.6s ease-in-out infinite; }
+@keyframes maya-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.12); } }
+.maya-avatar__talk > ellipse { animation: maya-mouth-open 260ms steps(1) infinite; }
+.maya-avatar__talk > path { animation: maya-mouth-closed 260ms steps(1) infinite; }
+@keyframes maya-mouth-open { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes maya-mouth-closed { 0% { opacity: 0; } 50% { opacity: 1; } }
+
+/* Hints, chess.com style: the square glows, then an arrow shows the move. */
+:root { --hint-arrow: rgb(232 136 40 / 0.85); }
+.hint-square { background: rgb(232 136 40 / 0.42); box-shadow: inset 0 0 0 3px rgb(232 136 40 / 0.9); animation: hint-glow 1.6s ease-in-out infinite; }
+@keyframes hint-glow { 50% { background: rgb(232 136 40 / 0.26); } }
+[data-motion="reduced"] .hint-square { animation: none; }

@@ -40,8 +40,9 @@ function buffer(pack: SoundPack, event: SoundEvent): AudioBuffer | null {
  * the files are never copied into this app, its repository or its builds.
  * Until they arrive (or if they can't load) the built-in cues play instead.
  */
-const CHESSCOM_BASE = "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/";
-const CHESSCOM_FILES: Partial<Record<SoundEvent, string>> = {
+/** Same-origin pass-through to chess.com's official files (see next.config.ts rewrites). */
+export const CHESSCOM_BASE = "/sounds/chesscom/";
+export const CHESSCOM_FILES: Partial<Record<SoundEvent, string>> = {
   move: "move-self", opponent_move: "move-opponent", capture: "capture", check: "move-check",
   castle: "castle", promote: "promote", premove_set: "premove", premove_execute: "premove",
   illegal: "illegal", start: "game-start", end: "game-end", victory: "game-end", defeat: "game-end",
@@ -61,7 +62,7 @@ function loadChesscom(): void {
   for (const file of new Set(Object.values(CHESSCOM_FILES))) {
     const url = `${CHESSCOM_BASE}${file}.mp3`;
     // Decoded buffers play with no latency; if the server refuses CORS, fall back to an <audio> element.
-    void fetch(url, { mode: "cors", credentials: "omit" })
+    void fetch(url, { credentials: "omit" })
       .then((response) => { if (!response.ok) throw new Error(String(response.status)); return response.arrayBuffer(); })
       .then((data) => { if (!context) throw new Error("no audio"); return context.decodeAudioData(data); })
       .then((decoded) => { chesscomBuffers.set(file, decoded); })
