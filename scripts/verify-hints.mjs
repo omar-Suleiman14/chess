@@ -48,8 +48,8 @@ try {
     await hint.click();
     await expect(panel).toHaveCount(0);
     await expect(page.getByText("Unrated · assistance used", { exact: true })).toBeVisible();
-    if (!await page.getByRole("button", { name: "Flip board", exact: true }).isVisible()) await page.getByRole("button", { name: "Game options", exact: true }).click();
-    await page.getByRole("button", { name: "Flip board", exact: true }).click();
+    await page.getByRole("button", { name: "Game options", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Flip board", exact: true }).click();
     await expect(page.locator(".game-opponent").getByLabel(/Player:/)).toBeVisible();
     await expect(page.locator(".game-player").getByRole("button", { name: /Bot strength:/ })).toBeVisible();
     // The bot-strength popup (ⓘ) always closes: backdrop tap and its button.

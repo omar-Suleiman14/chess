@@ -80,4 +80,24 @@ describe("gameplay sound dispatch", () => {
     const { installAudioUnlock } = await import("./sound"); const first = installAudioUnlock(); const second = installAudioUnlock();
     first(); expect(document.removeEventListener).not.toHaveBeenCalled(); second(); expect(document.removeEventListener).toHaveBeenCalledTimes(4);
   });
+  it("starts a fresh audio engine on the next tap after iOS suspends it in the background", async () => {
+    const created: Array<{ state: string; close: ReturnType<typeof vi.fn> }> = [];
+    class Ctx {
+      state = "running"; destination = {};
+      close = vi.fn(async () => {});
+      resume = vi.fn(async () => {});
+      constructor() { created.push(this); }
+      createBuffer() { return { getChannelData: () => new Float32Array(1) }; }
+      createBufferSource() { return { buffer: null, connect: (n: unknown) => n, start, stop, disconnect: vi.fn(), onended: null }; }
+      createGain() { return { gain: { value: 0 }, connect: () => ({}), disconnect: vi.fn() }; }
+    }
+    vi.stubGlobal("window", { AudioContext: Ctx });
+    const { unlockAudio } = await import("./sound");
+    unlockAudio();
+    expect(created).toHaveLength(1);
+    created[0].state = "interrupted";
+    unlockAudio();
+    expect(created).toHaveLength(2);
+    expect(created[0].close).toHaveBeenCalled();
+  });
 });

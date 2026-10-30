@@ -32,10 +32,10 @@ function PersonRow({ person, children }: { person: Person; children?: React.Reac
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, flat = false }: { title: string; children: React.ReactNode; flat?: boolean }) {
   return (
-    <section className="rounded-3xl bg-surface px-4 py-3 shadow-[var(--shadow)]">
-      <h2 className="pb-1 text-sm font-semibold text-muted">{title}</h2>
+    <section className={flat ? "rounded-2xl bg-surface-2/60 px-3.5 py-2 ring-1 ring-inset ring-line" : "rounded-3xl bg-surface px-4 py-3 shadow-[var(--shadow)]"}>
+      <h2 className={`pb-1 font-semibold text-muted ${flat ? "text-xs uppercase tracking-wide" : "text-sm"}`}>{title}</h2>
       <ul className="divide-y divide-line">{children}</ul>
     </section>
   );
@@ -121,10 +121,8 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
     );
   }
 
-  return (
-    <div className={embedded ? "min-w-0" : "mx-auto min-h-dvh max-w-xl overflow-x-clip pb-10"}>
-      {!embedded && <PageHeader title="Friends" />}
-      <div className="grid gap-4 px-4">
+  const addForm = (
+      <>
         <form
           className="flex gap-2"
           onSubmit={(e) => {
@@ -152,10 +150,18 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
           </p>
         )}
 
+      </>
+  );
+
+  return (
+    <div className={embedded ? "min-w-0" : "mx-auto min-h-dvh max-w-xl overflow-x-clip pb-10"}>
+      {!embedded && <PageHeader title="Friends" />}
+      <div className={embedded ? "grid gap-3" : "grid gap-4 px-4"}>
+        {!embedded && addForm}
         {(data === undefined || (!embedded && view === "cards" && cards === undefined)) && <LoadingSpinner label="Loading friends" />}
 
         {data && data.challenges.length > 0 && (
-          <Section title="Game invites">
+          <Section flat={embedded} title="Challenges for you">
             {data.challenges.map((c) => (
               <PersonRow key={c.id} person={c.from}>
                 <Link href={`/play/${c.code}`} className={`${pill} grid place-items-center bg-accent text-accent-text`}>Play</Link>
@@ -166,7 +172,7 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
         )}
 
         {data && data.incoming.length > 0 && (
-          <Section title="Friend requests">
+          <Section flat={embedded} title="Friend requests">
             {data.incoming.map((p) => (
               <PersonRow key={p.alias} person={p}>
                 <button disabled={busy} onClick={() => void act(() => respond({ alias: p.alias, accept: true }))} className={`${pill} bg-accent text-accent-text`}>Accept</button>
@@ -192,8 +198,8 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
         )}
 
         {data && (embedded || view === "list" || data.friends.length === 0) && (
-          <Section title={`Friends${data.friends.length ? ` · ${data.friends.length}` : ""}`}>
-            {data.friends.length === 0 && <li className="py-3 text-sm text-muted">No friends yet. Add someone by username, or scan their card.</li>}
+          <Section flat={embedded} title={`Friends${data.friends.length ? ` · ${data.friends.length}` : ""}`}>
+            {data.friends.length === 0 && <li className="py-3 text-sm text-muted">{embedded ? "No friends yet. Add someone below, or play anyone with a link." : "No friends yet. Add someone by username, or scan their card."}</li>}
             {data.friends.map((p) => (
               <PersonRow key={p.alias} person={p}>
                 <button onClick={() => setChallenging(p.alias)} className={`${pill} bg-accent text-accent-text`}>Challenge</button>
@@ -203,7 +209,7 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
         )}
 
         {data && data.outgoing.length > 0 && (
-          <Section title="Sent requests">
+          <Section flat={embedded} title="Sent requests">
             {data.outgoing.map((p) => (
               <PersonRow key={p.alias} person={p}>
                 <button disabled={busy} onClick={() => void act(() => remove({ alias: p.alias }))} className={`${pill} bg-surface-2`}>Cancel</button>
@@ -211,6 +217,7 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
             ))}
           </Section>
         )}
+        {embedded && addForm}
       </div>
       {challenging && <ChallengeDialog alias={challenging} myName={data?.me?.alias ?? ""} onClose={() => setChallenging(null)} />}
     </div>

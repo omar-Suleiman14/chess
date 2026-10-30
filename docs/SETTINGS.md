@@ -9,14 +9,16 @@ Chess by Chaos has one design, **Classic**: graphite ink on warm paper, white su
 Open **Settings → Sound & feel → Haptics** and choose **Off**, **Subtle** or **Standard**, then tap **Test**. The line under the control says what this device can really do:
 
 - **Android (Chrome and most browsers):** full vibration patterns, different for a move, a capture, check, an illegal move and the result.
-- **iPhone (Safari 18+):** a light tap on your own taps and moves. Safari doesn't let websites vibrate, so this uses the tap iOS plays for a switch. It is best effort and stays silent where iOS doesn't allow it.
+- **iPhone (iOS 18+):** one light tap when you move or tap. Safari doesn't let websites vibrate, so this uses the tap iOS plays for a switch, which WebKit only allows during your own tap (WebKit PR #38473), not for the opponent's moves. **System Haptics** must be on (iPhone Settings → Sounds & Haptics).
 - **Anything else:** no haptics; sound and visuals still give feedback.
 
 Subtle shortens pulses and skips the opponent's quiet moves. Off stops feedback immediately. The strength is saved per device.
 
 ## Navigation
 
-On phones, five tabs sit above the home indicator: **Play**, **Bots**, **Learn**, **Review** and **More** (Timed games, Play a friend, Friends, Profile, Progress, Settings, help and your account). Each tab remembers the last page you had open; tap it again to go back to its start. Game screens are full screen with **Options · Hint · Back · Forward** at the bottom; **Options → Go to** leaves the game. On a computer the same destinations are in the left sidebar.
+On phones, five tabs sit above the home indicator: **Play**, **Bots**, **Learn**, **Review** and **More** (Timed games, Play a friend, Friends, Profile, Progress, Settings, help and your account). Each tab remembers the last page you had open; tap it again to go back to its start. On a computer the same destinations are in the left sidebar.
+
+Game screens are full screen with **Options · Hint · Back · Forward** at the bottom. **Options** opens a chess.com-style menu: New game, Undo, Resign, Share game (PGN), Friends, Settings, Flip board, sounds, and Go to. **Settings** and **Friends** open a half-screen drawer over the game: drag it up for more room, swipe it down (or tap outside) to get back to the board.
 
 **Hints** work like chess.com: tap **Hint** once to light up the piece to move, again to see the move, again to clear it. Hints are always in English; only Sherine's and Maya's chat follows the language you choose.
 

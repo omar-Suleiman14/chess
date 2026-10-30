@@ -10,7 +10,7 @@ import { DEFAULT_EXPERIENCE, parseExperience, type Experience } from "../experie
 import { themeTokens } from "../experience/theme";
 import { BOARD_THEME_KEY, boardThemeVars, findBoardTheme } from "../experience/boardThemes";
 import { configureAudio, configureChesscomSounds, installAudioUnlock } from "./sound";
-import { configureHaptics, type HapticLevel } from "./haptics";
+import { configureHaptics, prepareHaptics, type HapticLevel } from "./haptics";
 
 export type Palette = "ivory" | "sage" | "slate" | "blue";
 
@@ -307,7 +307,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (theme && !settings.highContrast) for (const [key, value] of Object.entries(boardThemeVars(theme))) root.style.setProperty(key, value);
   }, [boardTheme, settings.highContrast]);
   const hapticLevel: HapticLevel = settings.haptics ? hapticStrength : "off";
-  useEffect(() => configureHaptics(hapticLevel), [hapticLevel]);
+  useEffect(() => { configureHaptics(hapticLevel); if (hapticLevel !== "off") prepareHaptics(); }, [hapticLevel]);
   const setHapticLevel = useCallback((level: HapticLevel) => {
     if (level !== "off") {
       setHapticStrength(level);
