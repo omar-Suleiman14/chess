@@ -18,14 +18,11 @@ Subtle shortens pulses and skips the opponent's quiet moves. Off stops feedback 
 
 On phones, five tabs sit above the home indicator: **Play**, **Bots**, **Learn**, **Review** and **More** (Settings, Profile, Friends and everything else). Each tab remembers the last page you had open; tap it again to go back to its start. Once a game is underway the tabs step aside for the game toolbar (**Options**, **Undo**, move arrows). **Options** includes **Go to** buttons to leave the game.
 
-## Change the game scene
+## Live background and board themes
 
-1. Open **Gameplay background**.
-2. Keep **Minimal**, choose **Ambient Glyphs**, or select **Off**.
-3. For Ambient, choose a preset and adjust basic controls. Expand advanced controls for density, scale, tint, blur, speed, and frame cap.
-4. Use **Preview on the board** or reset to defaults.
-
-Ambient is confined to the game scene. It never animates the library, Friends, profile, or settings. Reduced motion uses a static frame; hidden scenes pause. Adaptive limits are explained in the setting and can be turned off.
+- **Live background:** Settings → Background → **Live background**, or **Options → Live background** during a game. Drifting characters appear behind games only; move the mouse to stir them and tap empty space for a ripple (every third makes a heart). It pauses in hidden tabs and stays still with reduced motion. Renderer: [Claude Code Background Lab](https://github.com/Henry-fan88/claude-code-background) (MIT).
+- **Board themes:** Settings → Board → **Theme** (or **Options → Board theme**). Each theme sets board colours and pieces together and is saved on this device.
+- **Chess.com sounds:** Settings → Sound & feel → **Chess.com sounds**. Your browser loads them from chess.com; nothing is stored in the app.
 
 ## Choose event sounds
 

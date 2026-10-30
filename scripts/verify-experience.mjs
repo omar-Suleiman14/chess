@@ -124,15 +124,12 @@ try {
         "classic",
       );
 
-      await page.getByRole("radio", { name: /Ambient Glyphs/ }).check();
+      // One switch turns the live background on; it renders only behind games.
+      await page.getByRole("switch", { name: "Live background" }).click();
       await expect(page.locator("[data-ambient-renderer]")).toHaveCount(0);
       await page.goto(base);
-      await expect(page.locator("[data-ambient-renderer]")).toBeVisible();
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      await expect(page.locator("[data-ambient-renderer]")).toHaveAttribute(
-        "data-effective-fps",
-        "0",
-      );
+      await expect(page.locator("[data-ambient-renderer] canvas")).toHaveCount(1);
+      await expect.poll(() => page.locator("[data-ambient-renderer] canvas").evaluate((canvas) => canvas.width > 0)).toBe(true);
       await page.goto(`${base}/settings`);
       await expect(page.locator("[data-ambient-renderer]")).toHaveCount(0);
       if (errors.length) process.exitCode = 1;

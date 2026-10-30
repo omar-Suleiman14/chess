@@ -12,6 +12,8 @@ import { useSettings, type Palette } from "@/lib/client/settings";
 import { playSound, unlockAudio } from "@/lib/client/sound";
 import { haptic, hapticSupport, hapticSupportText, type HapticLevel, type HapticSupport } from "@/lib/client/haptics";
 import { useEffect, useState } from "react";
+import Link from "@/components/navigation/PrefetchLink";
+import { BOARD_THEMES, findBoardTheme } from "@/lib/experience/boardThemes";
 import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
 
 const PALETTES: Array<[Palette, string, string, string]> = [
@@ -31,7 +33,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function SettingsPage() {
-  const { settings, update, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds } = useSettings();
+  const { settings, update, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme } = useSettings();
   // Known only in the browser: render the neutral text first, then the truth.
   const [support, setSupport] = useState<HapticSupport | null>(null);
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -46,25 +48,16 @@ export default function SettingsPage() {
         <BackgroundSettings />
         <SoundSettings />
         <Group title="Board">
-          <div className="grid grid-cols-4 gap-2 p-1" role="radiogroup" aria-label="Board colours">
-            {PALETTES.map(([id, name, light, dark]) => (
-              <button
-                key={id}
-                role="radio"
-                aria-checked={settings.palette === id}
-                onClick={() => update({ palette: id })}
-                className={`rounded-2xl bg-surface p-2 shadow-[var(--shadow)] transition-transform active:scale-95 ${settings.palette === id ? "ring-2 ring-[var(--accent)]" : ""}`}
-              >
-                <span className="grid aspect-square grid-cols-2 overflow-hidden rounded-lg" aria-hidden="true">
-                  <span style={{ background: light }} />
-                  <span style={{ background: dark }} />
-                  <span style={{ background: dark }} />
-                  <span style={{ background: light }} />
-                </span>
-                <span className="mt-1 block text-xs">{name}</span>
-              </button>
-            ))}
-          </div>
+          <Link href="/settings/theme" className="press-overlay flex min-h-[72px] items-center gap-4 overflow-hidden rounded-2xl px-4 text-white" style={{ background: (findBoardTheme(boardTheme || settings.palette) ?? BOARD_THEMES[0]).art }}>
+            <span className="grid h-12 w-12 shrink-0 grid-cols-2 overflow-hidden rounded-[3px] shadow-md" aria-hidden="true">
+              {(() => { const t = findBoardTheme(boardTheme || settings.palette) ?? BOARD_THEMES[0]; return [t.light, t.dark, t.dark, t.light].map((c, i) => <span key={i} style={{ background: c }} />); })()}
+            </span>
+            <span className="min-w-0 flex-1 [text-shadow:0_1px_3px_rgb(0_0_0/0.45)]">
+              <span className="block text-xs font-medium uppercase tracking-wide opacity-90">Theme</span>
+              <span className="block text-lg font-semibold">{(findBoardTheme(boardTheme || settings.palette) ?? BOARD_THEMES[0]).name}</span>
+            </span>
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </Link>
         </Group>
 
         <Group title="Pieces">

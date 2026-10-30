@@ -8,6 +8,7 @@ import type { PieceSet } from "@/components/chess/Pieces";
 import type { FatmaLanguage } from "../chess/personality/lines";
 import { DEFAULT_EXPERIENCE, parseExperience, type Experience } from "../experience/config";
 import { themeTokens } from "../experience/theme";
+import { BOARD_THEME_KEY, boardThemeVars, findBoardTheme } from "../experience/boardThemes";
 import { configureAudio, configureChesscomSounds, installAudioUnlock } from "./sound";
 import { configureHaptics, type HapticLevel } from "./haptics";
 
@@ -71,6 +72,9 @@ type Ctx = {
   /** Personal option: play Chess.com's own sounds, loaded from chess.com on this device. */
   chesscomSounds: boolean;
   setChesscomSounds: (on: boolean) => void;
+  /** Board theme id (colours + pieces), saved on this device. "" = the board palette. */
+  boardTheme: string;
+  setBoardTheme: (id: string) => void;
 };
 const SettingsContext = createContext<Ctx | null>(null);
 
@@ -164,6 +168,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const experienceSupported = useRef(false);
   const [hapticStrength, setHapticStrength] = useState<Exclude<HapticLevel, "off">>("standard");
   const [chesscomSounds, setChesscomState] = useState(false);
+  const [boardTheme, setBoardThemeState] = useState("");
 
   const [hydrated, setHydrated] = useState(false);
   const changedAt = useRef(0);
@@ -180,6 +185,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
     setHapticStrength(loadHapticStrength());
     try { setChesscomState(localStorage.getItem(CHESSCOM_KEY) === "on"); } catch { /* Off. */ }
+    try { setBoardThemeState(findBoardTheme(localStorage.getItem(BOARD_THEME_KEY))?.id ?? ""); } catch { /* Palette. */ }
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setSystemReduced(media.matches);
     const onChange = () => setSystemReduced(media.matches);
@@ -272,6 +278,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     configureChesscomSounds(on);
     try { localStorage.setItem(CHESSCOM_KEY, on ? "on" : "off"); } catch { /* This visit only. */ }
   }, []);
+  const setBoardTheme = useCallback((id: string) => {
+    const theme = findBoardTheme(id);
+    setBoardThemeState(theme?.id ?? "");
+    try { localStorage.setItem(BOARD_THEME_KEY, theme?.id ?? ""); } catch { /* This visit only. */ }
+    // Themes that match a synced palette keep other devices in step; every theme brings its pieces.
+    if (theme) update({ pieceSet: theme.pieces, ...(["ivory", "sage", "slate", "blue"].includes(theme.id) ? { palette: theme.id as Palette } : {}) });
+  }, [update]);
+  useEffect(() => {
+    const root = document.documentElement;
+    const theme = findBoardTheme(boardTheme);
+    for (const key of ["--sq-light", "--sq-dark", "--sq-coord-light", "--sq-coord-dark"]) root.style.removeProperty(key);
+    // High contrast keeps its own accessible board.
+    if (theme && !settings.highContrast) for (const [key, value] of Object.entries(boardThemeVars(theme))) root.style.setProperty(key, value);
+  }, [boardTheme, settings.highContrast]);
   const hapticLevel: HapticLevel = settings.haptics ? hapticStrength : "off";
   useEffect(() => configureHaptics(hapticLevel), [hapticLevel]);
   const setHapticLevel = useCallback((level: HapticLevel) => {
@@ -302,7 +322,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.palette, settings.highContrast, settings.experience, systemDark, reducedMotion]);
 
 
-  const value = useMemo(() => ({ settings, update, updateExperience, syncsExperience: isAuthenticated && syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds }), [settings, update, updateExperience, isAuthenticated, syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds]);
+  const value = useMemo(() => ({ settings, update, updateExperience, syncsExperience: isAuthenticated && syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme, setBoardTheme }), [settings, update, updateExperience, isAuthenticated, syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme, setBoardTheme]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 

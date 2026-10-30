@@ -18,9 +18,9 @@ export function EvalBar({ score, orientation, depth, reducedMotion, horizontal =
   // The number sits at the end of whichever side is ahead.
   const numberAtBottom = whiteBetter === whiteAtBottom;
   return (
-    <div className={horizontal ? "flex h-6 w-full shrink-0" : "flex w-[28px] shrink-0 self-stretch"}>
+    <div className={horizontal ? "flex h-[22px] w-full shrink-0" : "flex w-[28px] shrink-0 self-stretch"}>
       <div
-        className="relative w-full flex-1 overflow-hidden rounded-[5px] bg-[#403d39]"
+        className="relative w-full flex-1 overflow-hidden rounded-[5px] bg-[#403d39] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]"
         role="meter"
         aria-label={`Evaluation: ${score ? describeScore(score) : "calculating"}${depth ? `, depth ${depth}` : ""}`}
         aria-valuemin={0}
@@ -37,7 +37,10 @@ export function EvalBar({ score, orientation, depth, reducedMotion, horizontal =
         />
         {text && (
           <span
-            className={horizontal ? "absolute inset-0 grid place-items-center text-[11px] font-bold tabular-nums text-white mix-blend-difference" : `absolute inset-x-0 text-center text-[11px] font-bold leading-none tabular-nums ${numberAtBottom ? "bottom-1.5" : "top-1.5"} ${
+            className={horizontal
+              // Like chess.com: the score sits at the leading side's end, dark on white or white on dark.
+              ? `absolute inset-y-0 flex items-center px-2 text-[13px] font-bold tabular-nums ${whiteBetter === (orientation === "w") ? "left-0" : "right-0"} ${whiteBetter ? "text-[#2b2926]" : "text-white"}`
+              : `absolute inset-x-0 text-center text-[11px] font-bold leading-none tabular-nums ${numberAtBottom ? "bottom-1.5" : "top-1.5"} ${
               whiteBetter ? "text-[#403d39]" : "text-white"
             }`}
           >

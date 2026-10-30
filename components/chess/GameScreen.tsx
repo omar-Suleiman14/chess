@@ -53,7 +53,7 @@ type Props = {
 };
 
 export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props) {
-  const { settings, reducedMotion, update } = useSettings();
+  const { settings, reducedMotion, update, updateExperience } = useSettings();
   const { coaching } = useCoachingPreferences();
   const fatma = useFatma();
   const sync = useSync();
@@ -450,13 +450,14 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
         <div className="game-position relative flex w-full flex-col items-stretch gap-1">
           {settings.evalBar && (evalAllowed ? (
-            <EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} horizontal />
+            // Phones: inset from the screen edges with breathing room above the board.
+            <div className="max-lg:px-4 max-lg:pb-4 max-lg:pt-2"><EvalBar score={evaluation?.score ?? null} orientation={orientation} depth={evaluation?.depth} reducedMotion={reducedMotion} horizontal /></div>
           ) : (
             <button
               onClick={() => {
                 void chess.markAssisted("eval_bar").then((ok) => { if (!ok) setHintFailure(true); });
               }}
-              className="h-6 w-full shrink-0 rounded-[5px] bg-surface-2 text-xs"
+              className="h-6 w-full shrink-0 rounded-[5px] bg-surface-2 text-xs max-lg:mx-4 max-lg:mb-4 max-lg:mt-2 max-lg:w-[calc(100%-2rem)]"
               aria-label="Show evaluation bar. This makes the current rated game unrated."
               title="Show evaluation (makes this game unrated)"
             >Show evaluation · makes this game unrated</button>
@@ -593,6 +594,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         onFriends={() => { setShowActions(false); setShowFriends(true); }}
         evalBar={settings.evalBar}
         onEval={() => update({ evalBar: !settings.evalBar })}
+        live={settings.experience.ambient.mode === "ambient"}
+        onLive={() => updateExperience({ ambient: { ...settings.experience.ambient, mode: settings.experience.ambient.mode === "ambient" ? "minimal" : "ambient" } })}
       />}
       {showFriends && <FriendsDialog onClose={() => setShowFriends(false)} />}
 
@@ -675,10 +678,11 @@ const GO_TO: Array<{ id: TabId; label: string }> = [
 ];
 
 /** One clear Options sheet: game actions first, then a way out to the rest of the app. */
-function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSound, onResign, canUndo, onUndo, onFriends, evalBar, onEval }: {
+function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSound, onResign, canUndo, onUndo, onFriends, evalBar, onEval, live, onLive }: {
   onClose: () => void; finished: boolean; canResign: boolean; sound: boolean;
   onNew: () => void; onFlip: () => void; onSound: () => void; onResign: () => void;
   canUndo: boolean; onUndo: () => void; onFriends: () => void; evalBar: boolean; onEval: () => void;
+  live: boolean; onLive: () => void;
 }) {
   const { goToTab } = useShell();
   return (
@@ -688,10 +692,15 @@ function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSou
         <OptionRow onClick={onUndo} disabled={!canUndo} label="Undo move" hint="U" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" {...stroke} /></svg>} />
         <OptionRow onClick={onFriends} label="Friends & challenges" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><circle cx="9" cy="8" r="3" {...stroke} /><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2" {...stroke} /></svg>} />
         <OptionRow onClick={onEval} label={evalBar ? "Hide evaluation bar" : "Show evaluation bar"} icon={<span className="text-sm font-semibold">±</span>} />
+        <OptionRow onClick={onLive} label={live ? "Turn off live background" : "Live background"} icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M3 8c3-2 5 2 8 0s5-2 8 0M3 13c3-2 5 2 8 0s5-2 8 0M3 18c3-2 5 2 8 0" {...stroke} /></svg>} />
         <OptionRow onClick={onFlip} label="Flip board" hint="F" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" {...stroke} /></svg>} />
         <OptionRow onClick={onSound} label={sound ? "Mute sounds" : "Turn sounds on"} hint="M" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" {...stroke} />{sound ? <path d="M15.5 9a4 4 0 0 1 0 6" {...stroke} /> : <path d="M16 9.5l5 5m0-5l-5 5" {...stroke} />}</svg>} />
         <OptionRow onClick={onResign} disabled={!canResign} danger label="Resign" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M6 21V4m0 0h11l-2 4 2 4H6" {...stroke} /></svg>} />
       </div>
+      <Link href="/settings/theme" className="press-overlay flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-medium ring-1 ring-inset ring-line">
+        Board theme
+        <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} /></svg>
+      </Link>
       <Link href="/settings" className="press-overlay flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-medium ring-1 ring-inset ring-line">
         Board, sound, haptics & Sherine
         <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" {...stroke} /></svg>
