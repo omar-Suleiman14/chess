@@ -13,7 +13,7 @@ export type CoachingPreferences = {
 
 const KEY = "cbc.coaching.v1";
 const EVENT = "cbc:coaching";
-const DEFAULTS: CoachingPreferences = { autoLanguage: false, frequency: "balanced", intensity: "playful", moveFeedback: false, explanations: false, hints: true };
+const DEFAULTS: CoachingPreferences = { autoLanguage: false, frequency: "balanced", intensity: "playful", moveFeedback: true, explanations: false, hints: true };
 let serialized: string | null = null;
 let snapshot = DEFAULTS;
 let memoryOnly = false;
@@ -31,6 +31,8 @@ function read() {
     for (const key of ["autoLanguage", "moveFeedback", "explanations", "hints"] as const) {
       if (typeof fields[key] === "boolean") snapshot[key] = fields[key];
     }
+    // Move feedback became the default (v2); saves from before then only stored the old default "off".
+    if (fields.feedbackV2 !== true) snapshot.moveFeedback = true;
     if ("frequency" in data && (data.frequency === "quiet" || data.frequency === "balanced" || data.frequency === "chatty")) snapshot.frequency = data.frequency;
     if ("intensity" in data && (data.intensity === "gentle" || data.intensity === "playful" || data.intensity === "spicy")) snapshot.intensity = data.intensity;
   } catch { /* Keep the current session's preferences when storage is blocked. */ }
@@ -48,7 +50,8 @@ function subscribe(notify: () => void) {
 
 function update(patch: Partial<CoachingPreferences>) {
   snapshot = { ...read(), ...patch };
-  serialized = JSON.stringify(snapshot);
+  // feedbackV2 marks saves made after move feedback became the default, so "off" sticks.
+  serialized = JSON.stringify({ ...snapshot, feedbackV2: true });
   try { localStorage.setItem(KEY, serialized); } catch { memoryOnly = true; }
   window.dispatchEvent(new Event(EVENT));
 }

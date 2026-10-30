@@ -8,7 +8,7 @@ import { readAnalysis, writeAnalysis } from "./analysisCache";
 
 export const EVAL_MOVETIME_MS = 1500;
 export const EVAL_SETTINGS_HASH = `eval:mt${EVAL_MOVETIME_MS}:mpv1`;
-const UPDATE_INTERVAL_MS = 125; // <= 8 updates per second
+const UPDATE_INTERVAL_MS = 250; // <= 4 repaints per second: smooth enough, light on phones
 
 export type Evaluation = { nodeKey: string; fen: string; score: WhiteScore; depth?: number; bestmove?: string | null; final: boolean };
 
@@ -72,6 +72,19 @@ export function useEvaluation(fen: string, nodeKey: string, enabled: boolean, on
   // Only show scores that belong to the position on the board (no stale jumps).
   const current = enabled && evaluation && evaluation.fen === fen && evaluation.nodeKey === nodeKey ? evaluation : null;
   return current;
+}
+
+/**
+ * The eval bar's view: the current position's score, or, while that is still
+ * being computed (or the engine is busy with the bot's move), the last score
+ * shown, marked stale, instead of flashing "Analyzing".
+ */
+export function useDisplayedEvaluation(current: Evaluation | null, enabled: boolean): { evaluation: Evaluation | null; stale: boolean } {
+  const [last, setLast] = useState<Evaluation | null>(null);
+  if (current && current !== last) setLast(current);
+  if (!enabled) return { evaluation: null, stale: false };
+  if (current) return { evaluation: current, stale: false };
+  return { evaluation: last, stale: last !== null };
 }
 
 export { ENGINE_BUILD };

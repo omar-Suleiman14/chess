@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { TreeNode } from "@/lib/chess/history/tree";
 import { useSettings } from "@/lib/client/settings";
 import { Piece } from "./Pieces";
@@ -33,7 +33,7 @@ export function SanText({ san, white }: { san: string; white: boolean }) {
  * board is highlighted and kept in view, so stepping back and forth walks
  * through this bar. Tap any move to jump to it.
  */
-export function MoveStrip({ line, cursor, onSelect, flat = false }: { line: Pick<TreeNode, "key" | "ply" | "san">[]; cursor: number; onSelect: (ply: number) => void; /** Phone game screen: a plain bar across the top, no card. */ flat?: boolean }) {
+export const MoveStrip = memo(function MoveStrip({ line, cursor, onSelect, flat = false }: { line: Pick<TreeNode, "key" | "ply" | "san">[]; cursor: number; onSelect: (ply: number) => void; /** Phone game screen: a plain bar across the top, no card. */ flat?: boolean }) {
   const ref = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
@@ -76,10 +76,10 @@ export function MoveStrip({ line, cursor, onSelect, flat = false }: { line: Pick
       )}
     </nav>
   );
-}
+});
 
 /** Desktop side-panel version: numbered rows, White and Black side by side. */
-export function MoveList({ line, cursor, onSelect, className = "" }: { line: Pick<TreeNode, "key" | "ply" | "san">[]; cursor: number; onSelect: (ply: number) => void; className?: string }) {
+export const MoveList = memo(function MoveList({ line, cursor, onSelect, className = "" }: { line: Pick<TreeNode, "key" | "ply" | "san">[]; cursor: number; onSelect: (ply: number) => void; className?: string }) {
   const ref = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
@@ -126,4 +126,4 @@ export function MoveList({ line, cursor, onSelect, className = "" }: { line: Pic
       )}
     </nav>
   );
-}
+});

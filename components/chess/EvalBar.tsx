@@ -9,7 +9,7 @@ import type { Color } from "@/lib/chess/rules";
  * winning side in a clear bold face. The fill is
  * a display mapping, not a win probability.
  */
-export function EvalBar({ score, orientation, depth, reducedMotion, horizontal = false }: { score: WhiteScore | null; orientation: Color; depth?: number; reducedMotion?: boolean; horizontal?: boolean }) {
+export function EvalBar({ score, orientation, depth, reducedMotion, horizontal = false, stale = false }: { score: WhiteScore | null; orientation: Color; depth?: number; reducedMotion?: boolean; horizontal?: boolean; /** Last known score while the new position is analysed. */ stale?: boolean }) {
   const fill = score ? barFill(score) : 0.5;
   const whitePct = `${(fill * 100).toFixed(1)}%`;
   const text = score ? formatScore(score) : "Analyzing";
@@ -18,7 +18,7 @@ export function EvalBar({ score, orientation, depth, reducedMotion, horizontal =
   // The number sits at the end of whichever side is ahead.
   const numberAtBottom = whiteBetter === whiteAtBottom;
   return (
-    <div className={horizontal ? "flex h-[22px] w-full shrink-0" : "flex w-[28px] shrink-0 self-stretch"}>
+    <div className={`${horizontal ? "flex h-[22px] w-full shrink-0" : "flex w-[28px] shrink-0 self-stretch"} transition-opacity duration-200 ${stale ? "opacity-70" : ""}`}>
       <div
         className="relative w-full flex-1 overflow-hidden rounded-[5px] bg-[#403d39] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]"
         role="meter"
