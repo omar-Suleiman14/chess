@@ -20,12 +20,15 @@ function contentSecurityPolicy(): string {
   const convexOrigin = configuredConvex ? new URL(configuredConvex).origin : "";
   const convexSources = convexOrigin ? `${convexOrigin} ${convexOrigin.replace(/^http/, "ws")}` : "";
   const clerkSrc = clerk ? `https://${clerk}` : "https://*.clerk.accounts.dev";
+  // A separate cloud engine server (VM/VPS), if one is configured.
+  const engineUrl = process.env.NEXT_PUBLIC_ENGINE_URL;
+  const engineOrigin = engineUrl && /^https?:\/\//.test(engineUrl) ? new URL(engineUrl).origin : "";
   return [
     "default-src 'self'",
     // Next.js inline bootstrap scripts; WebAssembly for Stockfish.
     `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${clerkSrc} https://*.protect.clerk.com https://challenges.cloudflare.com`,
     "worker-src 'self' blob:",
-    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${convexSources} ${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com`,
+    `connect-src 'self' ${engineOrigin} https://*.convex.cloud wss://*.convex.cloud ${convexSources} ${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com`,
     "media-src 'self' blob:",
     "img-src 'self' data: blob: https://img.clerk.com",
     "style-src 'self' 'unsafe-inline'",
@@ -44,6 +47,10 @@ const nextConfig: NextConfig = {
   // them. Nothing is stored in the repository.
   async rewrites() {
     return [{ source: "/sounds/chesscom/:file([a-z-]+\\.mp3)", destination: "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/:file" }];
+  },
+  // The cloud engine route starts Stockfish from node_modules; ship those two files with it.
+  outputFileTracingIncludes: {
+    "/api/engine": ["./node_modules/stockfish/bin/stockfish-19-lite-single.js", "./node_modules/stockfish/bin/stockfish-19-lite-single.wasm"],
   },
   // The dev badge sits over the bottom-left game controls.
   devIndicators: false,

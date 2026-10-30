@@ -63,6 +63,41 @@ class FakeEngine implements WorkerLike {
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 describe("EngineController", () => {
+  it("applies the multiPv request field as the MultiPV option", async () => {
+    const fake = new FakeEngine();
+    const engine = new EngineController(() => fake);
+    const pending = engine.search({ kind: "review", fen: DEFAULT_POSITION, movetimeMs: 100, multiPv: 2 });
+    for (let i = 0; i < 4; i++) await tick();
+    expect(fake.sent).toContain("setoption name MultiPV value 2");
+    fake.complete();
+    await pending;
+    // The next plain search goes back to one line.
+    const next = engine.search({ kind: "eval", fen: DEFAULT_POSITION, movetimeMs: 100 });
+    for (let i = 0; i < 4; i++) await tick();
+    expect(fake.sent).toContain("setoption name MultiPV value 1");
+    fake.complete();
+    await next;
+    engine.terminate();
+  });
+
+  it("in shared mode, never lets one request cancel another, and an abort signal cancels only its own search", async () => {
+    const fake = new FakeEngine();
+    const engine = new EngineController(() => fake, { supersede: false });
+    const first = engine.search({ kind: "eval", fen: DEFAULT_POSITION, movetimeMs: 100 });
+    for (let i = 0; i < 4; i++) await tick();
+    const controller = new AbortController();
+    const second = engine.search({ kind: "eval", fen: DEFAULT_POSITION, movetimeMs: 100, signal: controller.signal });
+    const third = engine.search({ kind: "move", fen: DEFAULT_POSITION, movetimeMs: 100 });
+    controller.abort();
+    await expect(second).rejects.toBeInstanceOf(SearchCancelled);
+    fake.complete();
+    expect((await first).bestmove).toBe("e2e4");
+    for (let i = 0; i < 4; i++) await tick();
+    fake.complete();
+    expect((await third).bestmove).toBe("e2e4");
+    engine.terminate();
+  });
+
   it("keeps the scored principal line when depth-only and secondary messages follow", async () => {
     const fake = new FakeEngine();
     const engine = new EngineController(() => fake);

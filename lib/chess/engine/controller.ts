@@ -28,6 +28,8 @@ export type SearchRequest = {
    */
   gameId?: string;
   onInfo?: (info: SearchInfo) => void;
+  /** Cancels just this search (queued or running). */
+  signal?: AbortSignal;
 };
 
 export type SearchInfo = {
@@ -65,6 +67,16 @@ export class EngineFailure extends Error {
   }
 }
 
+/** What the app needs from an engine: the local worker, the cloud engine, or both. */
+export interface EngineLike {
+  readonly state: EngineState;
+  subscribe(listener: (state: EngineState) => void): () => void;
+  start(): Promise<void>;
+  search(request: SearchRequest): Promise<SearchResult>;
+  cancel(kind?: SearchKind): void;
+  restart(): Promise<void>;
+}
+
 export interface WorkerLike {
   postMessage(message: string): void;
   terminate(): void;
@@ -94,7 +106,19 @@ type Pending = {
   options: EngineOptions;
 };
 
-export class EngineController {
+export type ControllerPolicy = {
+  /**
+   * One player's engine (default): a newer search of the same kind, or a
+   * more urgent one, stops the running search. A shared server engine turns
+   * this off so one player's request never cancels another's; it only orders
+   * the queue by priority.
+   */
+  supersede: boolean;
+  /** Hash table size in MB. */
+  hashMb: number;
+};
+
+export class EngineController implements EngineLike {
   private worker: WorkerLike | null = null;
   private readyPromise: Promise<void> | null = null;
   private lineWaiters: Array<{ match: (line: string) => boolean; resolve: () => void }> = [];
@@ -106,7 +130,16 @@ export class EngineController {
   private listeners = new Set<(state: EngineState) => void>();
   private _state: EngineState = "idle";
 
-  constructor(private readonly createWorker: () => WorkerLike) {}
+  private readonly policy: ControllerPolicy;
+
+  constructor(private readonly createWorker: () => WorkerLike, policy: Partial<ControllerPolicy> = {}) {
+    this.policy = { supersede: true, hashMb: 16, ...policy };
+  }
+
+  /** Searches waiting or running (for load balancing across engines). */
+  get load(): number {
+    return this.queue.length + (this.active ? 1 : 0);
+  }
 
   get state(): EngineState {
     return this._state;
@@ -139,7 +172,7 @@ export class EngineController {
     worker.onerror = () => this.fail("The engine worker crashed.");
     await this.withTimeout(this.send("uci", (l) => l === "uciok"), "UCI handshake timed out");
     this.post("setoption name Threads value 1");
-    this.post("setoption name Hash value 16");
+    this.post(`setoption name Hash value ${this.policy.hashMb}`);
     await this.withTimeout(this.send("isready", (l) => l === "readyok"), "Engine did not become ready");
     this.currentOptions = {};
     this.currentGame = null;
@@ -156,16 +189,24 @@ export class EngineController {
         cancelled: false,
         startedAt: 0,
         variations: new Map(),
-        options: { ...DEFAULT_ENGINE_OPTIONS, ...request.options },
+        // multiPv is a request field; the engine only sees it as the MultiPV option.
+        options: { ...DEFAULT_ENGINE_OPTIONS, ...request.options, ...(request.multiPv ? { MultiPV: request.multiPv } : {}) },
       };
-      // Only the newest eval matters; drop queued stale ones.
-      if (request.kind === "eval") this.dropQueued("eval");
-      if (request.kind === "move") this.dropQueued("move");
+      if (request.signal?.aborted) {
+        reject(new SearchCancelled());
+        return;
+      }
+      request.signal?.addEventListener("abort", () => this.abort(pending), { once: true });
+      if (this.policy.supersede) {
+        // Only the newest eval matters; drop queued stale ones.
+        if (request.kind === "eval") this.dropQueued("eval");
+        if (request.kind === "move") this.dropQueued("move");
+      }
       this.queue.push(pending);
       this.queue.sort((a, b) => PRIORITY[b.request.kind] - PRIORITY[a.request.kind] || a.id - b.id);
-      if (this.active && PRIORITY[request.kind] > PRIORITY[this.active.request.kind]) {
+      if (this.policy.supersede && this.active && PRIORITY[request.kind] > PRIORITY[this.active.request.kind]) {
         this.stopActive();
-      } else if (this.active && request.kind === this.active.request.kind && request.kind !== "review") {
+      } else if (this.policy.supersede && this.active && request.kind === this.active.request.kind && request.kind !== "review") {
         // A newer request of the same kind supersedes the running one.
         this.stopActive();
       }
@@ -191,6 +232,17 @@ export class EngineController {
   async restart(): Promise<void> {
     this.terminate();
     await this.start();
+  }
+
+  private abort(pending: Pending): void {
+    if (this.active === pending) {
+      this.stopActive();
+      return;
+    }
+    const index = this.queue.indexOf(pending);
+    if (index < 0) return;
+    this.queue.splice(index, 1);
+    pending.reject(new SearchCancelled());
   }
 
   private dropQueued(kind?: SearchKind): void {

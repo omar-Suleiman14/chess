@@ -15,7 +15,9 @@
     "test:experience": "node scripts/qa-server.mjs -- node scripts/qa-suite.mjs",
     "bench:ui": "node scripts/benchmark-ui.mjs",
     "bench:lighthouse": "node scripts/lighthouse-ui.mjs",
-    "check:docs": "node scripts/check-docs.mjs"
+    "check:docs": "node scripts/check-docs.mjs",
+    "build:engine-server": "esbuild engine-server/main.ts --bundle --platform=node --format=esm --outfile=.cache/engine-server.mjs --log-level=warning",
+    "engine-server": "npm run build:engine-server && node .cache/engine-server.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",

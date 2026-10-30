@@ -7,6 +7,7 @@ import { ScrollRow } from "@/components/ui/ScrollRow";
 import { SwitchRow } from "@/components/ui/Switch";
 import { Slider } from "@/components/ui/Slider";
 import { OfflineSettings } from "@/components/settings/OfflineSettings";
+import { EngineSettings } from "@/components/settings/EngineSettings";
 import { AppearanceSettings, BackgroundSettings, SoundSettings } from "@/components/settings/ExperienceSettings";
 import { FATMA_LANGUAGES } from "@/lib/chess/personality/lines";
 import { useSettings, type Palette } from "@/lib/client/settings";
@@ -46,6 +47,7 @@ export default function SettingsPage() {
       <PageHeader title="Settings" />
       <div className="grid grid-cols-1 gap-7 px-4">
         <OfflineSettings />
+        <EngineSettings />
         <AppearanceSettings />
         <BackgroundSettings />
         <SoundSettings />

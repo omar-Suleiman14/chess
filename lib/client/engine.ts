@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { EngineController, ENGINE_URL, type EngineState, type WorkerLike } from "../chess/engine/controller";
+import { EngineController, ENGINE_URL, SearchCancelled, type EngineLike, type EngineState, type SearchKind, type SearchRequest, type SearchResult, type WorkerLike } from "../chess/engine/controller";
+import { CloudEngine, CloudUnavailable } from "./cloudEngine";
+import { cloudEngineUrl, engineMode } from "./engineMode";
 
 // One engine worker per tab (one active worker on mobile, per the spec).
 let controller: EngineController | null = null;
@@ -12,7 +14,8 @@ export function supportsEngine(): boolean {
   return typeof window !== "undefined" && typeof Worker !== "undefined" && typeof WebAssembly !== "undefined";
 }
 
-export function getEngine(): EngineController {
+/** Stockfish on this device (a Web Worker). Created only when something actually needs it. */
+export function getLocalEngine(): EngineController {
   if (!controller) {
     controller = new EngineController(() => new Worker(ENGINE_URL) as unknown as WorkerLike);
     if (typeof document !== "undefined") {
@@ -28,6 +31,101 @@ export function getEngine(): EngineController {
     }
   }
   return controller;
+}
+
+/**
+ * Picks where each search runs (see EngineMode): the cloud engine keeps the
+ * phone cool; this device is the fallback whenever the cloud can't answer,
+ * so play never stops. The on-device worker is not even loaded until needed.
+ */
+class HybridEngine implements EngineLike {
+  private cloud: CloudEngine | null;
+  private downUntil = 0;
+  private listeners = new Set<(state: EngineState) => void>();
+  private localUnsubscribe: (() => void) | null = null;
+
+  constructor(url: string | null) {
+    this.cloud = url ? new CloudEngine(url) : null;
+    this.cloud?.subscribe(() => this.emit());
+  }
+
+  /** Whether the cloud should be asked first right now. */
+  private cloudFirst(): boolean {
+    if (!this.cloud || engineMode() === "device") return false;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
+    return Date.now() >= this.downUntil;
+  }
+
+  private local(): EngineController {
+    const engine = getLocalEngine();
+    if (!this.localUnsubscribe) this.localUnsubscribe = engine.subscribe(() => this.emit());
+    return engine;
+  }
+
+  get state(): EngineState {
+    const local = controller?.state;
+    if (local === "loading" || local === "thinking") return local;
+    if (this.cloudFirst()) return this.cloud!.state;
+    return local ?? "idle";
+  }
+
+  subscribe(listener: (state: EngineState) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private emit(): void {
+    const state = this.state;
+    for (const listener of this.listeners) listener(state);
+  }
+
+  start(): Promise<void> {
+    return this.cloudFirst() ? Promise.resolve() : this.local().start();
+  }
+
+  async restart(): Promise<void> {
+    // A retry also gives the cloud another chance.
+    this.downUntil = 0;
+    this.cloud?.cancel();
+    if (controller) await controller.restart();
+    this.emit();
+  }
+
+  cancel(kind?: SearchKind): void {
+    this.cloud?.cancel(kind);
+    controller?.cancel(kind);
+  }
+
+  async search(request: SearchRequest): Promise<SearchResult> {
+    if (this.cloudFirst()) {
+      try {
+        return await this.cloud!.search(request);
+      } catch (error) {
+        if (!(error instanceof CloudUnavailable)) throw error;
+        this.downUntil = Date.now() + error.retryAfterMs;
+        this.emit();
+        if (request.signal?.aborted) throw new SearchCancelled();
+      }
+    }
+    // Cloud only: analysis waits for the internet, but a bot always gets to move.
+    if (this.cloud && engineMode() === "cloud" && request.kind !== "move") {
+      throw new CloudUnavailable("Analysis needs the cloud engine (Settings → Engine).");
+    }
+    return this.local().search(request);
+  }
+}
+
+let hybrid: HybridEngine | null = null;
+
+/** The engine everything uses: cloud, this device, or both (Settings → Engine). */
+export function getEngine(): EngineLike {
+  hybrid ??= new HybridEngine(cloudEngineUrl());
+  return hybrid;
+}
+
+/** Whether this build has a cloud engine to talk to. */
+export function hasCloudEngine(): boolean {
+  return cloudEngineUrl() !== null;
 }
 
 export function useEngineState(): EngineState {
