@@ -6,6 +6,7 @@ import { ConvexHttpClient } from "convex/browser";
 import type { FunctionReference } from "convex/server";
 import { z } from "zod";
 import { api } from "@/convex/_generated/api";
+import { botPersona, CLIMB_OPPONENTS, FULL_POWER_LABEL, THINK_TIME_MS } from "@/lib/chess/engine/opponents";
 
 type Base = { secret: string; clerkUserId: string; clientId: string };
 type ServiceResult = { ok: true; data: unknown } | { ok: false; code: string; message: string };
@@ -79,7 +80,7 @@ export function registerTools(server: McpServer, { origin }: ToolContext): void 
 
   server.registerTool(
     "get_chess_profile",
-    { title: "Chess profile", description: "The player's chess identity, per-pool ratings with uncertainty, and Sherine status. Sherine's '3000' is a nominal label, not a measured Elo.", inputSchema: z.object({}), annotations: READ },
+    { title: "Chess profile", description: "The player's chess identity, per-pool ratings with uncertainty, and Sherine status. Maya's '3000' (Full Power) is a nominal label, not a measured Elo.", inputSchema: z.object({}), annotations: READ },
     async (_args, extra) => run(api.mcp.getChessProfile, extra, {}),
   );
 
@@ -145,6 +146,18 @@ export function registerTools(server: McpServer, { origin }: ToolContext): void 
   );
 
   server.registerTool(
+    "get_bots",
+    { title: "Bots", description: "Every bot the player can face: Maya (strongest, full-strength Stockfish), Sherine's Climb levels and the scripted beginner bots, with engine settings and honest rating labels.", inputSchema: z.object({}), annotations: READ },
+    async () => {
+      const bots = [
+        { name: "Maya", persona: "maya", character: "The strongest bot. Calm, exact, quietly confident; respects good moves and says little.", where: "Full Power and Climb level 11", engine: "Stockfish 19 Lite, full strength (no skill limit)", thinkTimeMs: THINK_TIME_MS, rating: `${FULL_POWER_LABEL} (nominal label, not measured)` },
+        ...CLIMB_OPPONENTS.filter((o) => o.id !== "climb-11").map((o) => ({ name: o.name, persona: botPersona(o), where: `Climb level ${Number(o.id.slice(-2))}`, engine: o.policy.kind === "stockfish" ? `Stockfish 19 Lite, ${JSON.stringify(o.policy.options)} · ${o.policy.movetimeMs} ms` : `Scripted ${o.policy.policy} beginner bot`, rating: `~${o.rating} (estimate${o.calibrated ? "" : ", uncalibrated"})` })),
+      ];
+      return { content: [{ type: "text" as const, text: JSON.stringify({ bots, sherine: "Sherine is also the app's companion: playful, teasing, speaks English, Egyptian Arabic and Franco. Use get_fatma_profile for her state." }, null, 2) }] };
+    },
+  );
+
+  server.registerTool(
     "get_fatma_profile",
     { title: "Sherine profile", description: "Sherine's on/off state, mood, memory counters, achievements and installed/pending upgrades.", inputSchema: z.object({}), annotations: READ },
     async (_args, extra) => run(api.mcp.getFatmaProfile, extra, {}),
@@ -159,7 +172,7 @@ export function registerTools(server: McpServer, { origin }: ToolContext): void 
       inputSchema: z.object({
         sourceGameKey: key,
         sourceNodeKey: z.string().min(1).max(64).describe("nodeKey from get_game; the new game starts from the position AFTER this move ('root' = initial position)."),
-        enginePreset: z.enum(["fast", "standard", "deep"]).default("standard").describe("Sherine's thinking time at full strength."),
+        enginePreset: z.enum(["fast", "standard", "deep"]).default("standard").describe("Maya's thinking time at full strength."),
         label: z.string().max(60).default(""),
         expectedRevision: z.number().int().optional().describe("Game revision from get_game; rejects if the game changed since."),
         clientOperationId: opId,

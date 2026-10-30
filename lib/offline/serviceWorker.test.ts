@@ -4,12 +4,13 @@ import { SERVICE_WORKER_SOURCE } from "./serviceWorker";
 const build = () => SERVICE_WORKER_SOURCE
   .replace("__VERSION__", JSON.stringify("test"))
   .replace("__PAGES__", JSON.stringify(["/", "/learn"]))
-  .replace("__FILES__", JSON.stringify(["/engine/19.0.1/stockfish-19-lite-single.wasm"]));
+  .replace("__FILES__", JSON.stringify(["/engine/19.0.1/stockfish-19-lite-single.wasm"]))
+  .replace("__OPTIONAL__", JSON.stringify(["/sounds/chesscom/move-self.mp3"]));
 
 describe("offline service worker", () => {
   it("fills every placeholder and is valid JavaScript", () => {
     const code = build();
-    expect(code).not.toMatch(/__(VERSION|PAGES|FILES)__/);
+    expect(code).not.toMatch(/__(VERSION|PAGES|FILES|OPTIONAL)__/);
     expect(() => new Function("self", "caches", "fetch", code)).not.toThrow();
   });
 

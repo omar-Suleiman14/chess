@@ -70,7 +70,7 @@ export default function ProgressPage() {
         <section className="rounded-2xl bg-surface p-4 shadow-[var(--shadow)]" aria-labelledby="fp">
           <h2 id="fp" className="font-semibold">Full Power</h2>
           <p className="mt-1 text-sm">{summary.fullPower.games} finished · {record(summary.fullPower)}</p>
-          <p className="text-sm text-muted">Average length {summary.fullPower.averageLength} plies. Not a rating: Sherine&apos;s 3000 is a nominal label.</p>
+          <p className="text-sm text-muted">Average length {summary.fullPower.averageLength} plies. Not a rating: Maya&apos;s 3000 is a nominal label.</p>
         </section>
 
         <section className="rounded-2xl bg-surface p-4 shadow-[var(--shadow)]" aria-labelledby="timed">

@@ -6,9 +6,14 @@ The board remains the visual focus. All designs share the same routes, game stat
 
 One design. Graphite ink on warm paper (`--bg`), white surfaces, and a brass accent (`--brand`, `--switch-on`) reserved for "on" and "here": switches, the active tab, selected states. Light, Dark and System are the only appearance choices. Tokens live in `lib/experience/theme.ts`; a validated first-paint cache avoids flashes. Retired Material / Liquid Glass values stay readable in stored settings and always resolve to Classic.
 
-## Phone navigation
+## Navigation (mobile first, chess.com style)
 
-Top-level pages show five bottom tabs (Play / Bots / Learn / Review / More) above the safe area; More opens the menu sheet. Deeper pages (an online room, a lesson, a reviewed game) are full screen. A game hides the tabs once it has moves (`useGameFocus`), and its footer becomes the toolbar: Options, Undo, review arrows. Both bars take the same space, so the board never changes size when they swap. Tabs cross-fade instead of sliding and remember their last page.
+One list of destinations (`components/shell/navigation.ts`) drives every surface, so they never disagree:
+
+- **Phones:** five bottom tabs (Play / Bots / Learn / Review / More). **More** is a page (`/more`) listing everything else with the account card; there is no drawer. Tabs remember their last page and cross-fade.
+- **Game screens** (Play, a Climb or Timed game) are full screen: the move list on top, an edge-to-edge board, and a bar pinned to the bottom edge (Options · Hint · Back · Forward). Options holds Undo, Friends, eval bar, live background, flip, mute, resign, board theme and "Go to".
+- **Desktop:** a left sidebar with the same destinations (icons with small labels on laptops, full labels from 1280 px), plus Settings, More and the account. Pages offset by `--sidebar-w`; the game board size accounts for it.
+- Back buttons appear only on deeper pages (a lesson, a reviewed game, a theme page).
 
 ## Haptics
 
@@ -38,6 +43,6 @@ Use actual screenshots and interactions in light/dark, languages, small phones, 
 
 ## Launch screen and offline
 
-A CSS-only launch screen (`components/shell/LaunchSplash.tsx`) plays once per launch (~1.4 s): a 4×4 board in the current theme, a brass square hopping a knight's path, then the name. It is pointer-transparent, skipped on later pages via `sessionStorage`, and shortened under reduced motion.
+A CSS-only launch screen (`components/shell/LaunchSplash.tsx`) plays once per launch (~1.4 s) in the app icon's look: the dark tile's eight light squares land one by one, then the name. It is pointer-transparent, skipped on later pages via `sessionStorage`, and shortened under reduced motion.
 
 The offline service worker (`lib/offline/serviceWorker.ts`, served at `/sw.js`) precaches signed-out page shells, every public file and the scripts those pages reference. Navigation is network-first with the cached shell as the fallback; API, MCP, auth, RSC data and other origins are never cached. `scripts/verify-offline.mjs` proves an Airplane Mode cold start, an engine reply, a reload and route navigation.

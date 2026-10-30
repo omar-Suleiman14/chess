@@ -348,7 +348,7 @@ export const Board = memo(function Board({
           {isSelected && <div className="absolute inset-0" style={{ background: "var(--hl-select)" }} />}
           {isCheck && <div className="absolute inset-0" style={{ background: "radial-gradient(circle, var(--hl-check) 0%, transparent 72%)" }} />}
           {shaking && <div key={`flash-${illegal!.key}`} className="illegal-flash absolute inset-0" style={{ background: "rgba(220, 60, 50, 0.45)" }} />}
-          {isHint && <div className="absolute inset-[6%] rounded-md border-[3px] border-dashed" style={{ borderColor: "var(--hl-target)" }} />}
+          {isHint && <div className="hint-square pointer-events-none absolute inset-0" />}
           {coordinates && col === 0 && (
             <span aria-hidden="true" className={`pointer-events-none absolute left-[3%] top-[2%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[1]}</span>
           )}
@@ -442,7 +442,7 @@ export const Board = memo(function Board({
       </div>
       {hintMove && (() => {
         const from = coordsOf(hintMove.from, orientation), to = coordsOf(hintMove.to, orientation);
-        return <svg aria-hidden="true" data-hint-arrow className="pointer-events-none absolute inset-0 z-30 h-full w-full" viewBox="0 0 8 8"><defs><marker id={arrowId} markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto"><path d="M0,0 L3,1.5 L0,3 Z" fill="var(--focus)" /></marker></defs><line x1={from.col + 0.5} y1={from.row + 0.5} x2={to.col + 0.5} y2={to.row + 0.5} stroke="var(--focus)" strokeWidth="0.14" strokeLinecap="round" markerEnd={`url(#${arrowId})`} /></svg>;
+        return <svg aria-hidden="true" data-hint-arrow className="pointer-events-none absolute inset-0 z-30 h-full w-full" viewBox="0 0 8 8"><defs><marker id={arrowId} markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto"><path d="M0,0 L3,1.5 L0,3 Z" fill="var(--hint-arrow)" /></marker></defs><line x1={from.col + 0.5} y1={from.row + 0.5} x2={to.col + 0.5} y2={to.row + 0.5} stroke="var(--hint-arrow)" strokeWidth="0.14" strokeLinecap="round" markerEnd={`url(#${arrowId})`} /></svg>;
       })()}
       <span className="sr-only" aria-live="polite">{premove ? `Premove queued: ${premove.slice(0, 2)} to ${premove.slice(2, 4)}. Press Escape to cancel.` : ""}</span>
       {ghost && drag && size > 0 && (

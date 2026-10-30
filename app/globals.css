@@ -41,6 +41,8 @@
   --shadow: 0 1px 2px #24221e0d, 0 6px 18px #24221e0a;
   /* Height of the mobile tab bar when it is on screen (0 otherwise). */
   --tabbar-space: 0px;
+  /* Desktop sidebar width (0 on phones). */
+  --sidebar-w: 0px;
 
   --sq-light: #efe6d5;
   --sq-dark: #c3a982;
@@ -162,7 +164,7 @@ button {
 }
 @media (min-width: 1024px) {
   .game-layout {
-    --board-size: min(calc(100dvh - 208px), calc(100vw - 380px - var(--eval-gutter)));
+    --board-size: min(calc(100dvh - 208px), calc(100vw - 380px - var(--sidebar-w) - var(--eval-gutter)));
     width: fit-content;
     max-width: none;
     min-height: 0;
@@ -352,35 +354,47 @@ button {
 /* Move-list figurines: black pieces keep a thin light edge on dark surfaces. */
 :root[data-tone="dark"] .san-piece--black { filter: drop-shadow(0 0 0.6px #f2f1ee) drop-shadow(0 0 0.6px #f2f1ee); }
 
-/* Launch screen (components/shell/LaunchSplash.tsx). ~1.4 s, once per launch. */
-/* It blocks taps while it's on screen, so nothing hidden underneath is pressed; once faded it's gone. */
-.launch-splash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: var(--bg); touch-action: none; animation: splash-out 320ms cubic-bezier(.4, 0, .2, 1) 1.15s forwards; }
+/* Launch screen (components/shell/LaunchSplash.tsx), in the app icon's look. ~1.4 s, once per launch. */
+.launch-splash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: var(--bg); touch-action: none; animation: splash-out 320ms cubic-bezier(.4, 0, .2, 1) 1.2s forwards; }
 :root[data-launched] .launch-splash { display: none; }
-.launch-splash__stage { display: grid; justify-items: center; gap: 18px; animation: splash-stage 320ms cubic-bezier(.4, 0, .2, 1) 1.15s forwards; }
-.launch-splash__board { --cell: 26px; position: relative; display: grid; grid-template-columns: repeat(4, var(--cell)); grid-template-rows: repeat(4, var(--cell)); overflow: hidden; border-radius: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / .14), 0 1px 3px rgb(0 0 0 / .1); animation: splash-board-in 380ms cubic-bezier(.2, .9, .3, 1.2) both; }
-.launch-splash__runner { position: absolute; left: 0; top: 0; width: var(--cell); height: var(--cell); border-radius: 6px; background: var(--brand); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 35%, transparent), 0 6px 14px color-mix(in srgb, var(--brand) 45%, transparent); opacity: 0;
-  /* A knight's tour fragment: a1 → b3 → d4 → c2 → a3 → b1, each hop with a little lift. */
-  animation: splash-runner 960ms cubic-bezier(.5, 0, .25, 1) 160ms forwards; }
-.launch-splash__name { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; color: var(--text); opacity: 0; animation: splash-name 420ms ease-out 520ms forwards; }
-@keyframes splash-board-in { from { opacity: 0; transform: scale(.82) rotate(-6deg); } to { opacity: 1; transform: none; } }
-@keyframes splash-runner {
-  0%   { opacity: 0; transform: translate(0, calc(var(--cell) * 3)) scale(.6); }
-  8%   { opacity: 1; transform: translate(0, calc(var(--cell) * 3)) scale(1); }
-  24%  { transform: translate(var(--cell), var(--cell)) scale(1.12); }
-  28%  { transform: translate(var(--cell), var(--cell)) scale(1); }
-  44%  { transform: translate(calc(var(--cell) * 3), 0) scale(1.12); }
-  48%  { transform: translate(calc(var(--cell) * 3), 0) scale(1); }
-  64%  { transform: translate(calc(var(--cell) * 2), calc(var(--cell) * 2)) scale(1.12); }
-  68%  { transform: translate(calc(var(--cell) * 2), calc(var(--cell) * 2)) scale(1); }
-  84%  { transform: translate(0, var(--cell)) scale(1.12); }
-  88%  { transform: translate(0, var(--cell)) scale(1); }
-  100% { opacity: 1; transform: translate(var(--cell), calc(var(--cell) * 3)) scale(1); }
-}
+.launch-splash__stage { display: grid; justify-items: center; gap: 18px; animation: splash-stage 320ms cubic-bezier(.4, 0, .2, 1) 1.2s forwards; }
+/* Same proportions as public/icon.svg: 64-unit tile, 8-unit margin, 12-unit squares. */
+.launch-splash__tile { --u: 1.75px; display: grid; grid-template-columns: repeat(4, calc(12 * var(--u))); grid-template-rows: repeat(4, calc(12 * var(--u))); padding: calc(8 * var(--u)); border-radius: calc(14 * var(--u)); background: #1d1c1a; box-shadow: 0 14px 34px rgb(0 0 0 / .22), 0 2px 4px rgb(0 0 0 / .12); animation: splash-tile-in 360ms cubic-bezier(.2, .9, .3, 1.15) both; }
+.launch-splash__square { border-radius: calc(2 * var(--u)); background: #f6f4ef; opacity: 0; transform: scale(.2) translateY(calc(-6 * var(--u))); animation: splash-square 300ms cubic-bezier(.3, 1.4, .5, 1) forwards; }
+.launch-splash__name { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; color: var(--text); opacity: 0; animation: splash-name 420ms ease-out 760ms forwards; }
+@keyframes splash-tile-in { from { opacity: 0; transform: scale(.84); } to { opacity: 1; transform: none; } }
+@keyframes splash-square { to { opacity: 1; transform: none; } }
 @keyframes splash-name { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes splash-stage { to { transform: scale(1.06); } }
 @keyframes splash-out { to { opacity: 0; visibility: hidden; } }
 @media (prefers-reduced-motion: reduce) {
   .launch-splash { animation-delay: 300ms; }
-  .launch-splash__board, .launch-splash__stage, .launch-splash__name { animation: none; opacity: 1; }
-  .launch-splash__runner { animation: none; opacity: 1; transform: translate(var(--cell), calc(var(--cell) * 3)); }
+  .launch-splash__tile, .launch-splash__stage, .launch-splash__name, .launch-splash__square { animation: none; opacity: 1; transform: none; }
+}
+
+
+/* Maya's avatar: an occasional blink, and a mouth that moves while she talks. */
+.maya-avatar__eyes { animation: maya-blink 4.6s ease-in-out infinite; }
+@keyframes maya-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.12); } }
+.maya-avatar__talk > ellipse { animation: maya-mouth-open 260ms steps(1) infinite; }
+.maya-avatar__talk > path { animation: maya-mouth-closed 260ms steps(1) infinite; }
+@keyframes maya-mouth-open { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes maya-mouth-closed { 0% { opacity: 0; } 50% { opacity: 1; } }
+
+/* Hints, chess.com style: the square glows, then an arrow shows the move. */
+:root { --hint-arrow: rgb(232 136 40 / 0.85); }
+.hint-square { background: rgb(232 136 40 / 0.42); box-shadow: inset 0 0 0 3px rgb(232 136 40 / 0.9); animation: hint-glow 1.6s ease-in-out infinite; }
+@keyframes hint-glow { 50% { background: rgb(232 136 40 / 0.26); } }
+[data-motion="reduced"] .hint-square { animation: none; }
+
+/* Desktop sidebar: icons with small labels on laptops, full labels on wide screens. */
+@media (min-width: 1024px) { :root { --sidebar-w: 88px; } .app-content { padding-inline-start: var(--sidebar-w); } }
+@media (min-width: 1280px) { :root { --sidebar-w: 236px; } }
+.sidebar { width: var(--sidebar-w); }
+
+/* Phones: the game bar is pinned to the bottom edge (through the home indicator), like a native app. */
+@media (max-width: 1023px) {
+  .game-bar { position: fixed; inset-inline: 0; bottom: 0; z-index: 45; padding-bottom: env(safe-area-inset-bottom); }
+  .game-footer { padding: 0; min-height: 0; }
+  .game-layout { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
 }

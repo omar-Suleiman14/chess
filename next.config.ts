@@ -25,9 +25,8 @@ function contentSecurityPolicy(): string {
     // Next.js inline bootstrap scripts; WebAssembly for Stockfish.
     `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${clerkSrc} https://*.protect.clerk.com https://challenges.cloudflare.com`,
     "worker-src 'self' blob:",
-    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${convexSources} ${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com https://images.chesscomfiles.com`,
-    // Optional Chess.com sounds (Settings → Sound & feel), streamed from chess.com.
-    "media-src 'self' blob: https://images.chesscomfiles.com",
+    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${convexSources} ${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com`,
+    "media-src 'self' blob:",
     "img-src 'self' data: blob: https://img.clerk.com",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
@@ -40,6 +39,12 @@ function contentSecurityPolicy(): string {
 }
 
 const nextConfig: NextConfig = {
+  // Chess.com's official sounds (owner's personal setup), passed through this
+  // origin so every browser can decode them and the offline worker can keep
+  // them. Nothing is stored in the repository.
+  async rewrites() {
+    return [{ source: "/sounds/chesscom/:file([a-z-]+\\.mp3)", destination: "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/:file" }];
+  },
   // The dev badge sits over the bottom-left game controls.
   devIndicators: false,
   // The build script runs TypeScript 7 before Next.js. Next still needs the

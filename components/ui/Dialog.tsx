@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSettings } from "@/lib/client/settings";
 /** Opens with a small, quickly settling overshoot; never a wobble. */
 const SHEET_SPRING = { type: "spring" as const, stiffness: 460, damping: 34, mass: 0.85 };
@@ -47,8 +48,8 @@ export function Dialog({ title, children, onClose, size = "default", description
       else document.querySelector<HTMLElement>('[role="grid"] [tabindex="0"]')?.focus();
     };
   }, []);
-  return (
-    <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:p-4 sm:items-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+  const dialog = (
+    <motion.div className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center bg-black/35 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:p-4 sm:items-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
       <motion.div
         ref={ref}
         role="dialog"
@@ -69,4 +70,7 @@ export function Dialog({ title, children, onClose, size = "default", description
       </motion.div>
     </motion.div>
   );
+  // Rendered at the top of the page: no parent (a tap-through player row, a
+  // scaled shell) can swallow its taps or shift where it sits.
+  return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
 }

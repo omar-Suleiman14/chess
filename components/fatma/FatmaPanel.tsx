@@ -11,6 +11,8 @@ import { unlockAudio } from "@/lib/client/sound";
 import { Dialog } from "@/components/ui/Dialog";
 import type { FatmaApi } from "@/lib/client/useFatma";
 import { FatmaSprite } from "./FatmaSprite";
+import { MayaAvatar } from "./MayaAvatar";
+import { botPersona, PERSONA_NAMES } from "@/lib/chess/engine/opponents";
 
 /**
  * Sherine's corner: a fixed-size space (sprite + bubble) so her lines never
@@ -21,6 +23,9 @@ import { FatmaSprite } from "./FatmaSprite";
 export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, opponent, captures, capturedColor, advantage }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean; opponent?: Opponent; captures?: CapturedPiece[]; capturedColor?: Color; advantage?: number }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [greeting, setGreeting] = useState("");
+  // Maya (strongest bot) or Sherine (every weaker level): same voice system, own face and name.
+  const persona = botPersona(opponent);
+  const name = PERSONA_NAMES[persona];
   const expression = fatma.line ? fatma.expression : thinking ? "thinking" : "idle";
   const text = fatma.enabled ? fatma.line?.text ?? "" : "";
   const progress = useSpeechProgress(text, reducedMotion, fatma.utteranceId);
@@ -28,7 +33,7 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, o
     <button
       onClick={fatma.dismiss}
       className="bubble-in pointer-events-auto max-w-[min(100%,280px)] rounded-2xl rounded-es-sm bg-surface px-3 py-1.5 text-start text-sm leading-snug shadow-[var(--shadow)]"
-      aria-label={`Sherine says: ${fatma.line.text}. Tap to dismiss.`}
+      aria-label={`${name} says: ${fatma.line.text}. Tap to dismiss.`}
     >
       <StreamedText text={text} visible={progress.visible} />
     </button>
@@ -38,12 +43,12 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, o
     return (
       <div className="pointer-events-none relative flex h-14 w-full min-w-0 items-center gap-2">
         {fatma.enabled && (
-          <button onClick={() => { unlockAudio(); fatma.say("poke"); setChatOpen((open) => !open); }} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label="Talk to Sherine" aria-expanded={chatOpen} title="Talk to Sherine">
-            <FatmaSprite expression={expression} speaking={progress.speaking} size={48} reducedMotion={reducedMotion} />
+          <button onClick={() => { unlockAudio(); fatma.say("poke"); setChatOpen((open) => !open); }} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label={`Talk to ${name}`} aria-expanded={chatOpen} title={`Talk to ${name}`}>
+            {persona === "maya" ? <MayaAvatar expression={expression} speaking={progress.speaking} size={44} reducedMotion={reducedMotion} /> : <FatmaSprite expression={expression} speaking={progress.speaking} size={48} reducedMotion={reducedMotion} />}
           </button>
         )}
         <div className="min-w-0 max-w-[65%] shrink-0">
-          <div className="flex min-w-0 items-center gap-1"><span className="text-sm font-semibold">Sherine</span><BotRatingBadge opponent={opponent} /></div>
+          <div className="flex min-w-0 items-center gap-1"><span className="text-sm font-semibold">{name}</span><BotRatingBadge opponent={opponent} /></div>
           <CapturedPieces pieces={captures} color={capturedColor} advantage={advantage} />
         </div>
         <div aria-live="polite" className="flex min-w-0 flex-1 items-center">

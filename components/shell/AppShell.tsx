@@ -3,26 +3,26 @@
 import { SignInButton, UserButton } from "@clerk/nextjs";
 import { ChallengeBanner } from "@/components/online/ChallengeBanner";
 import { useConvexAuth } from "convex/react";
-import { animate, motion, useDragControls, useMotionValue, useTransform } from "motion/react";
 import Link from "@/components/navigation/PrefetchLink";
 import { usePathname } from "next/navigation";
 import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSettings } from "@/lib/client/settings";
-import { playSound } from "@/lib/client/sound";
 import { haptic } from "@/lib/client/haptics";
 import { clearTabNavigation, markTabNavigation, TAB_RESELECT_EVENT } from "@/lib/client/navIntent";
 import { TabBar, tabFor, showsTabs, TABS, type Tab, type TabId } from "./TabBar";
 import { useSync } from "@/lib/client/sync";
 import { SocialPrefetch } from "@/lib/client/socialCache";
 import { Button } from "@/components/ui/Button";
+import { Sidebar } from "./Sidebar";
 
 type ShellCtx = {
+  /** Opens More (the page that lists everything else). */
   openMenu: () => void;
   closeMenu: () => void;
-  /** A game in progress hides the phone tab bar in favour of its own toolbar. */
+  /** A game screen swaps the phone tab bar for its own toolbar. */
   setGameFocus: (focused: boolean) => void;
-  /** Go to a top-level destination the way its tab would (remembered page, or More's sheet). */
+  /** Go to a top-level destination the way its tab would (its remembered page). */
   goToTab: (id: TabId) => void;
 };
 const Ctx = createContext<ShellCtx | null>(null);
@@ -62,157 +62,28 @@ function readTabMemory(): Partial<Record<TabId, string>> {
   }
 }
 
-const SECTIONS: Array<{ title: string; items: Array<{ href: string; label: string; hint?: string }> }> = [
-  {
-    title: "Play",
-    items: [
-      { href: "/", label: "Full Power", hint: "Sherine · 3000" },
-      { href: "/climb", label: "The Climb", hint: "Rated ladder" },
-      { href: "/timed", label: "Timed", hint: "Clock presets" },
-      { href: "/play", label: "Play a friend", hint: "Link · QR · PIN" },
-    ],
-  },
-  {
-    title: "Improve",
-    items: [
-      { href: "/learn", label: "Learn" },
-      { href: "/time-machine", label: "Time Machine" },
-      { href: "/progress", label: "Progress" },
-    ],
-  },
-  {
-    title: "You",
-    items: [
-      { href: "/profile", label: "Profile & Sherine" },
-      { href: "/friends", label: "Friends", hint: "Requests · invites" },
-      { href: "/u", label: "Players" },
-      { href: "/settings", label: "Settings" },
-    ],
-  },
-  { title: "Explore & support", items: [
-  { href: "/search", label: "Search lessons & help" },
-  { href: "/about", label: "About Chess by Chaos" },
-  { href: "/help", label: "Help & FAQ" },
-  { href: "/contact", label: "Contact" },
-  { href: "/privacy", label: "Privacy policy" },
-  { href: "/terms", label: "Terms of use" },
-  { href: "/cookies", label: "Cookies & storage" },
-  { href: "/accessibility", label: "Accessibility" },
-  ] },
-];
+/** In-app page visits this session, so Back knows whether there is somewhere to go back to. */
+let visits = 0;
 
-const SHEET_SPRING = { type: "spring" as const, stiffness: 400, damping: 38, mass: 1 };
-
+/**
+ * One navigation system, mobile first:
+ * - Phones: five bottom tabs (Play, Bots, Learn, Review, More). More is a real
+ *   page listing everything else. Game screens swap the tabs for their own bar.
+ * - Desktop: a left sidebar with the same destinations (chess.com style).
+ */
 export function AppShell({ children }: { children: ReactNode }) {
-  const { reducedMotion, settings } = useSettings();
+  const { reducedMotion } = useSettings();
   const pathname = usePathname();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [gameFocus, setGameFocus] = useState(false);
   const tabsVisible = showsTabs(pathname) && !gameFocus;
-  const activeTab: TabId = open ? "more" : tabFor(pathname);
-  const [height, setHeight] = useState(800);
-  // Single source of truth: sheet translateY. Everything else derives from it.
-  const sheetY = useMotionValue(800);
-  const progress = useTransform(sheetY, [height, 0], [0, 1], { clamp: true });
-  const scale = useTransform(progress, [0, 1], [1, 0.955]);
-  const radius = useTransform(progress, [0, 1], [0, 18]);
-  const backY = useTransform(progress, [0, 1], [0, 10]);
-  const dim = useTransform(progress, [0, 1], [0, 0.32]);
-  const dragControls = useDragControls();
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLElement | null>(null);
+  const activeTab: TabId = tabFor(pathname);
 
-  useEffect(() => {
-    const measure = () => {
-      const h = Math.min(window.innerHeight * 0.88, 720);
-      setHeight(h);
-      if (!open) sheetY.set(h);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [open, sheetY]);
-
-  const openMenu = useCallback(() => {
-    triggerRef.current = document.activeElement as HTMLElement | null;
-    setOpen(true);
-    if (settings.sound) playSound("sheet", settings.volume * 0.6);
-    haptic("select");
-    if (reducedMotion) sheetY.set(0);
-    else animate(sheetY, 0, SHEET_SPRING);
-  }, [reducedMotion, sheetY, settings.sound, settings.volume]);
-
-  const closeMenu = useCallback(() => {
-    const done = () => {
-      setOpen(false);
-      triggerRef.current?.focus?.();
-    };
-    if (reducedMotion) {
-      sheetY.set(height);
-      done();
-    } else {
-      void animate(sheetY, height, SHEET_SPRING).then(done);
-    }
-  }, [reducedMotion, sheetY, height]);
-
-  // Going back to the page the menu was opened from re-opens the menu.
-  // (Opened after the router has settled, so the close-on-navigate below can't undo it.)
-  const openRef = useRef(openMenu);
-  useEffect(() => {
-    openRef.current = openMenu;
-  });
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const onPop = () => {
-      if (readMenuReturn() !== window.location.pathname) return;
-      writeMenuReturn(null);
-      timer = setTimeout(() => openRef.current(), 150);
-    };
-    window.addEventListener("popstate", onPop);
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      if (timer) clearTimeout(timer);
-    };
-  }, []);
-
-  // Close on navigation.
-  useEffect(() => {
-    if (open) closeMenu();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
-  // Focus trap + Escape.
-  useEffect(() => {
-    if (!open) return;
-    const sheet = sheetRef.current;
-    sheet?.querySelector<HTMLElement>("a,button")?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        closeMenu();
-      } else if (e.key === "Tab" && sheet) {
-        const focusables = [...sheet.querySelectorAll<HTMLElement>("a,button,[tabindex]:not([tabindex='-1'])")];
-        if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, closeMenu]);
+  useEffect(() => { visits++; }, [pathname]);
 
   // Each tab remembers the last page you had open in it, like a native tab stack.
   useEffect(() => {
     const tab = tabFor(pathname);
-    if (tab === "more") return;
     try {
       sessionStorage.setItem(TAB_MEMORY_KEY, JSON.stringify({ ...readTabMemory(), [tab]: pathname }));
     } catch {
@@ -225,209 +96,109 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const selectTab = useCallback((tab: Tab, event?: React.MouseEvent) => {
-    if (tab.id === "more") {
-      if (open) closeMenu();
-      else openMenu();
-      return;
-    }
-    if (tab.id === tabFor(pathname)) {
-      // Re-tapping the current tab: back to its start page, or to the top.
-      if (pathname === tab.href) {
-        event?.preventDefault();
-        clearTabNavigation();
-        window.dispatchEvent(new CustomEvent(TAB_RESELECT_EVENT, { detail: tab.href }));
-        window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
-      }
-    }
-  }, [open, openMenu, closeMenu, pathname, reducedMotion]);
+    if (tab.id !== tabFor(pathname) || pathname !== tab.href) return;
+    // Re-tapping the current tab on its start page: back to the top (and its first view).
+    event?.preventDefault();
+    clearTabNavigation();
+    window.dispatchEvent(new CustomEvent(TAB_RESELECT_EVENT, { detail: tab.href }));
+    window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+  }, [pathname, reducedMotion]);
 
   const goToTab = useCallback((id: TabId) => {
     const tab = TABS.find((t) => t.id === id)!;
     haptic("select");
-    if (id === "more") return openMenu();
     const href = hrefFor(tab);
     if (href === pathname) window.dispatchEvent(new CustomEvent(TAB_RESELECT_EVENT, { detail: tab.href }));
     else {
       markTabNavigation();
       router.push(href);
     }
-  }, [hrefFor, openMenu, pathname, router]);
+  }, [hrefFor, pathname, router]);
 
+  const openMenu = useCallback(() => goToTab("more"), [goToTab]);
+  const closeMenu = useCallback(() => {}, []);
   const value = useMemo(() => ({ openMenu, closeMenu, setGameFocus, goToTab }), [openMenu, closeMenu, goToTab]);
 
   return (
     <Ctx.Provider value={value}>
-      <SocialPrefetch enabled={open} />
-      <div className="fixed inset-0 -z-10 bg-black" aria-hidden="true" />
-      <motion.div
-        className="isolate min-h-dvh origin-top overflow-hidden bg-bg"
-        data-tabbar={tabsVisible ? "on" : "off"}
-        style={{ scale, borderRadius: radius, y: backY }}
-        aria-hidden={open}
-        inert={open}
-      >
+      <SocialPrefetch enabled={pathname === "/more"} />
+      <Sidebar pathname={pathname} />
+      <div className="app-content isolate min-h-dvh bg-bg" data-tabbar={tabsVisible ? "on" : "off"}>
         {children}
-      </motion.div>
+      </div>
       <ChallengeBanner />
       <TabBar visible={tabsVisible} active={activeTab} reducedMotion={reducedMotion} hrefFor={hrefFor} onSelect={selectTab} />
-      {open && (
-        <motion.div className="fixed inset-0 z-[60] bg-black" style={{ opacity: dim }} onClick={closeMenu} aria-hidden="true" />
-      )}
-      <motion.div
-        ref={sheetRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Menu"
-        className="fixed inset-x-0 bottom-0 z-[70] mx-auto flex max-w-xl flex-col overflow-hidden rounded-t-[22px] bg-surface shadow-[0_-8px_40px_rgba(0,0,0,0.18)]"
-        style={{ y: sheetY, height, visibility: open ? "visible" : "hidden" }}
-        drag="y"
-        dragControls={dragControls}
-        dragListener={false}
-        dragConstraints={{ top: 0, bottom: height }}
-        dragElastic={{ top: 0.04, bottom: 0.3 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.y > height * 0.25 || info.velocity.y > 600) closeMenu();
-          else animate(sheetY, 0, SHEET_SPRING);
-        }}
-      >
-        {/* No visible close: swipe down, tap outside or Escape. Screen readers still get a button. */}
-        <div
-          className="bg-surface cursor-grab touch-none px-5 pb-2 pt-3 active:cursor-grabbing"
-          onPointerDown={(e) => dragControls.start(e)}
-        >
-          <div className="mx-auto h-1.5 w-10 rounded-full bg-line" />
-          <div className="mt-3 flex min-h-11 items-center">
-            <span className="text-lg font-semibold">Chess by Chaos</span>
-            <button onClick={closeMenu} className="sr-only focus-visible:not-sr-only focus-visible:ms-auto focus-visible:rounded-full focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm" aria-label="Close menu">
-              Close
-            </button>
-          </div>
-        </div>
-        <nav className="no-scrollbar flex-1 overflow-y-auto overscroll-contain bg-surface px-4 pb-4">
-          {SECTIONS.map((section) => (
-            <div key={section.title} className="mt-3">
-              <p className="px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted">{section.title}</p>
-              <ul className="overflow-hidden rounded-2xl bg-surface-2">
-                {section.items.map((item) => (
-                  <li key={item.href} className="border-b border-line last:border-b-0">
-                    <Link
-                      href={item.href}
-                      prefetch={open}
-                      onClick={() => item.href !== pathname && writeMenuReturn(pathname)}
-                      aria-current={pathname === item.href ? "page" : undefined}
-                      className="flex min-h-12 items-center justify-between px-4 py-3 transition-colors active:bg-line/60"
-                    >
-                      <span className="font-medium">{item.label}</span>
-                      {item.hint && <span className="text-sm text-muted">{item.hint}</span>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          <AccountRow />
-          <p className="mt-6 px-2 text-xs text-muted">
-            Open source (GPL-3.0). <Link href="/licenses" prefetch={false} className="underline">Licences & engine source</Link>
-          </p>
-        </nav>
-        <div className="safe-bottom bg-surface" />
-      </motion.div>
     </Ctx.Provider>
   );
 }
 
-function AccountRow() {
+/** Account and sync state, shown on More and in the desktop sidebar. */
+export function AccountCard({ compact = false }: { compact?: boolean }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { status } = useSync();
+  const text = isLoading ? "Checking account…" : isAuthenticated
+    ? status.pending > 0 ? `${status.pending} change${status.pending === 1 ? "" : "s"} waiting to sync` : status.online ? "Synced" : "Offline · saved on this device"
+    : "Games are saved on this device.";
   return (
-    <div className="mt-4 flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3">
-      {isLoading ? (
-        <span className="text-sm text-muted">Checking account…</span>
-      ) : isAuthenticated ? (
-        <>
-          <span className="text-sm text-muted">
-            {status.pending > 0 ? `${status.pending} change${status.pending === 1 ? "" : "s"} waiting to sync` : status.online ? "Synced" : "Offline · saved on this device"}
-          </span>
-          <UserButton />
-        </>
-      ) : (
-        <>
-          <span className="text-sm text-muted">Games are saved on this device.</span>
-          <SignInButton mode="modal">
-            <button className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-text">Sign in to sync</button>
-          </SignInButton>
-        </>
-      )}
+    <div className={`flex items-center justify-between gap-3 ${compact ? "" : "rounded-2xl bg-surface px-4 py-3 shadow-[var(--shadow)]"}`}>
+      <span className={`min-w-0 text-sm text-muted ${compact ? "max-xl:sr-only" : ""}`}>{text}</span>
+      {!isLoading && (isAuthenticated ? <UserButton /> : (
+        <SignInButton mode="modal">
+          <button className="shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-text">{compact ? "Sign in" : "Sign in to sync"}</button>
+        </SignInButton>
+      ))}
     </div>
   );
 }
 
-/** Circular horizontal-ellipsis menu button. */
+/** Opens More. Phones use the More tab, desktop the sidebar; kept for deep full-screen pages. */
 export function MenuButton() {
-  const { openMenu } = useShell();
   return (
-    <Button onClick={openMenu} aria-label="Open menu" aria-haspopup="dialog" className="grid h-11 w-11 shrink-0 place-items-center rounded-full">
+    <Link href="/more" aria-label="More" className="press-overlay grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-ink ring-1 ring-inset ring-line/70 lg:hidden">
       <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
         <circle cx="6" cy="12" r="1.8" fill="currentColor" />
         <circle cx="12" cy="12" r="1.8" fill="currentColor" />
         <circle cx="18" cy="12" r="1.8" fill="currentColor" />
       </svg>
-    </Button>
+    </Link>
   );
 }
 
 /** Simple page header for secondary pages. */
 export function PageToolbar() {
-  return <div className="safe-top sticky top-0 z-30 flex items-center justify-between bg-bg/95 px-4 pb-2"><BackButton /><MenuButton /></div>;
+  return <div className="safe-top sticky top-0 z-30 flex items-center justify-between bg-bg/95 px-4 pb-2"><BackButton /></div>;
 }
 
 export function PageHeader({ title, back = true }: { title: string; back?: boolean }) {
-  const topLevel = showsTabs(usePathname());
   return (
-    <header className="safe-top sticky top-0 z-30 flex min-h-[60px] items-center justify-between gap-3 bg-bg/95 px-4 pb-2">
-      <div className="flex min-w-0 items-center gap-2">
-        {back && <BackButton />}
-        <h1 className="truncate text-[28px] font-bold leading-tight tracking-[-0.02em] sm:text-3xl">{title}</h1>
-      </div>
-      {/* Phones reach the menu from the More tab on top-level pages. */}
-      <div className={topLevel ? "max-lg:hidden" : undefined}><MenuButton /></div>
+    <header className="safe-top sticky top-0 z-30 flex min-h-[60px] items-center gap-2 bg-bg/95 px-4 pb-2 lg:pt-6">
+      {back && <BackButton />}
+      <h1 className="truncate text-[28px] font-bold leading-tight tracking-[-0.02em] sm:text-3xl">{title}</h1>
     </header>
   );
 }
 
-const MENU_RETURN_KEY = "cbc.menuReturn";
-
-function readMenuReturn(): string | null {
-  try {
-    return sessionStorage.getItem(MENU_RETURN_KEY);
-  } catch {
-    return null;
-  }
+/** Parent of a path ("/learn/abc" → "/learn"); top-level pages have none. */
+function parentOf(pathname: string): string {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length <= 1) return "/";
+  if (parts[0] === "game") return "/time-machine";
+  return `/${parts.slice(0, -1).join("/")}`;
 }
 
-function writeMenuReturn(path: string | null): void {
-  try {
-    if (path) sessionStorage.setItem(MENU_RETURN_KEY, path);
-    else sessionStorage.removeItem(MENU_RETURN_KEY);
-  } catch {
-    // Storage unavailable: back simply goes to the board.
-  }
-}
-
-/** Back: returns to where the menu was opened (with the menu open), else to the board. */
+/** Back on deeper pages: the previous in-app page, else the page above this one. Top-level pages have tabs/sidebar instead. */
 function BackButton() {
   const router = useRouter();
   const pathname = usePathname();
-  // Top-level pages on phones navigate with the tab bar; Back is for deeper pages and desktop.
-  const topLevel = showsTabs(pathname);
+  if (showsTabs(pathname)) return null;
   return (
     <Button
       onClick={() => {
-        if (readMenuReturn() !== null && window.history.length > 1) router.back();
-        else router.push("/");
+        if (visits > 1 && window.history.length > 1) router.back();
+        else router.push(parentOf(pathname));
       }}
       aria-label="Back"
-      className={`${topLevel ? "max-lg:hidden" : ""} grid h-11 w-11 place-items-center rounded-full`}
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-full"
     >
       <svg viewBox="0 0 24 24" className="h-5 w-5 rtl:rotate-180" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />

@@ -13,7 +13,9 @@ import {
   type FatmaMemory,
   type Mood,
 } from "../chess/personality/fatma";
-import { linesFor } from "../chess/personality/lines";
+import { linesFor, type FatmaLanguage } from "../chess/personality/lines";
+import { mayaLinesFor } from "../chess/personality/maya";
+import type { BotPersona } from "../chess/engine/opponents";
 import { packLines, validatePack } from "../chess/personality/packs";
 import { useSettings } from "./settings";
 import { useCoachingPreferences } from "./useCoachingPreferences";
@@ -36,7 +38,8 @@ function loadLocal(): FatmaMemory {
  * Sherine's runtime: picks lines locally (no network per move), persists
  * memory in Convex when signed in, localStorage for guests.
  */
-export function useFatma() {
+/** Sherine by default; in Maya's games the same runtime speaks Maya's own lines. */
+export function useFatma(persona: BotPersona = "sherine") {
   const { isAuthenticated } = useConvexAuth();
   const { settings } = useSettings();
   const { coaching } = useCoachingPreferences();
@@ -95,15 +98,17 @@ export function useFatma() {
   }, [memory]);
 
   // Re-validate installed packs on the client too (defence in depth).
+  const linesOf = useCallback((lang: FatmaLanguage) => (persona === "maya" ? mayaLinesFor(lang) : linesFor(lang)), [persona]);
   const lines = useMemo(
-    () => [
+    () => persona === "maya" ? mayaLinesFor(language) : [
       ...linesFor(language),
+      // Installed upgrade packs are Sherine's.
       ...(remote?.packs ?? []).flatMap((p) => {
         const checked = validatePack(p);
         return checked.ok ? (packLines(checked.pack) as DialogueLine[]) : [];
       }),
     ],
-    [remote?.packs, language],
+    [remote?.packs, language, persona],
   );
 
   const saveLocal = useCallback((next: FatmaMemory) => {
@@ -126,7 +131,7 @@ export function useFatma() {
       if (!important && coaching.frequency === "balanced" && now - memoryRef.current.lastSpokeAt < 12_000 && !opts.force) return;
       const replyLanguage = opts.text && coaching.autoLanguage ? detectLanguage(opts.text, navigator.languages) : language;
       if (replyLanguage !== language) setConversationLanguage(replyLanguage);
-      const candidates = replyLanguage === language ? lines : linesFor(replyLanguage);
+      const candidates = replyLanguage === language ? lines : linesOf(replyLanguage);
       const toned = coaching.intensity === "spicy" ? candidates : candidates.filter((l) => !["start-3", "blunder-3", "blunder-4", "blunder-6"].includes(l.id.replace(/^(egy|franco):/, "")));
       const mem = opts.force ? { ...memoryRef.current, lastSpokeAt: 0 } : memoryRef.current;
       const familiarUndo = event === "undo" && Object.keys(mem.seen).filter((id) => /^(?:(?:egy|franco)[:_])?undo-/.test(id)).length >= 2;
@@ -159,7 +164,7 @@ export function useFatma() {
         hideTimer.current = setTimeout(hide, readMs(picked.text));
       }
     },
-    [lines, saveLocal, isAuthenticated, recordLine, clearTimers, coaching, language, settings.fatmaSound, settings.volume],
+    [lines, linesOf, saveLocal, isAuthenticated, recordLine, clearTimers, coaching, language, settings.fatmaSound, settings.volume],
   );
 
   // React to server-side events (achievements, installed upgrades).

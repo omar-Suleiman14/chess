@@ -17,6 +17,8 @@ export const SERVICE_WORKER_SOURCE = String.raw`
 const VERSION = __VERSION__;
 const PAGES = __PAGES__;
 const FILES = __FILES__;
+// Nice to have offline (Chess.com sounds): cached when available, never blocking "ready".
+const OPTIONAL = __OPTIONAL__;
 const SHELL = "cbc-shell-" + VERSION;
 const ASSETS = "cbc-assets-" + VERSION;
 const RUNTIME = "cbc-runtime";
@@ -78,6 +80,9 @@ async function precache() {
     }));
     broadcast({ type: "offline-progress", done: progress.done, total: progress.total });
   }
+  await Promise.all(OPTIONAL.map(async (file) => {
+    try { if (!(await assets.match(file))) await assets.put(file, await fetchOk(file, { credentials: "omit" })); } catch (error) { /* Built-in sounds cover it. */ }
+  }));
   await assets.put(READY, new Response(JSON.stringify({ version: VERSION, at: Date.now(), files: progress.total, scripts: [...discovered] }), { headers: { "Content-Type": "application/json" } }));
   broadcast({ type: "offline-ready", version: VERSION });
 }
@@ -173,6 +178,6 @@ self.addEventListener("fetch", (event) => {
   // Route data (RSC) is never cached; if it fails, Next.js falls back to a full navigation, which the shell serves.
   if (request.headers.get("RSC") || url.searchParams.has("_rsc")) return;
   if (url.pathname.startsWith("/_next/static/")) { event.respondWith(cacheFirst(request, RUNTIME)); return; }
-  if (FILE_SET.has(url.pathname)) event.respondWith(cacheFirst(request, ASSETS));
+  if (FILE_SET.has(url.pathname) || OPTIONAL.includes(url.pathname)) event.respondWith(cacheFirst(request, ASSETS));
 });
 `;
