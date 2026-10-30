@@ -25,7 +25,9 @@ function contentSecurityPolicy(): string {
     // Next.js inline bootstrap scripts; WebAssembly for Stockfish.
     `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${clerkSrc} https://*.protect.clerk.com https://challenges.cloudflare.com`,
     "worker-src 'self' blob:",
-    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${convexSources} ${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com`,
+    `connect-src 'self' https://*.convex.cloud wss://*.convex.cloud ${convexSources} ${clerkSrc} https://*.protect.clerk.com:* https://clerk-telemetry.com https://images.chesscomfiles.com`,
+    // Optional Chess.com sounds (Settings → Sound & feel), streamed from chess.com.
+    "media-src 'self' blob: https://images.chesscomfiles.com",
     "img-src 'self' data: blob: https://img.clerk.com",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",

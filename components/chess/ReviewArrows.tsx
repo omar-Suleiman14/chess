@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useRef, type PointerEvent } from "react";
-import { GlassLayer } from "@/components/ui/Glass";
-import { useGlassOn } from "@/lib/client/settings";
 
 const HOLD_DELAY_MS = 320;
 const REPEAT_START_MS = 120;
@@ -12,7 +10,7 @@ const REPEAT_MIN_MS = 35;
  * Tap to step once; press and hold to scrub, accelerating. Keyboard
  * (Enter/Space) still steps once per press, and auto-repeats while held.
  */
-function useHoldRepeat(action: () => void, disabled: boolean) {
+export function useHoldRepeat(action: () => void, disabled: boolean) {
   const actionRef = useRef(action);
   const disabledRef = useRef(disabled);
   useEffect(() => {
@@ -65,22 +63,20 @@ function useHoldRepeat(action: () => void, disabled: boolean) {
   };
 }
 
-/** Fixed glass surface; only the chevrons shrink during a press. */
+/** Fixed surface; only the chevrons shrink during a press. */
 export function ReviewArrows({ onBack, onForward, backDisabled, forwardDisabled }: { onBack: () => void; onForward: () => void; backDisabled: boolean; forwardDisabled: boolean }) {
-  const glassOn = useGlassOn();
   const back = useHoldRepeat(onBack, backDisabled);
   const forward = useHoldRepeat(onForward, forwardDisabled);
   const button =
-    `press-overlay grid h-14 w-16 shrink-0 ${glassOn ? "first-of-type:rounded-s-full last:rounded-e-full" : ""} touch-manipulation select-none place-items-center [-webkit-touch-callout:none] [-webkit-user-select:none] focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent disabled:opacity-30`;
+    `press-overlay grid h-14 w-16 shrink-0 touch-manipulation select-none place-items-center [-webkit-touch-callout:none] [-webkit-user-select:none] focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent disabled:opacity-30`;
   const chevron = "pointer-events-none h-8 w-8";
   return (
     <div
-      className={glassOn ? "glass-button relative isolate flex h-14 shrink-0 select-none rounded-full" : "flex h-14 shrink-0 select-none overflow-hidden rounded-full bg-surface shadow-[var(--shadow)]"}
+      className="flex h-14 shrink-0 select-none overflow-hidden rounded-full bg-surface shadow-[var(--shadow)] ring-1 ring-inset ring-line/70"
       role="group"
       aria-label="Review moves"
       dir="ltr"
     >
-      <GlassLayer radius="pill" />
       <button {...back} disabled={backDisabled} className={button} aria-label="Previous move (hold to rewind)" aria-keyshortcuts="ArrowLeft Home">
         <svg viewBox="0 0 24 24" className={chevron} aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
@@ -92,5 +88,3 @@ export function ReviewArrows({ onBack, onForward, backDisabled, forwardDisabled 
   );
 }
 
-/** Same footprint as ReviewArrows, so the footer stays symmetric. */
-export const FOOTER_BUTTON_SIZE = "h-14 w-[8.0625rem]";

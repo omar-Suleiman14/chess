@@ -5,8 +5,10 @@ Source of requested work: [live Chess checklist](https://app.notion.com/p/408448
 ## Implemented on the experience branch
 
 - Board-first layout, horizontal evaluation, conservative move feedback, Friends entry, manual PGN, three-language Sherine, and synchronized talking animation.
-- Classic default with lighter neutral backgrounds; separate Material 3 Expressive and Liquid Glass; board-derived/custom Material color and independent color mode.
-- Bounded glass tiers and opaque fallbacks; game-only Ambient Glyphs with presets, limits, and reduced-motion behavior.
+- Classic is the only design (Material 3 Expressive and Liquid Glass retired; old choices migrate); independent light/dark/system.
+- Phone tab bar (Play / Bots / Learn / Review / More) with per-tab memory, replaced by the in-game toolbar during play.
+- Haptics service with Off / Subtle / Standard and honest per-device support; bounded piece travel (130-220 ms, captures 150-240 ms).
+- Game-only Ambient Glyphs with presets, limits, and reduced-motion behavior.
 - Original event sound packs, previews, per-event overrides, channel/category controls, cached playback, and licensing ledger.
 - Larger accessible results and server-backed request/decline/cancel/expiry/accept rematches.
 - Manual Time Machine navigation, row move table, optional insights, preserved PGN names/variations, shared-position branch switching, and session cursor memory.

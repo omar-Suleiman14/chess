@@ -2,16 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { useSettings } from "@/lib/client/settings";
-import { BOARD_SEEDS } from "@/lib/experience/theme";
 
-const CharacterField = dynamic(() => import("./CharacterField").then((module) => module.CharacterField), { ssr: false });
+const LiveBackground = dynamic(() => import("./LiveBackground").then((module) => module.LiveBackground), { ssr: false });
 
-/** Mount only inside the immediate game layout, never in an app-wide shell. */
+/** Live background behind games only (Settings → Live background). Never on other pages. */
 export function GameBackground() {
-  const { settings, reducedMotion, reducedTransparency } = useSettings();
-  const ambient = settings.experience.ambient;
-  if (ambient.mode !== "ambient") return null;
-  return <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-3xl" data-game-background="ambient" aria-hidden="true">
-    <CharacterField settings={ambient} reducedMotion={reducedMotion} reducedTransparency={reducedTransparency} tint={ambient.syncBoard ? BOARD_SEEDS[settings.palette] : ambient.tint} />
-  </div>;
+  const { settings, reducedMotion } = useSettings();
+  if (settings.experience.ambient.mode !== "ambient") return null;
+  return <LiveBackground reducedMotion={reducedMotion} />;
 }

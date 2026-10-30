@@ -1,5 +1,3 @@
-import type { Experience } from "./config";
-
 export const BOARD_SEEDS = {
   ivory: "#8d6748",
   sage: "#4e7046",
@@ -34,61 +32,53 @@ export function contrast(a: string, b: string): number {
   const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (values[0] + 0.05) / (values[1] + 0.05);
 }
-export function themeTokens(
-  experience: Experience,
-  palette: keyof typeof BOARD_SEEDS,
-  dark: boolean,
-): Record<string, string> {
-  const expressive = experience.appearance === "expressive";
-  const seed =
-    experience.colorSource === "board"
-      ? BOARD_SEEDS[palette]
-      : experience.customColor;
-  const bg = expressive
-    ? mix(dark ? "#17151a" : "#fffbff", seed, dark ? 0.08 : 0.025)
-    : dark
-      ? "#191919"
-      : "#ffffff";
-  const surface = expressive
-    ? mix(dark ? "#252229" : "#f5eff7", seed, 0.06)
-    : dark
-      ? "#222222"
-      : "#f7f7f5";
-  const secondary = expressive
-    ? mix(dark ? "#322e37" : "#ece4f0", seed, 0.1)
-    : dark
-      ? "#2c2c2c"
-      : "#efefed";
-  let accent = expressive
-    ? mix(seed, dark ? "#ffffff" : "#000000", dark ? 0.6 : 0.05)
-    : dark
-      ? "#f0efed"
-      : "#37352f";
-  let onAccent = contrast(accent, "#ffffff") >= 4.5 ? "#ffffff" : "#171717";
-  if (contrast(accent, onAccent) < 4.5) {
-    accent = dark ? "#d7c6ee" : "#59436e";
-    onAccent = dark ? "#21192a" : "#ffffff";
-  }
-  return {
-    "--bg": bg,
-    "--surface": surface,
-    "--surface-2": secondary,
-    "--text": dark ? "#f1f0ee" : "#37352f",
-    "--muted": dark ? "#b7b5b1" : "#686660",
-    "--line": dark ? "#53504d" : "#d7d5d0",
-    "--accent": accent,
-    "--accent-text": onAccent,
-    "--focus": expressive ? accent : dark ? "#95baff" : "#245ab4",
-    "--theme-seed": seed,
-    "--switch-on": expressive ? accent : "#2168d4",
-    "--switch-off": dark ? "#55534f" : "#d4d3cf",
-    "--danger": dark ? "#ffb4ab" : "#b42318",
-    "--ok": dark ? "#9fdbb2" : "#1b6e43",
-    "--shadow": dark
-      ? "0 1px 2px #0004, 0 8px 24px #0002"
-      : "0 1px 2px #24221e0a, 0 6px 18px #24221e08",
-  };
+/**
+ * Classic: the single app design. Graphite ink on warm paper, white
+ * surfaces, and one original accent (brass) reserved for "on" and "here"
+ * states: switches, the active tab, selected rows. The board supplies colour.
+ */
+export function themeTokens(dark: boolean): Record<string, string> {
+  return dark
+    ? {
+        "--bg": "#141413",
+        "--surface": "#1e1e1c",
+        "--surface-2": "#2a2927",
+        "--text": "#f2f1ee",
+        "--muted": "#aaa79f",
+        "--line": "#3a3935",
+        "--accent": "#f2f1ee",
+        "--accent-text": "#141413",
+        "--brand": "#e3ac63",
+        "--focus": "#8ab4ff",
+        "--switch-on": "#d39a4c",
+        "--switch-off": "#4a4945",
+        "--danger": "#ffb4ab",
+        "--ok": "#9fdbb2",
+        "--shadow": "0 1px 2px #0005, 0 8px 24px #0003",
+      }
+    : {
+        "--bg": "#f7f6f3",
+        "--surface": "#ffffff",
+        "--surface-2": "#efede8",
+        "--text": "#1f1e1b",
+        "--muted": "#67645e",
+        "--line": "#e1ded6",
+        "--accent": "#1f1e1b",
+        "--accent-text": "#ffffff",
+        "--brand": "#a8691f",
+        "--focus": "#245ab4",
+        "--switch-on": "#b97a2c",
+        "--switch-off": "#dddad3",
+        "--danger": "#b42318",
+        "--ok": "#1b6e43",
+        "--shadow": "0 1px 2px #24221e0d, 0 6px 18px #24221e0a",
+      };
 }
 
+import { BOARD_THEMES, BOARD_THEME_KEY, boardThemeVars } from "./boardThemes";
+
+// Board theme colours, applied before first paint (hex values from our own table only).
+const BOARD_THEME_TABLE = JSON.stringify(Object.fromEntries(BOARD_THEMES.map((theme) => [theme.id, boardThemeVars(theme)])));
+
 // Same safe primitive attributes before hydration; no user strings become HTML.
-export const THEME_BOOTSTRAP = `try{const s=JSON.parse(localStorage.getItem('cbc.settings.v1')||'{}'),e=s.experience||{},r=document.documentElement,a=['classic','expressive','glass'].includes(e.appearance)?e.appearance:s.glass==='on'?'glass':'classic',m=['light','dark','system'].includes(e.colorMode)?e.colorMode:'light';r.dataset.appearance=a;r.dataset.colorMode=m;r.dataset.tone=m==='dark'||m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';r.style.colorScheme=r.dataset.tone;const p=['ivory','sage','slate','blue'].includes(s.palette)?s.palette:'ivory',c=JSON.parse(localStorage.getItem('cbc.theme.v1')||'null');r.dataset.palette=p;r.dataset.contrast=s.highContrast===true?'high':'normal';if(c&&c.fingerprint===JSON.stringify([a,e.colorSource||'board',e.customColor||'#6750a4',p]))for(const[k,v]of Object.entries(c[r.dataset.tone]||{}))if(/^--[a-z-]+$/.test(k)&&/^#[0-9a-fA-F]{6}$/.test(v))r.style.setProperty(k,v);if(s.highContrast===true){r.style.setProperty('--muted',r.dataset.tone==='dark'?'#eeeeee':'#333333');r.style.setProperty('--line',r.dataset.tone==='dark'?'#aaaaaa':'#666666');}}catch{}`;
+export const THEME_BOOTSTRAP = `try{const s=JSON.parse(localStorage.getItem('cbc.settings.v1')||'{}'),e=s.experience||{},r=document.documentElement,m=['light','dark','system'].includes(e.colorMode)?e.colorMode:'light';r.dataset.appearance='classic';r.dataset.colorMode=m;r.dataset.tone=m==='dark'||m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';r.style.colorScheme=r.dataset.tone;const p=['ivory','sage','slate','blue'].includes(s.palette)?s.palette:'ivory',c=JSON.parse(localStorage.getItem('cbc.theme.v1')||'null');r.dataset.palette=p;r.dataset.contrast=s.highContrast===true?'high':'normal';if(c&&c.fingerprint===JSON.stringify(['classic',p]))for(const[k,v]of Object.entries(c[r.dataset.tone]||{}))if(/^--[a-z-]+$/.test(k)&&/^#[0-9a-fA-F]{6}$/.test(v))r.style.setProperty(k,v);if(s.highContrast===true){r.style.setProperty('--muted',r.dataset.tone==='dark'?'#eeeeee':'#333333');r.style.setProperty('--line',r.dataset.tone==='dark'?'#aaaaaa':'#666666');}else{const t=${BOARD_THEME_TABLE}[typeof s.boardTheme==='string'?s.boardTheme:localStorage.getItem('${BOARD_THEME_KEY}')];if(t)for(const[k,v]of Object.entries(t))r.style.setProperty(k,v);}}catch{}`;

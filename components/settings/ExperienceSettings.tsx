@@ -1,21 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSettings } from "@/lib/client/settings";
 import { playSound, unlockAudio } from "@/lib/client/sound";
 import {
-  AMBIENT_PRESETS,
-  DEFAULT_AMBIENT,
   DEFAULT_EXPERIENCE,
   SOUND_EVENTS,
   SOUND_PACKS,
-  type AmbientSettings,
   type Experience,
   type SoundEvent,
   type SoundPack,
 } from "@/lib/experience/config";
-import { BOARD_SEEDS } from "@/lib/experience/theme";
 import { PACK_LABELS } from "@/lib/experience/audio";
 import { SwitchRow } from "@/components/ui/Switch";
 
@@ -50,7 +45,7 @@ function Choice<T extends string>({
               className="absolute end-3 top-3 accent-[var(--accent)]"
             />
             <span
-              className={`mb-3 flex h-12 gap-1 rounded-xl p-2 ${option.id === "expressive" ? "bg-[var(--theme-seed)]/20" : option.id === "glass" ? "border border-line bg-linear-to-br from-white/40 to-surface-2" : "bg-surface-2"}`}
+              className={`mb-3 flex h-12 gap-1 rounded-xl p-2 ${option.id === "dark" ? "bg-[#1e1e1c]" : option.id === "system" ? "bg-linear-to-r from-[#efede8] from-50% to-[#1e1e1c] to-50%" : "bg-surface-2"}`}
               aria-hidden="true"
             >
               <span className="w-1/3 rounded-lg bg-accent/20" />
@@ -106,70 +101,14 @@ function Range({
     </label>
   );
 }
-function SelectValue<T extends string>({
-  label,
-  value,
-  values,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  values: readonly T[];
-  onChange: (value: T) => void;
-}) {
-  return (
-    <label className="grid gap-1 text-sm">
-      {label}
-      <select
-        className={field}
-        value={value}
-        onChange={(event) => {
-          const selected = values.find((item) => item === event.target.value);
-          if (selected) onChange(selected);
-        }}
-      >
-        {values.map((item) => (
-          <option key={item} value={item}>
-            {item.replaceAll("-", " ")}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
 export function AppearanceSettings() {
   const { settings, updateExperience, syncsExperience } = useSettings();
   const e = settings.experience;
   return (
     <section aria-labelledby="appearance-heading" className="grid gap-4">
       <h2 id="appearance-heading" className="text-lg font-semibold">
-        App appearance
+        Appearance
       </h2>
-      <Choice
-        label="Design"
-        value={e.appearance}
-        onChange={(appearance) => updateExperience({ appearance })}
-        options={[
-          {
-            id: "classic",
-            name: "Classic / Standard",
-            description:
-              "The original layout with neutral paper surfaces. Default.",
-          },
-          {
-            id: "expressive",
-            name: "Material 3 Expressive",
-            description: "Tonal color, bolder shapes and expressive controls.",
-          },
-          {
-            id: "glass",
-            name: "Liquid Glass",
-            description:
-              "Translucent controls, crisp content and opaque dialogs.",
-          },
-        ]}
-      />
       <Choice
         label="Color mode"
         value={e.colorMode}
@@ -180,86 +119,11 @@ export function AppearanceSettings() {
           { id: "system", name: "System" },
         ]}
       />
-      {e.appearance === "expressive" && (
-        <div className="grid gap-3 rounded-2xl bg-surface p-4">
-          <Choice
-            label="Material color source"
-            value={e.colorSource}
-            onChange={(colorSource) => updateExperience({ colorSource })}
-            options={[
-              {
-                id: "board",
-                name: "Board palette",
-                description:
-                  "App colors follow the selected chessboard palette.",
-              },
-              {
-                id: "custom",
-                name: "Choose a color",
-                description: "Keep an independent accent color.",
-              },
-            ]}
-          />
-          {e.colorSource === "custom" ? (
-            <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
-              Accent color
-              <input
-                aria-label="Material accent color"
-                type="color"
-                value={e.customColor}
-                onChange={(event) =>
-                  updateExperience({ customColor: event.target.value })
-                }
-                className="h-11 w-16 rounded-lg"
-              />
-            </label>
-          ) : (
-            <p className="flex items-center gap-2 text-sm text-muted">
-              <span
-                className="h-6 w-6 rounded-full"
-                style={{ background: BOARD_SEEDS[settings.palette] }}
-              />
-              Following {settings.palette}. Change the board colors below to
-              update the whole app.
-            </p>
-          )}
-        </div>
-      )}
-      {e.appearance === "glass" && (
-        <div className="grid gap-2">
-          <Choice
-            label="Glass effects"
-            value={e.glassQuality}
-            onChange={(glassQuality) => updateExperience({ glassQuality })}
-            options={[
-              {
-                id: "full",
-                name: "Full Glass",
-                description: "12px bounded blur and brighter reflections.",
-              },
-              {
-                id: "balanced",
-                name: "Balanced Glass",
-                description: "8px blur. Recommended for everyday play.",
-              },
-              {
-                id: "minimal",
-                name: "Minimal Effects",
-                description: "Opaque materials, no backdrop blur.",
-              },
-            ]}
-          />
-          <p className="text-xs text-muted">
-            Reduced transparency and high contrast use opaque materials.
-            Unsupported browsers keep the same layout with solid surfaces.
-          </p>
-        </div>
-      )}
       <p className="text-xs text-muted">
         {syncsExperience
           ? "Appearance, background and sound preferences sync with your account."
-          : "Saved on this device. Account sync becomes available with the updated backend."}{" "}
-        Switching designs keeps your game and clocks intact.
+          : "Saved on this device."}{" "}
+        Changing it keeps your game and clocks intact.
       </p>
     </section>
   );
@@ -268,191 +132,19 @@ export function AppearanceSettings() {
 export function BackgroundSettings() {
   const { settings, updateExperience } = useSettings();
   const a = settings.experience.ambient;
-  const change = (patch: Partial<AmbientSettings>) =>
-    updateExperience({ ambient: { ...a, ...patch, preset: "custom" } });
   return (
-    <section aria-labelledby="background-heading" className="grid gap-4">
+    <section aria-labelledby="background-heading" className="grid gap-2">
       <h2 id="background-heading" className="text-lg font-semibold">
-        Gameplay background
+        Background
       </h2>
-      <Choice
-        label="Board scene"
-        value={a.mode}
-        onChange={(mode) => change({ mode })}
-        options={[
-          {
-            id: "minimal",
-            name: "Minimal",
-            description: "The quiet, original game background. Default.",
-          },
-          {
-            id: "ambient",
-            name: "Ambient Glyphs",
-            description: "Original drifting notation behind the game scene.",
-          },
-          {
-            id: "off",
-            name: "Off",
-            description: "No decorative background layer.",
-          },
-        ]}
-      />
-      {a.mode === "ambient" && (
-        <div className="grid gap-4 rounded-2xl bg-surface p-4">
-          <div
-            className="overflow-hidden rounded-xl bg-surface-2 p-5 font-mono text-sm tracking-widest text-muted"
-            aria-label="Static Ambient Glyphs preview"
-          >
-            e4 · Nf3 · O-O · ♞<br />
-            <span className="opacity-60"> ♜ c6 · g3 · ♙</span>
-            <br />
-            ... d5 · Bb5 · ↗
-          </div>
-          <SelectValue
-            label="Preset"
-            value={a.preset}
-            values={["calm", "competitive", "terminal", "expressive", "custom"]}
-            onChange={(preset) =>
-              updateExperience({
-                ambient:
-                  preset === "custom"
-                    ? { ...a, preset }
-                    : { ...a, ...AMBIENT_PRESETS[preset], preset },
-              })
-            }
-          />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectValue
-              label="Intensity"
-              value={a.intensity}
-              values={["low", "medium", "high"]}
-              onChange={(intensity) => change({ intensity })}
-            />
-            <SelectValue
-              label="Background motion"
-              value={a.motion}
-              values={["subtle", "normal", "dynamic"]}
-              onChange={(motion) => change({ motion })}
-            />
-          </div>
-          <SwitchRow
-            label="Pointer response"
-            hint="Only empty game-scene space responds. Board input is untouched."
-            checked={a.interactive}
-            onChange={(interactive) => change({ interactive })}
-          />
-          <SwitchRow
-            label="Adaptive battery limits"
-            hint="Caps rendering at 15fps on low-memory/core or data-saving devices. Turn off to use the chosen cap."
-            checked={a.adaptive}
-            onChange={(adaptive) => change({ adaptive })}
-          />
-          <details>
-            <summary className="cursor-pointer py-2 text-sm font-medium">
-              Advanced background controls
-            </summary>
-            <div className="mt-3 grid gap-3">
-              <Range
-                label="Glyph density"
-                value={a.density}
-                min={0.1}
-                onChange={(density) => change({ density })}
-              />
-              <SelectValue
-                label="Glyph style"
-                value={a.glyphs}
-                values={["notation", "chess", "mono", "mix"]}
-                onChange={(glyphs) => change({ glyphs })}
-              />
-              <Range
-                label="Glyph scale"
-                value={a.scale}
-                min={0.7}
-                max={1.8}
-                onChange={(scale) => change({ scale })}
-              />
-              <Range
-                label="Drift speed"
-                value={a.speed}
-                min={0.1}
-                max={1.5}
-                onChange={(speed) => change({ speed })}
-              />
-              <Range
-                label="Background opacity"
-                value={a.opacity}
-                min={0.02}
-                max={0.2}
-                step={0.01}
-                onChange={(opacity) => change({ opacity })}
-              />
-              <Range
-                label="Glyph softness"
-                value={a.blur}
-                max={2}
-                step={0.1}
-                onChange={(blur) => change({ blur })}
-              />
-              <SwitchRow
-                label="Sync background tint to board"
-                checked={a.syncBoard}
-                onChange={(syncBoard) => change({ syncBoard })}
-              />
-              {!a.syncBoard && (
-                <label className="flex min-h-11 items-center justify-between text-sm">
-                  Glyph tint
-                  <input
-                    aria-label="Glyph tint"
-                    type="color"
-                    value={a.tint}
-                    onChange={(event) => change({ tint: event.target.value })}
-                    className="h-11 w-16"
-                  />
-                </label>
-              )}
-              <label className="grid gap-1 text-sm">
-                Animation FPS cap
-                <select
-                  aria-label="Animation FPS cap"
-                  value={a.fps}
-                  className={field}
-                  onChange={(event) => {
-                    const fps = [0, 15, 30, 60].find(
-                      (value) => value === Number(event.target.value),
-                    );
-                    if (fps === 0 || fps === 15 || fps === 30 || fps === 60)
-                      change({ fps });
-                  }}
-                >
-                  <option value={0}>Static / no animation</option>
-                  {[15, 30, 60].map((fps) => (
-                    <option key={fps} value={fps}>
-                      {fps} fps
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </details>
-          <p className="text-xs text-muted">
-            The Canvas renderer loads only inside a game scene, pauses
-            offscreen/hidden and becomes static for reduced motion or
-            transparency. It is not mounted on other pages.
-          </p>
-          <Link
-            href="/"
-            className="grid min-h-11 place-items-center rounded-full bg-accent px-4 text-sm font-medium text-accent-text"
-          >
-            Preview on the board
-          </Link>
-        </div>
-      )}
-      <button
-        onClick={() => updateExperience({ ambient: { ...DEFAULT_AMBIENT } })}
-        className="min-h-11 justify-self-start rounded-full bg-surface-2 px-4 text-sm"
-      >
-        Reset background defaults
-      </button>
+      <div className="overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]">
+        <SwitchRow
+          label="Live background"
+          hint="Drifting characters behind your games. Move the mouse to stir them; tap empty space for a ripple."
+          checked={a.mode === "ambient"}
+          onChange={(on) => updateExperience({ ambient: { ...a, mode: on ? "ambient" : "minimal" } })}
+        />
+      </div>
     </section>
   );
 }

@@ -83,3 +83,7 @@ All current game-event cues are generated from original deterministic synthesis 
 ## Chaos (AGPL-3.0-or-later) audit result
 
 **No source code from [Chaos](https://github.com/omar-Suleiman14/chaos) was copied.** The Chess card (`components/profile/ChessCard.tsx`) is an independent implementation inspired by Chaos member cards, so no AGPL obligations arise. If Chaos components are copied later, they must keep their AGPL notices and network-source obligations, and be listed here.
+
+## Live background renderer (MIT)
+
+`lib/client/glyphWind.js` is ported from [Claude Code Background Lab](https://github.com/Henry-fan88/claude-code-background) by Henry Fan, MIT License, Copyright (c) 2026 Henry Fan. Changes: window-level pointer listeners, chess-aware tap targets, light/dark glow, ES module export. The MIT notice is kept in the file header. That project states it contains no recovered Anthropic code, shaders or fonts.

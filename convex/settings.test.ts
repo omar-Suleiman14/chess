@@ -19,7 +19,7 @@ function setup() {
 describe("settings", () => {
   it("syncs complete independent experience preferences and validates their bounds", async () => {
     const t = setup(); const user = t.withIdentity(alice);
-    expect(await user.query(api.settings.capabilities, {})).toEqual({ experienceVersion: 1 });
+    expect(await user.query(api.settings.capabilities, {})).toEqual({ experienceVersion: 1, boardTheme: true });
     const experience = { ...DEFAULT_EXPERIENCE, appearance: "expressive" as const, ambient: { ...DEFAULT_EXPERIENCE.ambient, mode: "ambient" as const }, audio: { ...DEFAULT_EXPERIENCE.audio, pack: "kalimba" as const } };
     await user.mutation(api.settings.save, { settings: { experience }, changedAt: 300 });
     expect((await user.query(api.settings.mine, {}))?.settings.experience).toEqual(experience);
@@ -46,6 +46,16 @@ describe("settings", () => {
     await user.mutation(api.settings.save, { settings: { sound: false }, changedAt: 300 });
     // Partial saves merge with what is stored.
     expect((await user.query(api.settings.mine, {}))?.settings).toMatchObject({ palette: "blue", sound: false });
+  });
+
+  it("syncs the board theme and refuses unknown themes", async () => {
+    const t = setup();
+    const user = t.withIdentity(alice);
+    await user.mutation(api.settings.save, { settings: { boardTheme: "walnut", pieceSet: "merida" }, changedAt: 10 });
+    expect((await user.query(api.settings.mine, {}))?.settings).toMatchObject({ boardTheme: "walnut", pieceSet: "merida" });
+    await user.mutation(api.settings.save, { settings: { boardTheme: "" }, changedAt: 11 });
+    expect((await user.query(api.settings.mine, {}))?.settings.boardTheme).toBe("");
+    await expect(user.mutation(api.settings.save, { settings: { boardTheme: "neon" }, changedAt: 12 })).rejects.toThrow(/theme/i);
   });
 
   it("rejects bad values", async () => {

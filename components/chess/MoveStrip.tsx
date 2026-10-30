@@ -8,7 +8,7 @@ import type { TreeNode } from "@/lib/chess/history/tree";
  * board is highlighted and kept in view, so stepping back and forth walks
  * through this bar. Tap any move to jump to it.
  */
-export function MoveStrip({ line, cursor, onSelect }: { line: Pick<TreeNode, "key" | "ply" | "san">[]; cursor: number; onSelect: (ply: number) => void }) {
+export function MoveStrip({ line, cursor, onSelect, flat = false }: { line: Pick<TreeNode, "key" | "ply" | "san">[]; cursor: number; onSelect: (ply: number) => void; /** Phone game screen: a plain bar across the top, no card. */ flat?: boolean }) {
   const ref = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
@@ -25,9 +25,9 @@ export function MoveStrip({ line, cursor, onSelect }: { line: Pick<TreeNode, "ke
   }, [cursor, line.length]);
 
   return (
-    <nav aria-label="Moves" dir="ltr" className="mb-2 h-10 w-full overflow-hidden rounded-xl bg-surface shadow-[var(--shadow)]">
+    <nav aria-label="Moves" dir="ltr" className={flat ? "h-11 w-full overflow-hidden" : "mb-2 h-10 w-full overflow-hidden rounded-xl bg-surface shadow-[var(--shadow)]"}>
       {line.length === 0 ? (
-        <p className="flex h-full items-center px-3 text-sm text-muted">Moves will appear here</p>
+        <p className={`flex h-full items-center px-3 text-sm text-muted ${flat ? "justify-center" : ""}`}>{flat ? "Your move" : "Moves will appear here"}</p>
       ) : (
         <ol ref={ref} className="no-scrollbar flex h-full items-center gap-0.5 overflow-x-auto px-2 text-sm">
           {line.map((node) => {
@@ -40,7 +40,7 @@ export function MoveStrip({ line, cursor, onSelect }: { line: Pick<TreeNode, "ke
                   onClick={() => onSelect(node.ply)}
                   aria-current={current}
                   aria-label={`${white ? "White" : "Black"} move ${Math.ceil(node.ply / 2)}: ${node.san}`}
-                  className={`rounded-md px-1.5 py-1 font-semibold ${current ? "bg-accent text-accent-text" : "text-ink"}`}
+                  className={`rounded-md px-1.5 py-1 font-semibold ${current ? (flat ? "bg-surface-2 text-ink shadow-[inset_0_-2px_0_var(--text)]" : "bg-accent text-accent-text") : "text-ink"}`}
                 >
                   {node.san}
                 </button>

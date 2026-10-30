@@ -2,19 +2,17 @@
 
 The board remains the visual focus. All designs share the same routes, game state, and actions.
 
-## Three designs
+## Classic
 
-| Design | Treatment |
-| --- | --- |
-| Classic / Standard | Default. Neutral paper backgrounds, crisp text, restrained surfaces and controls |
-| Material 3 Expressive | Board-derived or chosen tonal color, expressive shapes, stronger headings, selected states, short interaction motion |
-| Liquid Glass | Small translucent navigation/control surfaces; dense text and dialogs use strong opaque material |
+One design. Graphite ink on warm paper (`--bg`), white surfaces, and a brass accent (`--brand`, `--switch-on`) reserved for "on" and "here": switches, the active tab, selected states. Light, Dark and System are the only appearance choices. Tokens live in `lib/experience/theme.ts`; a validated first-paint cache avoids flashes. Retired Material / Liquid Glass values stay readable in stored settings and always resolve to Classic.
 
-Light, Dark, and System are separate choices. Theme tokens come from `lib/experience/theme.ts`; the provider applies them without restarting gameplay. A validated first-paint cache reduces theme flashes. Contrast, reduced motion, and reduced transparency apply across designs.
+## Phone navigation
 
-## Glass tiers
+Top-level pages show five bottom tabs (Play / Bots / Learn / Review / More) above the safe area; More opens the menu sheet. Deeper pages (an online room, a lesson, a reviewed game) are full screen. A game hides the tabs once it has moves (`useGameFocus`), and its footer becomes the toolbar: Options, Undo, review arrows. Both bars take the same space, so the board never changes size when they swap. Tabs cross-fade instead of sliding and remember their last page.
 
-Navigation uses bounded blur up to 8 px. Controls use 8 px in Balanced and 12 px in Full. Modal sheets use 97% opaque material without backdrop blur. Minimal, reduced transparency, high contrast, and unsupported-browser fallbacks are opaque. No SVG displacement maps, animated blur, or idle glass shimmer remain.
+## Haptics
+
+UI code emits semantic events (`select`, `move`, `capture`, `check`, `illegal`, `success`…) to `lib/client/haptics.ts`; nothing calls `navigator.vibrate` directly. Your own moves are felt on the board at the tap, before the engine or server answers. Opponent moves, premove execution and results are felt once per committed event (keyed). Selection ticks are throttled so scrubbing never buzzes continuously.
 
 ## Board and input
 
@@ -36,4 +34,4 @@ Short transforms and opacity communicate interactions. Reduced motion removes mo
 
 ## Verification
 
-Use actual screenshots and interactions across themes, light/dark, languages, small phones, desktop, zoom, and reduced motion. Browser automation does not replace VoiceOver, TalkBack, tactile device tests, or usability sessions. See [release status](ROADMAP.md).
+Use actual screenshots and interactions in light/dark, languages, small phones, desktop, zoom, and reduced motion. Browser automation does not replace VoiceOver, TalkBack, tactile device tests, or usability sessions. See [release status](ROADMAP.md).

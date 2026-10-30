@@ -3,14 +3,14 @@
 import { motion } from "motion/react";
 import { useEffect, useId, useRef } from "react";
 import { useSettings } from "@/lib/client/settings";
-import { IOS_SPRING } from "./Switch";
-import { GlassLayer } from "./Glass";
+/** Opens with a small, quickly settling overshoot; never a wobble. */
+const SHEET_SPRING = { type: "spring" as const, stiffness: 460, damping: 34, mass: 0.85 };
 
 export function Dialog({ title, children, onClose, size = "default", description, focusTitle = false, dir, lang }: { dir?: "ltr" | "rtl"; lang?: string; title: string; children: React.ReactNode; onClose: () => void; size?: "default" | "result"; description?: string; focusTitle?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  const { glassOn, reducedMotion } = useSettings();
+  const { reducedMotion } = useSettings();
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -48,7 +48,7 @@ export function Dialog({ title, children, onClose, size = "default", description
     };
   }, []);
   return (
-    <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+    <motion.div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 p-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:p-4 sm:items-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
       <motion.div
         ref={ref}
         role="dialog"
@@ -57,14 +57,12 @@ export function Dialog({ title, children, onClose, size = "default", description
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={`relative ${glassOn ? "glass-panel" : "bg-surface shadow-[var(--shadow)]"} w-full ${size === "result" ? "max-w-[520px] p-5 sm:p-8" : "max-w-sm p-5"} max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain rounded-3xl`}
+        className={`relative bg-surface shadow-[0_24px_64px_rgb(0_0_0/0.18),0_2px_6px_rgb(0_0_0/0.08)] ring-1 ring-line/60 w-full ${size === "result" ? "max-w-[520px] p-5 sm:p-8" : "max-w-sm p-5"} max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain rounded-3xl`}
         onClick={(e) => e.stopPropagation()}
-        // Glass skips the fade: a translucent parent would cut the lens off from the page.
-        initial={reducedMotion ? false : glassOn ? { y: 48, scale: 0.96 } : { opacity: 0, y: 48, scale: 0.96 }}
-        animate={glassOn ? { y: 0, scale: 1 } : { opacity: 1, y: 0, scale: 1 }}
-        transition={reducedMotion ? { duration: 0 } : IOS_SPRING}
+        initial={reducedMotion ? false : { opacity: 0, y: 40, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={reducedMotion ? { duration: 0 } : SHEET_SPRING}
       >
-        <GlassLayer radius={24} tier="sheet" />
         <h2 id={titleId} style={focusTitle ? { outline: "none" } : undefined} tabIndex={focusTitle ? -1 : undefined} data-dialog-initial={focusTitle ? "true" : undefined} className={size === "result" ? "text-center text-3xl font-bold tracking-tight sm:text-4xl" : "mb-4 text-lg font-semibold"}>{title}</h2>
         {description && <p id={descriptionId} className="mb-5 mt-2 text-center text-sm text-muted">{description}</p>}
         <div className="grid gap-2">{children}</div>

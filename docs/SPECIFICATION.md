@@ -14,7 +14,9 @@ This reference describes implemented behavior in the repository. [Release status
 | Continuations | Separate unrated games linked to an unchanged source position |
 | PGN | Manual import/export; no automatic Chess.com account connection |
 | Sherine | Original character; English, Egyptian Arabic, Franco; controlled banter and synchronized talking frames |
-| Appearance | Classic default, optional Material 3 Expressive and Liquid Glass; independent light/dark/system |
+| Appearance | Classic only (retired Material / Glass choices migrate to it); light/dark/system |
+| Haptics | Semantic events via `lib/client/haptics.ts`; Off / Subtle / Standard per device; vibration, iPhone switch tap or nothing |
+| Phone navigation | Play / Bots / Learn / Review / More tabs on top-level pages; an in-game toolbar replaces them once moves are played |
 | Game scene | Minimal default, optional Ambient Glyphs, or Off; isolated from other routes |
 | Sound | Original short event packs, previews, categories, volumes, overrides, and mute; no background music |
 | Results | Accessible large modal, bot Play again, human rematch lifecycle, available review actions |

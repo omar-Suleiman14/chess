@@ -6,15 +6,15 @@ import {
   experienceSchema,
   parseExperience,
 } from "./config";
-import { contrast, themeTokens, BOARD_SEEDS } from "./theme";
+import { contrast, themeTokens } from "./theme";
 import { synthesize } from "./audio";
 
 describe("experience preferences", () => {
   it("keeps Classic, Minimal and Classic Chess as independent defaults", () => {
     expect(experienceSchema.safeParse(DEFAULT_EXPERIENCE).success).toBe(true);
     expect(parseExperience(null)).toEqual(DEFAULT_EXPERIENCE);
-    expect(parseExperience(null, { glass: "on" }).appearance).toBe("glass");
-    expect(parseExperience(null, { glass: "auto" }).appearance).toBe("classic");
+    expect(parseExperience({ appearance: "glass" }).appearance).toBe("classic");
+    expect(parseExperience({ appearance: "expressive", colorMode: "dark" })).toMatchObject({ appearance: "classic", colorMode: "dark" });
     expect(
       parseExperience({ appearance: "expressive", ambient: { mode: "off" } })
         .ambient.mode,
@@ -48,37 +48,19 @@ describe("experience preferences", () => {
     );
   });
 });
-describe("app themes", () => {
-  it("maintains AA text and action contrast for all palettes, designs and modes", () => {
-    for (const appearance of ["classic", "expressive", "glass"] as const)
-      for (const palette of Object.keys(BOARD_SEEDS) as Array<
-        keyof typeof BOARD_SEEDS
-      >)
-        for (const dark of [false, true]) {
-          const tokens = themeTokens(
-            { ...DEFAULT_EXPERIENCE, appearance },
-            palette,
-            dark,
-          );
-          expect(
-            contrast(tokens["--text"], tokens["--surface"]),
-          ).toBeGreaterThanOrEqual(4.5);
-          expect(
-            contrast(tokens["--muted"], tokens["--surface"]),
-          ).toBeGreaterThanOrEqual(4.5);
-          expect(
-            contrast(tokens["--accent-text"], tokens["--accent"]),
-          ).toBeGreaterThanOrEqual(4.5);
-        }
-  });
-  it("uses board colors for Material and independent custom colors when requested", () => {
-    const e = { ...DEFAULT_EXPERIENCE, appearance: "expressive" as const };
-    expect(themeTokens(e, "sage", false)["--accent"]).not.toBe(
-      themeTokens(e, "blue", false)["--accent"],
-    );
-    expect(themeTokens({ ...e, colorSource: "custom" }, "sage", false)).toEqual(
-      themeTokens({ ...e, colorSource: "custom" }, "blue", false),
-    );
+describe("Classic theme", () => {
+  it("maintains AA text and action contrast in light and dark", () => {
+    for (const dark of [false, true]) {
+      const tokens = themeTokens(dark);
+      expect(contrast(tokens["--text"], tokens["--surface"])).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens["--text"], tokens["--bg"])).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens["--muted"], tokens["--surface"])).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens["--muted"], tokens["--bg"])).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens["--accent-text"], tokens["--accent"])).toBeGreaterThanOrEqual(4.5);
+      // The brass accent marks "on" and "here"; it must read against surfaces.
+      expect(contrast(tokens["--brand"], tokens["--surface"])).toBeGreaterThanOrEqual(3);
+      expect(contrast(tokens["--switch-on"], tokens["--surface"])).toBeGreaterThanOrEqual(3);
+    }
   });
 });
 describe("original audio samples", () => {

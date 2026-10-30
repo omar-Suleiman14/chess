@@ -9,7 +9,11 @@ import { Slider } from "@/components/ui/Slider";
 import { AppearanceSettings, BackgroundSettings, SoundSettings } from "@/components/settings/ExperienceSettings";
 import { FATMA_LANGUAGES } from "@/lib/chess/personality/lines";
 import { useSettings, type Palette } from "@/lib/client/settings";
-import { haptic, playSound, unlockAudio } from "@/lib/client/sound";
+import { playSound, unlockAudio } from "@/lib/client/sound";
+import { haptic, hapticSupport, hapticSupportText, type HapticLevel, type HapticSupport } from "@/lib/client/haptics";
+import { useEffect, useState } from "react";
+import Link from "@/components/navigation/PrefetchLink";
+import { BOARD_THEMES, findBoardTheme } from "@/lib/experience/boardThemes";
 import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
 
 const PALETTES: Array<[Palette, string, string, string]> = [
@@ -29,7 +33,11 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function SettingsPage() {
-  const { settings, update } = useSettings();
+  const { settings, update, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme } = useSettings();
+  // Known only in the browser: render the neutral text first, then the truth.
+  const [support, setSupport] = useState<HapticSupport | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setSupport(hapticSupport()), []);
   const { coaching, updateCoaching } = useCoachingPreferences();
   const palette = PALETTES.find((p) => p[0] === settings.palette) ?? PALETTES[0];
   return (
@@ -40,25 +48,16 @@ export default function SettingsPage() {
         <BackgroundSettings />
         <SoundSettings />
         <Group title="Board">
-          <div className="grid grid-cols-4 gap-2 p-1" role="radiogroup" aria-label="Board colours">
-            {PALETTES.map(([id, name, light, dark]) => (
-              <button
-                key={id}
-                role="radio"
-                aria-checked={settings.palette === id}
-                onClick={() => update({ palette: id })}
-                className={`rounded-2xl bg-surface p-2 shadow-[var(--shadow)] transition-transform active:scale-95 ${settings.palette === id ? "ring-2 ring-[var(--accent)]" : ""}`}
-              >
-                <span className="grid aspect-square grid-cols-2 overflow-hidden rounded-lg" aria-hidden="true">
-                  <span style={{ background: light }} />
-                  <span style={{ background: dark }} />
-                  <span style={{ background: dark }} />
-                  <span style={{ background: light }} />
-                </span>
-                <span className="mt-1 block text-xs">{name}</span>
-              </button>
-            ))}
-          </div>
+          <Link href="/settings/theme" className="press-overlay flex min-h-[72px] items-center gap-4 overflow-hidden rounded-2xl px-4 text-white" style={{ background: (findBoardTheme(boardTheme || settings.palette) ?? BOARD_THEMES[0]).art }}>
+            <span className="grid h-12 w-12 shrink-0 grid-cols-2 overflow-hidden rounded-[3px] shadow-md" aria-hidden="true">
+              {(() => { const t = findBoardTheme(boardTheme || settings.palette) ?? BOARD_THEMES[0]; return [t.light, t.dark, t.dark, t.light].map((c, i) => <span key={i} style={{ background: c }} />); })()}
+            </span>
+            <span className="min-w-0 flex-1 [text-shadow:0_1px_3px_rgb(0_0_0/0.45)]">
+              <span className="block text-xs font-medium uppercase tracking-wide opacity-90">Theme</span>
+              <span className="block text-lg font-semibold">{(findBoardTheme(boardTheme || settings.palette) ?? BOARD_THEMES[0]).name}</span>
+            </span>
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </Link>
         </Group>
 
         <Group title="Pieces">
@@ -114,6 +113,16 @@ export default function SettingsPage() {
                 if (v) setTimeout(() => playSound("move", settings.volume), 120);
               }}
             />
+            <SwitchRow
+              label="Chess.com sounds"
+              hint="Personal use: your browser loads them from chess.com. Built-in sounds play if they can't load."
+              checked={chesscomSounds}
+              onChange={(on) => {
+                unlockAudio();
+                setChesscomSounds(on);
+                if (on) setTimeout(() => playSound("move", settings.volume), 700);
+              }}
+            />
             <div className="flex min-h-14 items-center gap-3 border-b border-line px-4">
               <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" /></svg>
               <Slider
@@ -127,20 +136,34 @@ export default function SettingsPage() {
                   playSound("capture", settings.volume);
                 }}
                 className="flex-1"
-                fill="#0a84ff"
+                fill="var(--switch-on)"
                 aria-label="Volume"
               />
               <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-muted" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z" fill="currentColor" /></svg>
             </div>
-            <SwitchRow
+          </div>
+          <div className="mt-3 grid gap-2">
+            <Segmented<HapticLevel>
               label="Haptics"
-              hint="Android only; iPhone browsers don't allow vibration."
-              checked={settings.haptics}
-              onChange={(v) => {
-                update({ haptics: v });
-                if (v) haptic(10);
+              value={hapticLevel}
+              onChange={(level) => {
+                setHapticLevel(level);
+                // Feel the new strength right away (Off stays silent).
+                if (level !== "off") haptic("capture");
               }}
+              options={[["off", "Off"], ["subtle", "Subtle"], ["standard", "Standard"]]}
             />
+            <div className="flex items-center justify-between gap-3 px-1">
+              <p className="text-xs text-muted" aria-live="polite">{support ? hapticSupportText(support) : "Checking this device…"}</p>
+              <button
+                type="button"
+                disabled={hapticLevel === "off" || support === "none"}
+                onClick={() => { haptic("select"); setTimeout(() => haptic("move"), 260); setTimeout(() => haptic("capture"), 560); }}
+                className="min-h-11 shrink-0 rounded-full bg-surface px-4 text-sm font-medium shadow-[var(--shadow)] ring-1 ring-inset ring-line disabled:opacity-40"
+              >
+                Test
+              </button>
+            </div>
           </div>
           <div className="mt-3">
             <Segmented label="Motion" value={settings.motion} onChange={(motion) => update({ motion })} options={[["system", "System"], ["full", "Full"], ["reduced", "Reduced"]]} />

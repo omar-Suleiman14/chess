@@ -20,6 +20,7 @@ const browser = await { chromium, firefox, webkit }[browserName].launch({
 });
 const results = [];
 try {
+  // Stored retired designs must open as Classic.
   for (const appearance of ["classic", "expressive", "glass"])
     for (const colorMode of ["light", "dark"]) {
       const context = await browser.newContext({
@@ -50,7 +51,7 @@ try {
       await expect(page.getByRole("grid")).toBeVisible();
       await expect(page.locator("html")).toHaveAttribute(
         "data-appearance",
-        appearance,
+        "classic",
       );
       await expect(page.locator("html")).toHaveAttribute(
         "data-tone",
@@ -68,7 +69,7 @@ try {
       ).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
-      if (!await page.getByRole("button", { name: "Resign", exact: true }).isVisible()) await page.getByRole("button", { name: "Game controls", exact: true }).click();
+      if (!await page.getByRole("button", { name: "Resign", exact: true }).isVisible()) await page.getByRole("button", { name: "Game options", exact: true }).click();
       await page.getByRole("button", { name: "Resign", exact: true }).click();
       await page
         .getByRole("dialog")
@@ -112,37 +113,23 @@ try {
       }
       await page.goto(`${base}/settings`);
       await expect(
-        page.getByRole("heading", { name: "App appearance" }),
+        page.getByRole("heading", { name: "Appearance" }),
       ).toBeVisible();
       await expect(page.locator("[data-ambient-renderer]")).toHaveCount(0);
-      await page.getByRole("radio", { name: /Material 3 Expressive/ }).check();
-      await expect(page.locator("html")).toHaveAttribute(
-        "data-appearance",
-        "expressive",
-      );
+      // Only Classic exists: no design picker remains.
+      await expect(page.getByRole("radio", { name: /Material 3 Expressive|Liquid Glass/ })).toHaveCount(0);
       await page.reload();
       await expect(page.locator("html")).toHaveAttribute(
         "data-appearance",
-        "expressive",
+        "classic",
       );
-      const originalAccent = await page.locator("html").evaluate((root) => getComputedStyle(root).getPropertyValue("--accent"));
-      await page.getByRole("radio", { name: "Sage", exact: true }).click();
-      await expect.poll(() => page.locator("html").evaluate((root) => getComputedStyle(root).getPropertyValue("--accent"))).not.toBe(originalAccent);
-      await page.getByRole("radio", { name: /Choose a color/ }).check();
-      await page.getByLabel("Material accent color").fill("#6750a4");
-      const customAccent = await page.locator("html").evaluate((root) => getComputedStyle(root).getPropertyValue("--accent"));
-      await page.getByRole("radio", { name: "Blue", exact: true }).click();
-      expect(await page.locator("html").evaluate((root) => getComputedStyle(root).getPropertyValue("--accent"))).toBe(customAccent);
 
-      await page.getByRole("radio", { name: /Ambient Glyphs/ }).check();
+      // One switch turns the live background on; it renders only behind games.
+      await page.getByRole("switch", { name: "Live background" }).click();
       await expect(page.locator("[data-ambient-renderer]")).toHaveCount(0);
       await page.goto(base);
-      await expect(page.locator("[data-ambient-renderer]")).toBeVisible();
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      await expect(page.locator("[data-ambient-renderer]")).toHaveAttribute(
-        "data-effective-fps",
-        "0",
-      );
+      await expect(page.locator("[data-ambient-renderer] canvas")).toHaveCount(1);
+      await expect.poll(() => page.locator("[data-ambient-renderer] canvas").evaluate((canvas) => canvas.width > 0)).toBe(true);
       await page.goto(`${base}/settings`);
       await expect(page.locator("[data-ambient-renderer]")).toHaveCount(0);
       if (errors.length) process.exitCode = 1;

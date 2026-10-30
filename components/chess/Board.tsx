@@ -5,7 +5,8 @@ import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type Re
 import { FILES, legalMoves, pieceName, piecesOf, type BoardPiece, type Color, type PromotionPiece, type Square } from "@/lib/chess/rules";
 import { premoveMoves } from "@/lib/chess/premove";
 import { useSettings } from "@/lib/client/settings";
-import { haptic, playSound } from "@/lib/client/sound";
+import { playSound } from "@/lib/client/sound";
+import { haptic } from "@/lib/client/haptics";
 import { Piece } from "./Pieces";
 import { PromotionSheet } from "./PromotionSheet";
 
@@ -55,6 +56,22 @@ function coordsOf(square: Square, orientation: Color): { col: number; row: numbe
   const rank = Number(square[1]) - 1;
   return orientation === "w" ? { col: file, row: 7 - rank } : { col: 7 - file, row: rank };
 }
+
+/**
+ * Piece travel time, bounded: 130-220 ms for a normal move and 150-240 ms
+ * for a capture, growing with distance so a one-square step and a long
+ * diagonal both feel natural. Never a teleport, never a slow slide.
+ */
+export function moveDuration(from: Square, to: Square, capture: boolean): number {
+  const dx = Math.abs(from.charCodeAt(0) - to.charCodeAt(0));
+  const dy = Math.abs(Number(from[1]) - Number(to[1]));
+  const distance = Math.hypot(dx, dy);
+  const base = 118 + 16 * distance;
+  return capture ? Math.min(240, Math.max(150, base + 20)) : Math.min(220, Math.max(130, base));
+}
+
+/** Fast out, soft landing: the piece is decisive but doesn't thud. */
+const MOVE_EASE = [0.22, 0.8, 0.3, 1] as const;
 
 export const Board = memo(function Board({
   fen,
@@ -108,10 +125,10 @@ export const Board = memo(function Board({
   const flagIllegal = useCallback(
     (from: Square) => {
       setIllegal({ squares: checkSquare && checkSquare !== from ? [from, checkSquare] : [from], key: Date.now() });
-      if (settings.haptics) haptic([20, 40, 20]);
+      haptic("illegal");
       if (settings.sound) playSound("illegal", settings.volume);
     },
-    [checkSquare, settings.haptics, settings.sound, settings.volume],
+    [checkSquare, settings.sound, settings.volume],
   );
   useEffect(() => {
     if (!illegal) return;
@@ -125,6 +142,33 @@ export const Board = memo(function Board({
     setPromotion(null);
   }, [fen]);
 
+  // A piece dropped by drag is already on its square: don't slide it there again.
+  const [dropped, setDropped] = useState<{ from: Square; to: Square } | null>(null);
+
+  // The piece a move captured stays on its square until the attacker lands, then fades.
+  // `before` is the position just before the latest one, so the victim is known
+  // even if the last-move highlight arrives a render later.
+  const [positions, setPositions] = useState<{ fen: string; map: Map<Square, BoardPiece>; before: Map<Square, BoardPiece> | null }>({ fen, map: bySquare, before: null });
+  if (positions.fen !== fen) setPositions({ fen, map: bySquare, before: positions.map });
+  const before = positions.fen === fen ? positions.before : positions.map;
+  const victim = useMemo(() => {
+    if (reducedMotion || !animMove || !before) return null;
+    const landed = before.get(animMove.to);
+    const mover = bySquare.get(animMove.to);
+    const origin = before.get(animMove.from);
+    // Only a forward move: the mover really came from `from` in the previous position.
+    if (!landed || !mover || !origin || landed.color === mover.color || origin.color !== mover.color) return null;
+    return { piece: landed, key: animMove.key };
+  }, [reducedMotion, animMove, before, bySquare]);
+
+  /** Instant, physical acknowledgement of your own move (before any engine or server reply). */
+  const feelMove = useCallback((from: Square, to: Square, promotion?: PromotionPiece) => {
+    if (queuing) return haptic("premove");
+    const move = moves.find((m) => m.from === from && m.to === to && (!promotion || m.promotion === promotion));
+    if (!move || !("san" in move)) return;
+    haptic(move.san.includes("+") || move.san.includes("#") ? "check" : move.captured ? "capture" : move.flags.includes("k") || move.flags.includes("q") ? "castle" : move.promotion ? "promote" : "move");
+  }, [moves, queuing]);
+
   const tryMove = useCallback(
     (from: Square, to: Square) => {
       const info = targets.get(from)?.get(to);
@@ -134,11 +178,12 @@ export const Board = memo(function Board({
         setPromotion({ from, to, color: bySquare.get(from)!.color, queued: queuing });
         return true;
       }
+      feelMove(from, to);
       if (queuing) onPremove?.(`${from}${to}`);
       else void onMove(`${from}${to}`);
       return true;
     },
-    [targets, bySquare, onMove, queuing, onPremove],
+    [targets, bySquare, onMove, queuing, onPremove, feelMove],
   );
 
   const activate = useCallback(
@@ -147,6 +192,7 @@ export const Board = memo(function Board({
       if (selected && selected !== square && tryMove(selected, square)) return;
       if (piece && selectableColor && piece.color === selectableColor && targets.has(square)) {
         setSelected(selected === square ? null : square);
+        if (selected !== square) haptic("select");
         onSelect?.();
       } else {
         const ownPiece = !!piece && !!selectableColor && piece.color === selectableColor;
@@ -187,6 +233,8 @@ export const Board = memo(function Board({
     if (moved || drag.active) {
       if (!drag.active) {
         setSelected(drag.from);
+        // Picking the piece up: one light tick, never a buzz while dragging.
+        if (selected !== drag.from) haptic("select");
         onSelect?.();
       }
       setDrag({ ...drag, x: e.clientX, y: e.clientY, active: true });
@@ -199,6 +247,8 @@ export const Board = memo(function Board({
       const from = drag.from;
       setDrag(null);
       dragStart.current = null;
+      // A dropped premove stays on its origin until it runs, so it must still slide then.
+      if (square && square !== from && !queuing && targets.get(from)?.has(square)) setDropped({ from, to: square });
       if (square && square !== from && tryMove(from, square)) return;
       if (square && square !== from) flagIllegal(from);
       setSelected(from);
@@ -208,6 +258,7 @@ export const Board = memo(function Board({
     dragStart.current = null;
     if (square) {
       setCursor(square);
+      setDropped(null);
       activate(square);
     }
   };
@@ -258,14 +309,17 @@ export const Board = memo(function Board({
       ]
         .filter(Boolean)
         .join(", ");
-      let anim: { x: string; y: string } | null = null;
+      let anim: { x: string; y: string; duration: number } | null = null;
       if (!reducedMotion && animMove && piece) {
         const from = animMove.to === square ? animMove.from : animMove.rookTo === square ? animMove.rookFrom : undefined;
-        if (from && SQUARE_RE.test(from)) {
+        const alreadyThere = animMove.to === square && dropped?.from === animMove.from && dropped.to === animMove.to;
+        if (from && SQUARE_RE.test(from) && !alreadyThere) {
           const a = coordsOf(from, orientation);
-          anim = { x: `${(a.col - col) * 100}%`, y: `${(a.row - row) * 100}%` };
+          const capture = animMove.to === square && victim !== null;
+          anim = { x: `${(a.col - col) * 100}%`, y: `${(a.row - row) * 100}%`, duration: moveDuration(from as Square, square, capture) / 1000 };
         }
       }
+      const fallen = victim && animMove?.to === square && !(dropped?.from === animMove.from && dropped.to === animMove.to) ? victim : null;
       cells.push(
         <div
           key={square}
@@ -291,13 +345,26 @@ export const Board = memo(function Board({
           {coordinates && row === 7 && (
             <span aria-hidden="true" className={`pointer-events-none absolute bottom-[1%] right-[4%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[0]}</span>
           )}
+          {fallen && (
+            // The captured piece holds its square until the attacker arrives, then is gone.
+            <motion.div
+              key={`victim-${fallen.key}`}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-[9]"
+              initial={{ opacity: 1, scale: 1 }}
+              animate={{ opacity: 0, scale: 0.92 }}
+              transition={{ duration: 0.09, delay: Math.max(0, (anim?.duration ?? 0.18) - 0.07), ease: "easeOut" }}
+            >
+              <Piece type={fallen.piece.type} color={fallen.piece.color} set={settings.pieceSet} className="h-full w-full" />
+            </motion.div>
+          )}
           {piece && !hidden && (
             <motion.div
               key={anim ? `${animMove?.key}-${square}` : `${square}-${piece.color}${piece.type}`}
               className="absolute inset-0 z-10"
               initial={anim ? { x: anim.x, y: anim.y } : false}
               animate={{ x: 0, y: 0, scale: isSelected ? 1.04 : 1 }}
-              transition={fast ? { type: "tween", ease: [0.25, 0.1, 0.25, 1], duration: 0.14 } : { type: "spring", stiffness: 520, damping: 40, mass: 0.9 }}
+              transition={fast ? { type: "tween", ease: [0.25, 0.1, 0.25, 1], duration: 0.14 } : anim ? { type: "tween", ease: MOVE_EASE, duration: anim.duration } : { type: "spring", stiffness: 700, damping: 42, mass: 0.6 }}
             >
               <motion.div
                 key={`${piece.color}${piece.type}:${result?.result ?? "live"}:${result?.reason ?? ""}`}
@@ -382,6 +449,7 @@ export const Board = memo(function Board({
           onPick={(piece: PromotionPiece) => {
             const { from, to } = promotion;
             setPromotion(null);
+            feelMove(from, to, piece);
             if (promotion.queued) onPremove?.(`${from}${to}${piece}`);
             else void onMove(`${from}${to}${piece}`);
           }}
