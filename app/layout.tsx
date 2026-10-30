@@ -10,6 +10,8 @@ import { NavigationProvider } from "@/components/navigation/NavigationProvider";
 import { INDEXABLE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { THEME_BOOTSTRAP } from "@/lib/experience/theme";
 import { WebVitalsReporter } from "@/components/shell/WebVitalsReporter";
+import { OfflineSupport } from "@/lib/offline/client";
+import { LaunchSplash } from "@/components/shell/LaunchSplash";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -43,10 +45,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <LaunchSplash />
         <ClerkProvider telemetry={false} appearance={{ layout: { privacyPageUrl: "/privacy", termsPageUrl: "/terms" } }}>
           <ConvexClientProvider>
             <SettingsProvider>
               <WebVitalsReporter />
+              <OfflineSupport />
               <SyncProvider>
                 <NavigationProvider><AppShell>{children}</AppShell></NavigationProvider>
               </SyncProvider>

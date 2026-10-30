@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shell/AppShell";
 import { ScrollRow } from "@/components/ui/ScrollRow";
 import { SwitchRow } from "@/components/ui/Switch";
 import { Slider } from "@/components/ui/Slider";
+import { OfflineSettings } from "@/components/settings/OfflineSettings";
 import { AppearanceSettings, BackgroundSettings, SoundSettings } from "@/components/settings/ExperienceSettings";
 import { FATMA_LANGUAGES } from "@/lib/chess/personality/lines";
 import { useSettings, type Palette } from "@/lib/client/settings";
@@ -44,6 +45,7 @@ export default function SettingsPage() {
     <main className="mx-auto min-h-dvh max-w-xl pb-16">
       <PageHeader title="Settings" />
       <div className="grid grid-cols-1 gap-7 px-4">
+        <OfflineSettings />
         <AppearanceSettings />
         <BackgroundSettings />
         <SoundSettings />

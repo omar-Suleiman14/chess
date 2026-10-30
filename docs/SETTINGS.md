@@ -34,3 +34,16 @@ On phones, five tabs sit above the home indicator: **Play**, **Bots**, **Learn**
 All packs are brief original synthesized event cues. There is no background music. Mute and Silent prevent playback; previewing still respects master mute. [Sound provenance](SOUND-LEDGER.md)
 
 Preferences save on the device. Appearance, background, and audio settings sync after sign-in when the updated backend is deployed. Coaching and banter preferences remain labeled as device preferences.
+
+## Offline play
+
+Open Chess by Chaos once with internet. **Settings → Offline** shows *Preparing offline play* with real file progress, then **Offline ready**. From then on it opens and plays in Airplane Mode, including from the Home Screen icon.
+
+- **Works offline:** Sherine and every bot (Stockfish runs on the device), hints, evaluation, Time Machine, lessons, themes, sounds, the live background and your saved games (stored on this device).
+- **Needs internet:** online games, friends and challenges, account sync and Chess.com sounds. These screens say so instead of spinning.
+- Updates download in the background and wait; **Update ready · Restart now** appears in Settings, so a game is never interrupted.
+- Browsers can still clear site data under storage pressure; the app asks the browser to keep it, but export important games.
+
+## Premoves
+
+While the opponent is thinking, drag or tap a move to queue a premove. Tap either of its squares, or any square that doesn't start a new move, to cancel it (right-click or Escape also cancel).

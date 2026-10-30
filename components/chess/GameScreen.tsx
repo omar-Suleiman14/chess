@@ -39,6 +39,7 @@ import { PlayerIdentity } from "./PlayerIdentity";
 import { FriendsButton, FriendsDialog } from "@/components/friends/FriendsButton";
 import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
 import { useMoveCoach } from "@/lib/client/useMoveCoach";
+import { useOnline } from "@/lib/offline/client";
 import { MOVE_QUALITY } from "@/lib/chess/review";
 
 type Props = {
@@ -395,6 +396,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   // bottom bar (Options · Hint · Back · Forward) instead of the tab bar.
   useGameFocus(true);
   const [showFriends, setShowFriends] = useState(false);
+  const online = useOnline();
   const backHold = useHoldRepeat(() => step(-1), moveCount === 0 || viewPly === 0);
   const forwardHold = useHoldRepeat(() => step(1), !reviewing);
   const hintDisabled = hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine();
@@ -520,7 +522,8 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           {game && (game.meta.mode === "climb" || game.meta.mode === "timed") && (
             <span className={ratedEligible ? "text-ok" : ""}>{ratedEligible ? "Rated" : game.meta.rated === "ineligible" ? "Unrated · assistance used" : "Unrated"}</span>
           )}
-          {sync.status.error && <span className="truncate text-danger">{sync.status.error}</span>}
+          {!online && <span>Offline · games save on this device</span>}
+          {sync.status.error && online && <span className="truncate text-danger">{sync.status.error}</span>}
         </div>
 
       <p className="sr-only" aria-live="assertive">

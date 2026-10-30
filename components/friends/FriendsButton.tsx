@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { NeedsInternet } from "@/components/shell/NeedsInternet";
 
 const FriendsContent = dynamic(() => import("./FriendsContent").then((mod) => mod.FriendsContent), {
   loading: () => <p role="status">Loading friends…</p>,
@@ -12,6 +13,7 @@ const FriendsContent = dynamic(() => import("./FriendsContent").then((mod) => mo
 /** The Friends popup on its own, so a game's Options sheet can open it too. */
 export function FriendsDialog({ onClose }: { onClose: () => void }) {
   return <Dialog title="Friends" onClose={onClose}>
+    <NeedsInternet what="Friends and challenges" />
     <div className="max-h-[65dvh] overflow-y-auto overscroll-contain"><FriendsContent embedded /></div>
     <button onClick={onClose} className="min-h-11 rounded-full bg-surface-2">Back to game</button>
   </Dialog>;
