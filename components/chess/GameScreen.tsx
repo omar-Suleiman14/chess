@@ -259,8 +259,11 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     // Loading an old result is silent; only an active game ending gets a cue.
     if (game.meta.status !== "finished" || previous?.key !== game.meta.gameKey || previous.status !== "active") return;
     if (settings.sound) playSound(resultSound(game.meta.result, game.meta.humanColor, game.meta.resultReason), settings.volume, { key: `result:${game.meta.gameKey}` });
-    const won = game.meta.result === (game.meta.humanColor === "w" ? "1-0" : "0-1");
-    haptic(game.meta.result === "1/2-1/2" || !game.meta.result ? "draw" : won ? "success" : "defeat", { key: `result:${game.meta.gameKey}` });
+    // An aborted game (no result) ends quietly.
+    if (game.meta.result) {
+      const won = game.meta.result === (game.meta.humanColor === "w" ? "1-0" : "0-1");
+      haptic(game.meta.result === "1/2-1/2" ? "draw" : won ? "success" : "defeat", { key: `result:${game.meta.gameKey}` });
+    }
   }, [game, settings.sound, settings.volume]);
   const lowTimeWarned = useRef<string | null>(null);
   useEffect(() => {
@@ -526,7 +529,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
 
 
-      {/* The in-game toolbar. On phones it replaces the tab bar once a game is underway. */}
+      {/* The in-game toolbar. On phones game screens show it instead of the tab bar. */}
       <footer className="game-footer safe-bottom w-full pt-2 [grid-area:footer] lg:pb-0" aria-label="Game controls">
         {/* Phones: one flat bar of four big targets. */}
         <div className="game-bar grid grid-cols-4 lg:hidden">

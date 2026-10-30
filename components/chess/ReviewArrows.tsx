@@ -88,5 +88,3 @@ export function ReviewArrows({ onBack, onForward, backDisabled, forwardDisabled 
   );
 }
 
-/** Same footprint as ReviewArrows, so the footer stays symmetric. */
-export const FOOTER_BUTTON_SIZE = "h-14 w-[8.0625rem]";

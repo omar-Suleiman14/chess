@@ -177,6 +177,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [chesscomSounds, setChesscomState] = useState(false);
   // Newer backends also store the board theme; older ones would reject the field.
   const boardThemeSupported = useRef(false);
+  /** Capabilities answered (or failed): pushes wait for it so newer fields aren't skipped. */
+  const capabilitiesKnown = useRef(false);
 
   const [hydrated, setHydrated] = useState(false);
   const changedAt = useRef(0);
@@ -211,11 +213,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useConvexAuth();
   const convex = useConvex();
   useEffect(() => {
-    if (!isAuthenticated) { experienceSupported.current = false; boardThemeSupported.current = false; return; }
+    if (!isAuthenticated) { experienceSupported.current = false; boardThemeSupported.current = false; capabilitiesKnown.current = false; return; }
     let cancelled = false;
     void convex.query(api.settings.capabilities, {}).then((capabilities) => {
-      if (!cancelled) { experienceSupported.current = true; boardThemeSupported.current = capabilities.boardTheme === true; setSyncsExperience(true); }
-    }).catch(() => { /* Older deployments retain device-only experience preferences. */ });
+      if (!cancelled) { experienceSupported.current = true; boardThemeSupported.current = capabilities.boardTheme === true; capabilitiesKnown.current = true; setSyncsExperience(true); }
+    }).catch(() => { capabilitiesKnown.current = true; /* Older deployments retain device-only experience preferences. */ });
     return () => { cancelled = true; };
   }, [convex, isAuthenticated]);
   // A one-off read (not a live query) that fails quietly: if the backend
@@ -234,14 +236,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [convex, isAuthenticated]);
   const saveRemote = useMutation(api.settings.save);
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const push = useCallback(() => {
+  const pushRef = useRef<(attempt?: number) => void>(() => {});
+  const push = useCallback((attempt = 0) => {
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
+      // Wait (briefly) for capabilities so the first save includes every supported field.
+      if (!capabilitiesKnown.current && attempt < 20) { pushRef.current(attempt + 1); return; }
       // Failures (offline) are fine: the next load sees the newer local copy and pushes again.
       const { experience, boardTheme, ...legacy } = latest.current;
       void saveRemote({ settings: { ...legacy, ...(experienceSupported.current ? { experience } : {}), ...(boardThemeSupported.current ? { boardTheme } : {}) }, changedAt: changedAt.current }).catch(() => {});
     }, SAVE_DELAY_MS);
   }, [saveRemote]);
+  useEffect(() => { pushRef.current = push; }, [push]);
   useEffect(() => () => {
     if (pushTimer.current) clearTimeout(pushTimer.current);
   }, []);

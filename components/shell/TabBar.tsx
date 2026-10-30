@@ -35,7 +35,8 @@ export function tabFor(pathname: string): TabId {
  */
 export function showsTabs(pathname: string): boolean {
   const parts = pathname.split("/").filter(Boolean);
-  return parts.length <= 1 && parts[0] !== "bench" && parts[0] !== "licenses";
+  // "/" is the instant board: a full-screen game screen, like a native chess app.
+  return parts.length === 1 && parts[0] !== "bench" && parts[0] !== "licenses";
 }
 
 const SPRING = { type: "spring" as const, stiffness: 520, damping: 40, mass: 0.8 };

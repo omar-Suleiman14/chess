@@ -247,7 +247,8 @@ export const Board = memo(function Board({
       const from = drag.from;
       setDrag(null);
       dragStart.current = null;
-      if (square && square !== from && targets.get(from)?.has(square)) setDropped({ from, to: square });
+      // A dropped premove stays on its origin until it runs, so it must still slide then.
+      if (square && square !== from && !queuing && targets.get(from)?.has(square)) setDropped({ from, to: square });
       if (square && square !== from && tryMove(from, square)) return;
       if (square && square !== from) flagIllegal(from);
       setSelected(from);

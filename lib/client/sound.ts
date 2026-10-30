@@ -52,6 +52,7 @@ let chesscom = false;
 const chesscomBuffers = new Map<string, AudioBuffer>();
 const chesscomElements = new Map<string, HTMLAudioElement>();
 let chesscomLoading = false;
+const chesscomClips = new Set<HTMLAudioElement>();
 
 function loadChesscom(): void {
   if (chesscomLoading || typeof window === "undefined") return;
@@ -83,8 +84,15 @@ export function configureChesscomSounds(on: boolean): void {
 function playChesscom(name: SoundEvent, gain: number): boolean {
   const file = CHESSCOM_FILES[name];
   if (!chesscom || !file) return false;
+  if (document.hidden) return true;
   const decoded = chesscomBuffers.get(file);
   const context = audio();
+  // Same cap as the built-in sounds: fast scrubbing never piles up voices.
+  if (voices.size + chesscomClips.size >= 6) {
+    const oldest = voices.values().next().value;
+    if (oldest) { try { oldest.stop(); } catch { /* Finished. */ } voices.delete(oldest); }
+    else { const clip = chesscomClips.values().next().value; clip?.pause(); if (clip) chesscomClips.delete(clip); }
+  }
   if (decoded && context && context.state === "running") {
     const source = context.createBufferSource();
     const node = context.createGain();
@@ -100,7 +108,9 @@ function playChesscom(name: SoundEvent, gain: number): boolean {
   if (element) {
     const clip = element.cloneNode(true) as HTMLAudioElement;
     clip.volume = Math.max(0, Math.min(1, gain));
-    void clip.play().catch(() => {});
+    chesscomClips.add(clip);
+    clip.onended = () => chesscomClips.delete(clip);
+    void clip.play().catch(() => chesscomClips.delete(clip));
     return true;
   }
   return false;
@@ -148,6 +158,8 @@ export function installAudioUnlock(): () => void {
     const onVisibility = () => {
       if (document.hidden) {
         for (const voice of voices) { try { voice.stop(); } catch { /* Finished. */ } }
+        for (const clip of chesscomClips) clip.pause();
+        chesscomClips.clear();
       }
     };
     events.forEach((event) => document.addEventListener(event, onGesture, { capture: true, passive: true }));

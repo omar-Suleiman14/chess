@@ -11,7 +11,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useSettings } from "@/lib/client/settings";
 import { playSound } from "@/lib/client/sound";
 import { haptic } from "@/lib/client/haptics";
-import { consumeTabNavigation, markTabNavigation, TAB_RESELECT_EVENT } from "@/lib/client/navIntent";
+import { clearTabNavigation, markTabNavigation, TAB_RESELECT_EVENT } from "@/lib/client/navIntent";
 import { TabBar, tabFor, showsTabs, TABS, type Tab, type TabId } from "./TabBar";
 import { useSync } from "@/lib/client/sync";
 import { SocialPrefetch } from "@/lib/client/socialCache";
@@ -234,7 +234,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       // Re-tapping the current tab: back to its start page, or to the top.
       if (pathname === tab.href) {
         event?.preventDefault();
-        consumeTabNavigation();
+        clearTabNavigation();
         window.dispatchEvent(new CustomEvent(TAB_RESELECT_EVENT, { detail: tab.href }));
         window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
       }

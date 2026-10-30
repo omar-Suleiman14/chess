@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { isWeakDevice } from "@/lib/client/settings";
 
 /**
  * The live glyph wind behind a game: a quiet field of characters that drifts,
@@ -18,7 +19,9 @@ export function LiveBackground({ reducedMotion }: { reducedMotion: boolean }) {
     void import("@/lib/client/glyphWind").then(({ default: GlyphWind }) => {
       if (cancelled) return;
       // The renderer fills seed, look and field itself in the lab; here we pick a fresh pattern each game visit.
-      const settings = GlyphWind.defaults() as unknown as { seed: number; look: string; field: unknown };
+      const settings = GlyphWind.defaults() as unknown as { seed: number; look: string; field: unknown; power: { frameMs: number } };
+      // Few cores, little memory or Data Saver: draw half as often.
+      if (isWeakDevice()) settings.power.frameMs = 80;
       settings.seed = (Math.random() * 2 ** 32) >>> 0;
       settings.look = GlyphWind.chooseLook(settings.seed, []);
       settings.field = GlyphWind.pattern(settings.seed, settings.look);

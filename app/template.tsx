@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSettings } from "@/lib/client/settings";
 import { inViewTransition } from "@/lib/client/viewTransition";
-import { consumeTabNavigation } from "@/lib/client/navIntent";
+import { clearTabNavigation, isTabNavigation } from "@/lib/client/navIntent";
 
 // A template re-mounts on every navigation, so each page gets an entrance
 // that says where you went: deeper slides in from the right, back slides
@@ -24,7 +24,7 @@ function entranceFor(path: string): Entrance {
   const from = previousPath;
   const back = wentBack;
   // Tabs swap in place, like a native tab bar: a quick cross-fade, no slide.
-  if (consumeTabNavigation()) return { x: 0, y: 0, fade: from !== null && from !== path };
+  if (isTabNavigation()) return { x: 0, y: 0, fade: from !== null && from !== path };
   if (from === null || from === path) return { x: 0, y: 0 };
   if (back || depth(path) < depth(from)) return { x: -28, y: 0 };
   if (depth(path) > depth(from)) return { x: 28, y: 0 };
@@ -42,6 +42,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
     // Commit history after render: prefetch/render retries must not change it.
     previousPath = pathname;
     wentBack = false;
+    clearTabNavigation();
     const onBack = () => { wentBack = true; };
     window.addEventListener("popstate", onBack);
     return () => window.removeEventListener("popstate", onBack);
