@@ -10,7 +10,7 @@ const REPEAT_MIN_MS = 35;
  * Tap to step once; press and hold to scrub, accelerating. Keyboard
  * (Enter/Space) still steps once per press, and auto-repeats while held.
  */
-function useHoldRepeat(action: () => void, disabled: boolean) {
+export function useHoldRepeat(action: () => void, disabled: boolean) {
   const actionRef = useRef(action);
   const disabledRef = useRef(disabled);
   useEffect(() => {

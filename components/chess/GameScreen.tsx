@@ -32,11 +32,11 @@ import { Board, type LastMove } from "./Board";
 import { EvalBar } from "./EvalBar";
 import { GameResult } from "./GameResult";
 import { MoveList, MoveStrip } from "./MoveStrip";
-import { ReviewArrows } from "./ReviewArrows";
+import { ReviewArrows, useHoldRepeat } from "./ReviewArrows";
 import { ClockChip } from "./ClockChip";
 import { GameBackground } from "@/components/shell/GameBackground";
 import { PlayerIdentity } from "./PlayerIdentity";
-import { FriendsButton } from "@/components/friends/FriendsButton";
+import { FriendsButton, FriendsDialog } from "@/components/friends/FriendsButton";
 import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
 import { useMoveCoach } from "@/lib/client/useMoveCoach";
 import { MOVE_QUALITY } from "@/lib/chess/review";
@@ -388,9 +388,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const clockFor = (c: Color) => (game?.clock ? remaining(game.clock, c, now) : null);
   const fatmaColor: Color = human === "w" ? "b" : "w";
   const moveCount = head?.ply ?? 0;
-  // A fresh board is "home": phone tabs stay. Once moves are on the board it's a
-  // game, and the in-game toolbar takes over (null while loading: no flicker).
-  useGameFocus(game ? !(active && moveCount === 0) : null);
+  // A game screen is full screen on phones, like a native chess app: its own
+  // bottom bar (Options · Hint · Back · Forward) instead of the tab bar.
+  useGameFocus(true);
+  const [showFriends, setShowFriends] = useState(false);
+  const backHold = useHoldRepeat(() => step(-1), moveCount === 0 || viewPly === 0);
+  const forwardHold = useHoldRepeat(() => step(1), !reviewing);
+  const hintDisabled = hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine();
   const resultText = game?.meta.status === "finished" ? resultLine(game.meta.result, game.meta.resultReason, human) : null;
   const engineWaking = (engineState === "loading" || engineState === "idle") && active && turn !== human && opponent?.policy.kind === "stockfish";
 
@@ -398,7 +402,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     <>
     {/* Optional living background: only behind games (Settings → Display). */}
 
-    <main className="min-h-dvh w-full px-3 sm:px-6">
+    <main className="game-main min-h-dvh w-full px-3 sm:px-6">
       <LoadingScreen />
       {/* Phones: one column exactly as wide as the board, sized so everything fits on screen.
           Wide screens: the board as large as the window allows, controls and moves in a side panel. */}
@@ -407,7 +411,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         style={{ ["--eval-gutter" as string]: "0px" }}
       >
       <GameBackground />
-      <header className="safe-top flex flex-wrap items-center justify-between gap-2 pb-2 [grid-area:header] lg:pt-0">
+      <header className="safe-top flex flex-wrap max-lg:!hidden items-center justify-between gap-2 pb-2 [grid-area:header] lg:pt-0">
         <span className="sr-only">Chess</span>
         <div className="game-control-bar ms-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 lg:flex-nowrap lg:gap-1">
           <FriendsButton />
@@ -420,10 +424,11 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </div>
       </header>
 
-      <div className="game-moves min-h-0 [grid-area:moves] lg:flex lg:flex-col">
-        <div className="lg:hidden">
-          <MoveStrip line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
-        </div>
+      {/* Phones: the move list runs across the top, like a native chess app. */}
+      <div className="game-strip safe-top px-1 lg:hidden">
+        <MoveStrip flat line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
+      </div>
+      <div className="game-moves min-h-0 [grid-area:moves] max-lg:px-3 max-lg:pt-2 lg:flex lg:flex-col">
         <details open className="hidden min-h-0 flex-1 overflow-hidden lg:flex lg:flex-col">
           <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Move history</summary>
           <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="flex h-[calc(100%-44px)]" />
@@ -439,7 +444,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </div>
 
       <section className="game-board-group">
-        <div className="game-opponent flex items-center gap-2">
+        <div className="game-opponent flex items-center gap-2 max-lg:px-3">
           {orientation === human ? <FatmaPanel opponent={opponent} fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName captures={captures.captured[fatmaColor]} capturedColor={human} advantage={captures.advantage[fatmaColor]} /> : <PlayerIdentity game={game?.meta} captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} />}
           {tc && <ClockChip ms={clockFor(orientation === human ? fatmaColor : human)} running={active && turn === (orientation === human ? fatmaColor : human)} />}
         </div>
@@ -492,11 +497,11 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           )}
         </div>
 
-        <div className="game-player flex items-center justify-between gap-2">{orientation === human ? <PlayerIdentity game={game?.meta} captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} /> : <FatmaPanel opponent={opponent} fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName captures={captures.captured[fatmaColor]} capturedColor={human} advantage={captures.advantage[fatmaColor]} />}{tc && <ClockChip ms={clockFor(orientation)} running={active && turn === orientation} />}</div>
+        <div className="game-player flex items-center justify-between gap-2 max-lg:px-3">{orientation === human ? <PlayerIdentity game={game?.meta} captures={captures.captured[human]} capturedColor={fatmaColor} advantage={captures.advantage[human]} /> : <FatmaPanel opponent={opponent} fatma={fatma} thinking={chess.thinking} reducedMotion={reducedMotion} showName captures={captures.captured[fatmaColor]} capturedColor={human} advantage={captures.advantage[fatmaColor]} />}{tc && <ClockChip ms={clockFor(orientation)} running={active && turn === orientation} />}</div>
       </section>
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
-        <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted empty:hidden [grid-area:status] lg:justify-start" aria-live="polite">
+        <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted empty:hidden [grid-area:status] max-lg:px-3 lg:justify-start" aria-live="polite">
           {premove.uci && <button onClick={premove.cancel} className="shrink-0 underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
           {engineWaking && <span>Sherine is waking up…</span>}
           {chess.thinking && !engineWaking && <span>Sherine is thinking…</span>}
@@ -521,7 +526,34 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
 
 
       {/* The in-game toolbar. On phones it replaces the tab bar once a game is underway. */}
-      <footer className="game-footer safe-bottom flex w-full items-center gap-2 pt-2 [grid-area:footer] lg:gap-1.5 lg:pb-0" aria-label="Game controls">
+      <footer className="game-footer safe-bottom w-full pt-2 [grid-area:footer] lg:pb-0" aria-label="Game controls">
+        {/* Phones: one flat bar of four big targets. */}
+        <div className="game-bar grid grid-cols-4 lg:hidden">
+          <button onClick={() => setShowActions(true)} aria-haspopup="dialog" className="game-bar__item">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" /><circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none" /><circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none" /><circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none" /></svg>
+            Options
+          </button>
+          {coaching.hints ? (
+            <button disabled={hintDisabled} onClick={() => void requestHint()} aria-expanded={hintStage !== null} className="game-bar__item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" /></svg>
+              {hintCopy.hint}
+            </button>
+          ) : (
+            <button disabled={!game || moveCount === 0} onClick={() => setConfirmUndo(true)} className="game-bar__item">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" /></svg>
+              Undo
+            </button>
+          )}
+          <button {...backHold} disabled={moveCount === 0 || viewPly === 0} className="game-bar__item touch-manipulation select-none" aria-label="Back (hold to rewind)" aria-keyshortcuts="ArrowLeft Home">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+            Back
+          </button>
+          <button {...forwardHold} disabled={!reviewing} className="game-bar__item touch-manipulation select-none" aria-label="Forward (hold to fast-forward)" aria-keyshortcuts="ArrowRight End">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+            Forward
+          </button>
+        </div>
+        <div className="hidden items-center gap-1.5 lg:flex">
         <Button
           onClick={() => setShowActions(true)}
           className="grid h-14 w-14 shrink-0 place-items-center rounded-full shadow-[var(--shadow)]"
@@ -542,7 +574,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </Button>
         <div className="flex-1" />
         <ReviewArrows onBack={() => step(-1)} onForward={() => step(1)} backDisabled={moveCount === 0 || viewPly === 0} forwardDisabled={!reviewing} />
-
+        </div>
       </footer>
       </div>
 
@@ -556,7 +588,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         onFlip={() => { setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w")); setShowActions(false); }}
         onSound={() => { unlockAudio(); update({ sound: !settings.sound }); if (!settings.sound) playSound("move", settings.volume); }}
         onResign={() => { setShowActions(false); setConfirmResign(true); }}
+        canUndo={!!game && moveCount > 0}
+        onUndo={() => { setShowActions(false); setConfirmUndo(true); }}
+        onFriends={() => { setShowActions(false); setShowFriends(true); }}
+        evalBar={settings.evalBar}
+        onEval={() => update({ evalBar: !settings.evalBar })}
       />}
+      {showFriends && <FriendsDialog onClose={() => setShowFriends(false)} />}
 
       {confirmUndo && (
         <Dialog title="Undo your last move?" onClose={() => setConfirmUndo(false)}>
@@ -637,15 +675,19 @@ const GO_TO: Array<{ id: TabId; label: string }> = [
 ];
 
 /** One clear Options sheet: game actions first, then a way out to the rest of the app. */
-function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSound, onResign }: {
+function GameOptions({ onClose, finished, canResign, sound, onNew, onFlip, onSound, onResign, canUndo, onUndo, onFriends, evalBar, onEval }: {
   onClose: () => void; finished: boolean; canResign: boolean; sound: boolean;
   onNew: () => void; onFlip: () => void; onSound: () => void; onResign: () => void;
+  canUndo: boolean; onUndo: () => void; onFriends: () => void; evalBar: boolean; onEval: () => void;
 }) {
   const { goToTab } = useShell();
   return (
     <Dialog title="Options" onClose={onClose}>
       <div className="-mx-1 divide-y divide-line overflow-hidden rounded-2xl bg-surface-2/60 ring-1 ring-inset ring-line">
         <OptionRow onClick={onNew} label={finished ? "Show result" : "New game"} icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M12 5v14M5 12h14" {...stroke} /></svg>} />
+        <OptionRow onClick={onUndo} disabled={!canUndo} label="Undo move" hint="U" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" {...stroke} /></svg>} />
+        <OptionRow onClick={onFriends} label="Friends & challenges" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><circle cx="9" cy="8" r="3" {...stroke} /><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2" {...stroke} /></svg>} />
+        <OptionRow onClick={onEval} label={evalBar ? "Hide evaluation bar" : "Show evaluation bar"} icon={<span className="text-sm font-semibold">±</span>} />
         <OptionRow onClick={onFlip} label="Flip board" hint="F" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l-3 3m3-3l3 3" {...stroke} /></svg>} />
         <OptionRow onClick={onSound} label={sound ? "Mute sounds" : "Turn sounds on"} hint="M" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" {...stroke} />{sound ? <path d="M15.5 9a4 4 0 0 1 0 6" {...stroke} /> : <path d="M16 9.5l5 5m0-5l-5 5" {...stroke} />}</svg>} />
         <OptionRow onClick={onResign} disabled={!canResign} danger label="Resign" icon={<svg viewBox="0 0 24 24" className="h-[18px] w-[18px]"><path d="M6 21V4m0 0h11l-2 4 2 4H6" {...stroke} /></svg>} />

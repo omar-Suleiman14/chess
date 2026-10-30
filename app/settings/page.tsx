@@ -31,7 +31,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function SettingsPage() {
-  const { settings, update, hapticLevel, setHapticLevel } = useSettings();
+  const { settings, update, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds } = useSettings();
   // Known only in the browser: render the neutral text first, then the truth.
   const [support, setSupport] = useState<HapticSupport | null>(null);
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -118,6 +118,16 @@ export default function SettingsPage() {
                 unlockAudio();
                 update({ sound: v });
                 if (v) setTimeout(() => playSound("move", settings.volume), 120);
+              }}
+            />
+            <SwitchRow
+              label="Chess.com sounds"
+              hint="Personal use: your browser loads them from chess.com. Built-in sounds play if they can't load."
+              checked={chesscomSounds}
+              onChange={(on) => {
+                unlockAudio();
+                setChesscomSounds(on);
+                if (on) setTimeout(() => playSound("move", settings.volume), 700);
               }}
             />
             <div className="flex min-h-14 items-center gap-3 border-b border-line px-4">

@@ -320,3 +320,27 @@ button {
   [data-tabbar="on"] .game-footer { display: none; }
 }
 .tabbar { padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); box-shadow: 0 -1px 0 transparent, 0 -8px 24px rgb(0 0 0 / 0.04); }
+
+/* Phone game screen, native-app style: move list across the top, the board
+   edge to edge with square corners, name + clock rows, one flat bottom bar. */
+@media (max-width: 1023px) {
+  .game-main { padding-inline: 0; }
+  .game-layout {
+    grid-template-areas: "header" "strip" "group" "moves" "status" "footer";
+    grid-template-rows: auto auto auto 1fr auto auto;
+    /* Everything but the board: strip 44, two player rows (~66 each), eval 24, status 24, bar 60, plus safe areas. */
+    max-width: min(100%, max(300px, calc(100dvh - 320px - env(safe-area-inset-top) - env(safe-area-inset-bottom))));
+  }
+  .game-strip { grid-area: strip; border-bottom: 1px solid var(--line); }
+  .game-opponent, .game-player { min-height: 56px; margin: 0; padding-block: 6px; }
+  .game-layout .board { border-radius: 0; box-shadow: none; }
+  .game-layout .game-position { gap: 0; }
+  .game-footer { padding-top: 0; }
+}
+.game-bar { border-top: 1px solid var(--line); }
+.game-bar__item { display: flex; min-height: 60px; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; transition: color 120ms ease, transform 120ms ease; }
+.game-bar__item svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 120ms ease; }
+.game-bar__item:enabled { color: var(--text); }
+.game-bar__item:enabled:active svg { transform: scale(.86); }
+.game-bar__item:disabled { opacity: .35; }
+.game-bar__item[aria-expanded="true"] { color: var(--brand); }

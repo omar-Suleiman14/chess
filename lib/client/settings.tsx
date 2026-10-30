@@ -8,7 +8,7 @@ import type { PieceSet } from "@/components/chess/Pieces";
 import type { FatmaLanguage } from "../chess/personality/lines";
 import { DEFAULT_EXPERIENCE, parseExperience, type Experience } from "../experience/config";
 import { themeTokens } from "../experience/theme";
-import { configureAudio, installAudioUnlock } from "./sound";
+import { configureAudio, configureChesscomSounds, installAudioUnlock } from "./sound";
 import { configureHaptics, type HapticLevel } from "./haptics";
 
 export type Palette = "ivory" | "sage" | "slate" | "blue";
@@ -68,6 +68,9 @@ type Ctx = {
   hapticLevel: HapticLevel;
   /** Off / Subtle / Standard. The strength is per device, since hardware differs. */
   setHapticLevel: (level: HapticLevel) => void;
+  /** Personal option: play Chess.com's own sounds, loaded from chess.com on this device. */
+  chesscomSounds: boolean;
+  setChesscomSounds: (on: boolean) => void;
 };
 const SettingsContext = createContext<Ctx | null>(null);
 
@@ -141,6 +144,7 @@ export function isWeakDevice(): boolean {
 }
 
 const HAPTIC_KEY = "cbc.haptics.level";
+const CHESSCOM_KEY = "cbc.sound.chesscom";
 
 function loadHapticStrength(): Exclude<HapticLevel, "off"> {
   try {
@@ -159,6 +163,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [syncsExperience, setSyncsExperience] = useState(false);
   const experienceSupported = useRef(false);
   const [hapticStrength, setHapticStrength] = useState<Exclude<HapticLevel, "off">>("standard");
+  const [chesscomSounds, setChesscomState] = useState(false);
 
   const [hydrated, setHydrated] = useState(false);
   const changedAt = useRef(0);
@@ -174,6 +179,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(saved.settings);
     setHydrated(true);
     setHapticStrength(loadHapticStrength());
+    try { setChesscomState(localStorage.getItem(CHESSCOM_KEY) === "on"); } catch { /* Off. */ }
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setSystemReduced(media.matches);
     const onChange = () => setSystemReduced(media.matches);
@@ -260,6 +266,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [update]);
 
   const reducedMotion = settings.motion === "reduced" || (settings.motion === "system" && systemReduced);
+  useEffect(() => configureChesscomSounds(chesscomSounds), [chesscomSounds]);
+  const setChesscomSounds = useCallback((on: boolean) => {
+    setChesscomState(on);
+    configureChesscomSounds(on);
+    try { localStorage.setItem(CHESSCOM_KEY, on ? "on" : "off"); } catch { /* This visit only. */ }
+  }, []);
   const hapticLevel: HapticLevel = settings.haptics ? hapticStrength : "off";
   useEffect(() => configureHaptics(hapticLevel), [hapticLevel]);
   const setHapticLevel = useCallback((level: HapticLevel) => {
@@ -290,7 +302,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.palette, settings.highContrast, settings.experience, systemDark, reducedMotion]);
 
 
-  const value = useMemo(() => ({ settings, update, updateExperience, syncsExperience: isAuthenticated && syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel }), [settings, update, updateExperience, isAuthenticated, syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel]);
+  const value = useMemo(() => ({ settings, update, updateExperience, syncsExperience: isAuthenticated && syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds }), [settings, update, updateExperience, isAuthenticated, syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 
