@@ -60,9 +60,22 @@ describe("premove resolution", () => {
     expect(resolvePremove({ ...queued, fen: before, player: "w", uci: "e1g1" }, { ...ready, fen: after, player: "w" })).toBe("clear");
   });
 
-  it("offers piece geometry, including blocked paths, without calling it legal", () => {
-    expect(premoveMoves(DEFAULT_POSITION, "b").some(m => m.from === "c8" && m.to === "g4")).toBe(true);
+  it("keeps speculative premoves behind blockers and never targets our own pieces", () => {
+    expect(premoveMoves(DEFAULT_POSITION, "b").some(m => m.from === "c8" && m.to === "g4")).toBe(false);
+    expect(premoveMoves(DEFAULT_POSITION, "w").some(m => m.from === "f1" && m.to === "g2")).toBe(false);
+    expect(premoveMoves(DEFAULT_POSITION, "w").some(m => m.from === "f1" && m.to === "h3")).toBe(false);
+    expect(premoveMoves(DEFAULT_POSITION, "w").some(m => m.from === "a2" && m.to === "a3")).toBe(true);
     expect(premoveMoves(DEFAULT_POSITION, "b").some(m => m.from === "g8" && m.to === "g6")).toBe(false);
     expect(premoveMoves(DEFAULT_POSITION, "b").some(m => m.from === "e7" && m.to === "e4")).toBe(false);
+  });
+
+  it("offers the bishop's newly opened diagonal but stops at the g2 pawn", () => {
+    const after = applyUci(DEFAULT_POSITION, "e2e4")!.fen;
+    const options = premoveMoves(after, "w").filter(m => m.from === "f1").map(m => m.to);
+    expect(options).toContain("e2");
+    expect(options).toContain("d3");
+    expect(options).toContain("c4");
+    expect(options).not.toContain("g2");
+    expect(options).not.toContain("h3");
   });
 });

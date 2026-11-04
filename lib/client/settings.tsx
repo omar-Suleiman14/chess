@@ -75,7 +75,7 @@ type Ctx = {
   hapticLevel: HapticLevel;
   /** Off / Subtle / Standard. The strength is per device, since hardware differs. */
   setHapticLevel: (level: HapticLevel) => void;
-  /** Personal option: play Chess.com's own sounds, loaded from chess.com on this device. */
+  /** Play recorded Chess.com sounds supplied with this app. */
   chesscomSounds: boolean;
   setChesscomSounds: (on: boolean) => void;
   /** Board theme id (colours + pieces), saved on this device. "" = the board palette. */
@@ -103,6 +103,10 @@ export function fromSaved(saved: unknown): Settings {
   next.glass = "off";
   next.experience = parseExperience("experience" in saved ? saved.experience : undefined, saved);
   if (!["ivory", "sage", "slate", "blue"].includes(next.palette)) next.palette = "ivory";
+  // Old Studio selections migrate to Neo so an unsupported piece path is
+  // never requested after upgrading. Preserve the old server enum for sync.
+  if (next.pieceSet === ("studio" as PieceSet)) next.pieceSet = "chesscom";
+  if (!["cburnett", "merida", "chessnut", "mpchess", "fantasy", "chesscom"].includes(next.pieceSet)) next.pieceSet = DEFAULT_SETTINGS.pieceSet;
   if (!["system", "full", "reduced"].includes(next.motion)) next.motion = "system";
   if (!["en", "egy", "franco"].includes(next.fatmaLanguage)) next.fatmaLanguage = "en";
   if (typeof next.boardTheme !== "string" || (next.boardTheme !== "" && !findBoardTheme(next.boardTheme))) next.boardTheme = "";

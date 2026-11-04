@@ -42,12 +42,10 @@ function contentSecurityPolicy(): string {
 }
 
 const nextConfig: NextConfig = {
-  // Chess.com's official sounds (owner's personal setup), passed through this
-  // origin so every browser can decode them and the offline worker can keep
-  // them. Nothing is stored in the repository.
+  // Neo piece artwork uses the original source PNGs; the user's Standard
+  // sound files are static assets in public/sounds/chesscom (no rewrite).
   async rewrites() {
     return [
-      { source: "/sounds/chesscom/:file([a-z-]+\\.mp3)", destination: "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/:file" },
       { source: "/pieces/chesscom/:file([wb][pnbrqk]\\.png)", destination: "https://images.chesscomfiles.com/chess-themes/pieces/neo/150/:file" },
     ];
   },

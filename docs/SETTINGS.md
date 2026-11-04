@@ -26,7 +26,7 @@ Game screens are full screen with **Options · Hint · Back · Forward** at the 
 
 - **Live background:** Settings → Background → **Live background**, or **Options → Live background** during a game. Drifting characters appear behind games only; move the mouse to stir them and tap empty space for a ripple (every third makes a heart). It pauses in hidden tabs and stays still with reduced motion. Renderer: [Claude Code Background Lab](https://github.com/Henry-fan88/claude-code-background) (MIT).
 - **Board themes:** Settings → Board → **Theme** (or **Options → Board theme**). Each theme sets board colours and pieces together and is saved on this device.
-- **Chess.com sounds:** Settings → Sound & feel → **Chess.com sounds**. Your browser loads them from chess.com; nothing is stored in the app.
+- **Chess.com sounds:** Settings → Sound & feel → **Chess.com sounds**. This option now plays the exact Standard MP3 files supplied by the owner, bundled under `public/sounds/chesscom/` so playback does not depend on a remote CDN. The `illegal.mp3` cue is distinct from `incorrect.mp3` (puzzle feedback).
 
 ## Choose event sounds
 
@@ -44,7 +44,7 @@ Preferences save on the device. Appearance, background, and audio settings sync 
 Open Chess by Chaos once with internet. **Settings → Offline** shows *Preparing offline play* with real file progress, then **Offline ready**. From then on it opens and plays in Airplane Mode, including from the Home Screen icon.
 
 - **Works offline:** Sherine and every bot (Stockfish runs on the device), hints, evaluation, Time Machine, lessons, themes, sounds, the live background and your saved games (stored on this device).
-- **Needs internet:** online games, friends and challenges, account sync and Chess.com sounds. These screens say so instead of spinning.
+- **Needs internet:** online games, friends and challenges, account sync, and the Neo piece images when they have not yet been cached. These screens say so instead of spinning.
 - Updates download in the background and wait; **Update ready · Restart now** appears in Settings, so a game is never interrupted.
 - Browsers can still clear site data under storage pressure; the app asks the browser to keep it, but export important games.
 

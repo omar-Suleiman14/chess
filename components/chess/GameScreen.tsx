@@ -203,7 +203,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const coach = useMoveCoach(lastHumanMove, lastHumanMove?.parentKey ? tree?.nodes[lastHumanMove.parentKey]?.fen : undefined,
     (coaching.moveFeedback || (coachingAllowed && coaching.explanations)) && (!active || turn === human));
   const feedback = coaching.moveFeedback && coach?.kind === "ready" && lastHumanMove ? MOVE_QUALITY[coach.review.quality] : null;
-  const moveBadge = useMemo(() => feedback && lastHumanMove ? { square: lastHumanMove.uci.slice(2, 4) as Square, symbol: feedback.symbol, label: `${lastHumanMove.san}: ${feedback.label}`, color: feedback.color } : undefined, [feedback, lastHumanMove]);
   const checkSq = status.check ? kingSquare(fen, sideToMove(fen)) ?? null : null;
   const viewLastMove = useMemo<LastMove>(() => reviewing
     ? viewNode && viewNode.ply > 0
@@ -467,8 +466,18 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       {/* Phones: the move list runs across the top, like a native chess app. */}
       <div className="game-strip safe-top px-1 lg:hidden">
         <MoveStrip flat line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
+        <div className="game-quality flex h-7 items-center justify-center gap-1.5 overflow-hidden px-3 text-xs font-semibold" aria-label="Move feedback" aria-live="polite">
+          {feedback && lastHumanMove && <>
+            <span className="grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] text-white" style={{ background: feedback.color }} aria-hidden="true">{feedback.symbol}</span>
+            <span className="max-w-full truncate" style={{ color: feedback.color }}>{lastHumanMove.san} · {feedback.label}</span>
+          </>}
+        </div>
       </div>
       <div className="game-moves min-h-0 [grid-area:moves] max-lg:px-3 max-lg:pt-2 lg:flex lg:flex-col">
+        {feedback && lastHumanMove && <div className="hidden h-9 shrink-0 items-center gap-2 border-b border-line px-4 text-xs font-semibold lg:flex" aria-label="Move feedback" aria-live="polite">
+          <span className="grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] text-white" style={{ background: feedback.color }} aria-hidden="true">{feedback.symbol}</span>
+          <span style={{ color: feedback.color }}>{lastHumanMove.san} · {feedback.label}</span>
+        </div>}
         <details open className="hidden min-h-0 flex-1 overflow-hidden lg:flex lg:flex-col">
           <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Move history</summary>
           <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="flex h-[calc(100%-44px)]" />
@@ -503,7 +512,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <div className="relative min-w-0 w-full">
             <Board
               result={boardResult}
-              moveBadge={moveBadge}
               fen={fen}
               orientation={orientation}
               movable={active && turn === human && !reviewing ? human : null}
@@ -544,7 +552,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         {/* Fixed-height status line: nothing here can resize the layout. */}
         <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted empty:hidden [grid-area:status] max-lg:px-3 lg:justify-start" aria-live="polite">
           {shareNote && <span className="font-medium text-ok" role="status">{shareNote}</span>}
-          {feedback && lastHumanMove && !hintStatus && <span className="flex items-center gap-1.5 font-semibold" style={{ color: feedback.color }} role="status"><span className="grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] text-white" style={{ background: feedback.color }} aria-hidden="true">{feedback.symbol}</span>{lastHumanMove.san} · {feedback.label}</span>}
           {hintStatus && <span className="truncate font-medium text-ink" role="status">{hintStatus}</span>}
           {premove.uci && <button onClick={premove.cancel} className="shrink-0 underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
           {engineWaking && <span>{botName} is waking up…</span>}

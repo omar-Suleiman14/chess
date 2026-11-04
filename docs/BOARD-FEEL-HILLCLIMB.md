@@ -36,6 +36,19 @@ This is a **code-level improvement**, not a claim that the 95/100 perceptual tar
 | H20 | Prefer Chess.com recorded cues from the existing opt-in Chess.com sound pack sooner: prepare browser media immediately, decode Web Audio in parallel, retain the original built-in fallback if media cannot play. | Sound unit tests verify early media preparation and rejected-media fallback; browser QA requests original move, capture, check and premove cues and checks the response is audio. No third-party sound files are committed. |
 | H21 | Provide **Chess.com · Neo** as a separate, exact-source image set: transparently stream the original 150px PNG art through a same-origin route, with the existing six custom piece sets and Studio preserved. A hand-drawn SVG is not pixel-identical to the source artwork; this source-backed option is. | Unit-check 12 path mappings; browser-select and load all 32 actual images; capture `desktop-chesscom-neo.png` for reference comparison. Dependence on Chess.com's external asset host is explicit. |
 
+### H22–H27: reference-clip iteration (2026-11-04)
+
+H19–H21 describe the previous hill and are kept as history. The newest recording, screenshot and owner-provided Standard sound ZIP exposed further work:
+
+| Hill | Correction | Measurable acceptance criterion |
+| --- | --- | --- |
+| H22 | Remove Studio from selectable art, present the original Neo PNG option simply as **Neo**, and migrate a saved Studio choice to Neo. | Piece set enumeration omits Studio; settings migration unit test; Chrome selects Neo and renders 32 images after navigation. |
+| H23 | Stop speculative bishop/rook/queen premoves at blockers; don't show capture rings for own-color pieces. Fix bishop f1 falsely showing g2/h3 on the reference screenshot. | `premove.test.ts` covers initial blocked bishop and open e-file diagonal; no dots beyond own-color pawn. |
+| H24 | Distinguish selection from attempted illegal movement. Picking a trapped bishop never produces a buzz/error; dropping onto an invalid square produces one. | Browser clicks c1 with no illegal flash, then clicks e3 and gets one; unit tests exercise legality. |
+| H25 | Use the exact MP3 bytes from the owner's archive without streaming/transcoding. Map illegal moves to `illegal.mp3`, not `incorrect.mp3`, and use distinct win/lose/draw files. | SHA-256 fixtures for illegal, move and capture; browser fetches eight local audio URLs; local sound player supports existing fallback if unavailable. Third-party redistribution rights require clearance. |
+| H26 | Remove the colored badge on an individual board square, move per-move evaluation to the top move strip on phones and top move history area on desktop. Reserve height so feedback doesn't jump. | Board no longer accepts `moveBadge`; phone top region has accessible `Move feedback` display; bottom status never shows move quality. |
+| H27 | Lock the mobile game viewport to `100dvh`, shrink internal flexible tracks, retain fixed controls and board lower-middle reach. | Browser at 390×844 checks `scrollHeight ≤ innerHeight + 2`, `scrollTo(0,400)` stays at zero, board top ≥150 and bottom ≤740. |
+
 Earlier browser CI for the first hill verified mouse p95 held-piece offset at **8px**, desktop drop, a CDP-emulated 390px touch drag and the broader experience checks. Its Lighthouse desktop startup TBT gate still failed at ~1039ms; a baseline run before the hill already failed around 1067ms. This is a tracked unrelated performance problem, **not a green CI claim**. The follow-up hill must pass its new browser checks before being considered validated.
 
 ## Verification protocol

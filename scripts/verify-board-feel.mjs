@@ -28,13 +28,13 @@ try {
   const page = await context.newPage();
   await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   await expect(page.getByRole("grid")).toBeVisible();
-  for (const file of ["move-self", "capture", "move-check", "premove"]) {
+  for (const file of ["move-self", "capture", "move-check", "premove", "illegal", "game-win", "game-lose", "game-draw"]) {
     const cue = await page.request.get(`${process.env.QA_URL ?? "http://127.0.0.1:3100"}/sounds/chesscom/${file}.mp3`);
     if (!cue.ok() || !/audio|mpeg|octet-stream/i.test(cue.headers()["content-type"] ?? "")) {
       throw new Error(`Chess.com recorded sound ${file} unavailable: ${cue.status()} ${cue.headers()["content-type"]}`);
     }
   }
-  results.push("four streamed Chess.com sound cues resolve with audio content");
+  results.push("eight locally bundled recorded sounds resolve with audio content, including exact illegal cue");
   // The grid is server-rendered. A visible square does not mean the React
   // pointer handlers have hydrated yet; prove that they respond to a pickup
   // before measuring the compositor drag path.
@@ -42,6 +42,16 @@ try {
   await expect(page.locator("#sq-e2")).toHaveAttribute("aria-label", /selected/);
   await page.locator("#sq-e2").click();
   await expect(page.locator("#sq-e2")).not.toHaveAttribute("aria-label", /selected/);
+  // A blocked bishop is selectable. It must not buzz merely because it has
+  // zero legal moves. A destination attempt, however, should reject and flash.
+  await page.locator("#sq-c1").click();
+  await expect(page.locator("#sq-c1")).toHaveAttribute("aria-label", /selected/);
+  await expect(page.locator(".illegal-flash")).toHaveCount(0);
+  await page.locator("#sq-e3").click();
+  await expect(page.locator(".illegal-flash")).toHaveCount(1);
+  await expect(page.locator("#sq-c1")).toHaveAttribute("aria-label", /white bishop/);
+  await expect(page.locator(".illegal-flash")).toHaveCount(0, { timeout: 1500 });
+  results.push("blocked bishop selection stays silent; failed destination attempt raises illegal feedback");
   await page.screenshot({ path: `${output}/desktop-before.png` });
 
   const from = await centre(page, "e2");
@@ -92,22 +102,15 @@ try {
   expect(await page.evaluate(() => localStorage.getItem("cbc.bot.pace.v1"))).toBe("relaxed");
   results.push("piece-size and opponent pacing preferences");
   await page.goto(`${process.env.QA_URL ?? "http://127.0.0.1:3100"}/settings`);
-  await page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Studio/ }).click();
-  await expect(page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Studio/ })).toHaveAttribute("aria-checked", "true");
-  await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
-  // e2 is empty after the earlier e2→e4 drag; check every piece, not the
-  // original square. This catches partial theme swaps as well.
-  await page.screenshot({ path: `${output}/desktop-studio.png` });
-  await expect(page.locator("svg.board-piece")).toHaveCount(32);
-  results.push("Studio SVG set selects and persists across navigation");
-  await page.goto(`${process.env.QA_URL ?? "http://127.0.0.1:3100"}/settings`);
-  await page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Chess.com · Neo/ }).click();
+  await expect(page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Studio/ })).toHaveCount(0);
+  await page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: "Neo", exact: true }).click();
+  await expect(page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: "Neo", exact: true })).toHaveAttribute("aria-checked", "true");
   await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   const chesscomPieces = page.locator("img[src^='/pieces/chesscom/']");
   await expect(chesscomPieces).toHaveCount(32);
   await expect.poll(async () => chesscomPieces.evaluateAll((images) => images.filter((img) => img.complete && img.naturalWidth > 0).length), { timeout: 15_000 }).toBe(32);
   await page.screenshot({ path: `${output}/desktop-chesscom-neo.png` });
-  results.push("all 32 original Neo piece images load and persisted Chess.com artwork renders");
+  results.push("all 32 original Neo piece images load and named Neo choice persists; Studio removed");
   await context.close();
 
   const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
@@ -115,6 +118,11 @@ try {
   const phone = await touch.newPage();
   await phone.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   await expect(phone.getByRole("grid")).toBeVisible();
+  const viewport = await phone.evaluate(() => ({ height: window.innerHeight, scrollHeight: document.scrollingElement?.scrollHeight ?? 0 }));
+  if (viewport.scrollHeight > viewport.height + 2) throw new Error(`Phone document must not scroll: ${JSON.stringify(viewport)}`);
+  await phone.evaluate(() => window.scrollTo(0, 400));
+  const scrolled = await phone.evaluate(() => window.scrollY);
+  if (scrolled !== 0) throw new Error(`Phone game scrolled by ${scrolled}px`);
   await phone.screenshot({ path: `${output}/phone-before.png` });
   const phoneBoard = await phone.getByRole("grid").boundingBox();
   if (!phoneBoard || phoneBoard.y < 150 || phoneBoard.y + phoneBoard.height > 740) {
@@ -138,8 +146,14 @@ try {
   await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await expect(phone.locator("#sq-e4")).toHaveAttribute("aria-label", /white pawn/);
   await expect(phone.locator("[data-drag-ghost]")).toHaveCount(0);
+  const turnChangeViewport = await phone.evaluate(() => ({ height: window.innerHeight, scrollHeight: document.scrollingElement?.scrollHeight ?? 0 }));
+  if (turnChangeViewport.scrollHeight > turnChangeViewport.height + 2) {
+    throw new Error(`Mobile document overflowed after turn changed: ${JSON.stringify(turnChangeViewport)}`);
+  }
+  await phone.evaluate(() => window.scrollTo(0, 400));
+  if (await phone.evaluate(() => window.scrollY) !== 0) throw new Error("Mobile page scrolled on turn change");
   await phone.screenshot({ path: `${output}/phone-after.png` });
-  results.push("390px emulated touch pickup, follow and drop; board in lower-middle reach zone");
+  results.push("390px emulated touch pickup, follow and drop; board in lower-middle reach zone; page cannot scroll before or after turn change");
   await touch.close();
   console.log(`Board feel QA passed: ${results.join("; ")}`);
 } finally {

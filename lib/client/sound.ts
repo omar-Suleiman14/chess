@@ -38,20 +38,15 @@ function buffer(pack: SoundPack, event: SoundEvent): AudioBuffer | null {
   if (buffers.size > 128) buffers.delete(buffers.keys().next().value!);
   return next;
 }
-/*
- * Optional "Chess.com" sounds for a personal setup. The browser loads them
- * straight from chess.com's own sound server when the player turns them on;
- * the files are never copied into this app, its repository or its builds.
- * Until they arrive (or if they can't load) the built-in cues play instead.
- */
-/** Same-origin pass-through to chess.com's official files (see next.config.ts rewrites). */
+/** Local recordings from the supplied Standard sound pack. Audio is served
+ * directly by our origin, without a network redirect or transcoding. */
 export const CHESSCOM_BASE = "/sounds/chesscom/";
 export const CHESSCOM_FILES: Partial<Record<SoundEvent, string>> = {
   move: "move-self", opponent_move: "move-opponent", capture: "capture", check: "move-check",
   castle: "castle", promote: "promote", premove_set: "premove", premove_execute: "premove",
-  illegal: "illegal", start: "game-start", end: "game-end", victory: "game-end", defeat: "game-end",
-  draw: "game-end", checkmate: "game-end", stalemate: "game-end", repetition: "game-end",
-  insufficient: "game-end", lowtime: "tenseconds", notification: "notify", challenge: "notify", draw_offer: "notify",
+  illegal: "illegal", start: "game-start", end: "game-end", victory: "game-win", defeat: "game-lose",
+  draw: "game-draw", checkmate: "game-end", stalemate: "game-draw", repetition: "game-draw",
+  insufficient: "game-draw", lowtime: "tenseconds", notification: "notification", challenge: "notify", draw_offer: "drawoffer",
 };
 let chesscom = false;
 const chesscomBuffers = new Map<string, AudioBuffer>();
@@ -84,7 +79,7 @@ function loadChesscom(): void {
   }
 }
 
-/** Turn the streamed Chess.com sounds on or off for this device. */
+/** Turn the local recorded sound pack on or off for this device. */
 export function configureChesscomSounds(on: boolean): void {
   chesscom = on;
   if (on) loadChesscom();
