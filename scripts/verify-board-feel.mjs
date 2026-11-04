@@ -114,10 +114,22 @@ try {
   await context.close();
 
   const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
-  await touch.addInitScript(() => localStorage.setItem("cbc.settings.v1", JSON.stringify({ sound: false, evalBar: false })));
+  await touch.addInitScript(() => localStorage.setItem("cbc.settings.v1", JSON.stringify({ sound: false, evalBar: true })));
   const phone = await touch.newPage();
   await phone.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   await expect(phone.getByRole("grid")).toBeVisible();
+  await expect(phone.locator(".game-main")).toHaveCSS("position", "fixed");
+  await expect(phone.locator("[data-game-quality]")).toBeVisible();
+  // Evaluations belong beside move feedback, not above the board. Rated
+  // games may present a consent action instead of live engine numbers.
+  const desktopMeter = phone.locator(".game-position [role=meter]");
+  if (await desktopMeter.count()) await expect(desktopMeter).toBeHidden();
+  if (await phone.locator("[data-game-quality] [role=meter], [data-game-quality] button").count() !== 1) {
+    throw new Error("Mobile evaluation must live inside the move feedback strip");
+  }
+  const statusRow = phone.locator("[data-game-status]");
+  await expect(statusRow).toBeVisible();
+  if ((await statusRow.boundingBox())?.height !== 24) throw new Error("Game status must retain its height even while empty");
   const viewport = await phone.evaluate(() => ({ height: window.innerHeight, scrollHeight: document.scrollingElement?.scrollHeight ?? 0 }));
   if (viewport.scrollHeight > viewport.height + 2) throw new Error(`Phone document must not scroll: ${JSON.stringify(viewport)}`);
   await phone.evaluate(() => window.scrollTo(0, 400));
@@ -146,6 +158,7 @@ try {
   await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await expect(phone.locator("#sq-e4")).toHaveAttribute("aria-label", /white pawn/);
   await expect(phone.locator("[data-drag-ghost]")).toHaveCount(0);
+  if ((await statusRow.boundingBox())?.height !== 24) throw new Error("Thinking/status changes must never collapse their grid row");
   const turnChangeViewport = await phone.evaluate(() => ({ height: window.innerHeight, scrollHeight: document.scrollingElement?.scrollHeight ?? 0 }));
   if (turnChangeViewport.scrollHeight > turnChangeViewport.height + 2) {
     throw new Error(`Mobile document overflowed after turn changed: ${JSON.stringify(turnChangeViewport)}`);
@@ -153,7 +166,33 @@ try {
   await phone.evaluate(() => window.scrollTo(0, 400));
   if (await phone.evaluate(() => window.scrollY) !== 0) throw new Error("Mobile page scrolled on turn change");
   await phone.screenshot({ path: `${output}/phone-after.png` });
-  results.push("390px emulated touch pickup, follow and drop; board in lower-middle reach zone; page cannot scroll before or after turn change");
+  // Two fingers must move together vertically. A finished gesture is never a
+  // chess move, and a second swipe flips back to the original orientation.
+  const boardBox = await phone.getByRole("grid").boundingBox();
+  if (!boardBox) throw new Error("Board disappeared before gesture QA");
+  const touchX1 = boardBox.x + boardBox.width * 0.33;
+  const touchX2 = boardBox.x + boardBox.width * 0.67;
+  const touchY = boardBox.y + boardBox.height * 0.38;
+  const swipe = async (direction) => {
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [
+      { x: touchX1, y: touchY, id: 2 }, { x: touchX2, y: touchY, id: 3 },
+    ] });
+    for (let i = 1; i <= 8; i++) {
+      await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [
+        { x: touchX1, y: touchY + direction * 68 * i / 8, id: 2 },
+        { x: touchX2, y: touchY + direction * 68 * i / 8, id: 3 },
+      ] });
+    }
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  };
+  await swipe(1);
+  await expect(phone.locator('[role="grid"] [role="gridcell"]').first()).toHaveAttribute("id", "sq-h1");
+  await expect(phone.locator("#sq-e4")).toHaveAttribute("aria-label", /white pawn/);
+  await phone.waitForTimeout(120);
+  await swipe(-1);
+  await expect(phone.locator('[role="grid"] [role="gridcell"]').first()).toHaveAttribute("id", "sq-a8");
+  await phone.screenshot({ path: `${output}/phone-flipped-back.png` });
+  results.push("390px emulated touch pickup/drop, fixed status and evaluation strip; board remains viewport-locked through turn changes; two-finger swipe flips twice without moving a piece");
   await touch.close();
   console.log(`Board feel QA passed: ${results.join("; ")}`);
 } finally {

@@ -182,6 +182,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const captures = useMemo(() => capturesAlongLine(tree?.originFen ?? liveFen, reviewing ? line.slice(0, viewPly ?? 0) : line), [tree?.originFen, liveFen, reviewing, line, viewPly]);
   const human: Color = game?.meta.humanColor ?? "w";
   const orientation = orientationOverride ?? human;
+  const flipBoard = useCallback(() => {
+    setOrientationOverride((previous) => ((previous ?? human) === "w" ? "b" : "w"));
+    haptic("select");
+  }, [human]);
   const status = useMemo(() => positionStatus(fen), [fen]);
   const turn = sideToMove(liveFen);
   const opponent = game ? findOpponent(game.meta.opponentId, game.meta.opponentVersion ?? 1) : undefined;
@@ -347,7 +351,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     setHintTimedOut(null);
     setHintRequest({ context, stage: 1 });
   };
-  const onSelectSound = useCallback(() => { if (settings.sound) playSound("select", settings.volume); }, [settings.sound, settings.volume]);
+  // Selection is tactile but silent; recorded cues belong to moves and invalid attempts.
   const previousCoach = useRef<string | null>(null);
   useEffect(() => {
     if (coach?.kind !== "ready" || previousCoach.current === coach.key || reviewing) return;
@@ -466,11 +470,22 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       {/* Phones: the move list runs across the top, like a native chess app. */}
       <div className="game-strip safe-top px-1 lg:hidden">
         <MoveStrip flat line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} />
-        <div className="game-quality flex h-7 items-center justify-center gap-1.5 overflow-hidden px-3 text-xs font-semibold" aria-label="Move feedback" aria-live="polite">
-          {feedback && lastHumanMove && <>
-            <span className="grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] text-white" style={{ background: feedback.color }} aria-hidden="true">{feedback.symbol}</span>
-            <span className="max-w-full truncate" style={{ color: feedback.color }}>{lastHumanMove.san} · {feedback.label}</span>
-          </>}
+        <div data-game-quality className="game-quality flex h-9 min-w-0 items-center gap-2 overflow-hidden px-3 text-xs font-semibold" aria-label="Move feedback and evaluation">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden" aria-live="polite">
+            {feedback && lastHumanMove && <>
+              <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full px-1 text-[10px] text-white" style={{ background: feedback.color }} aria-hidden="true">{feedback.symbol}</span>
+              <span className="min-w-0 truncate" style={{ color: feedback.color }}>{lastHumanMove.san} · {feedback.label}</span>
+            </>}
+          </div>
+          {settings.evalBar && (evalAllowed ? (
+            <div className="w-[36%] max-w-36 shrink-0">
+              <EvalBar score={shownEval.evaluation?.score ?? null} stale={shownEval.stale} orientation={orientation} depth={shownEval.evaluation?.depth} reducedMotion={reducedMotion} horizontal />
+            </div>
+          ) : (
+            <button onClick={() => { void chess.markAssisted("eval_bar").then((ok) => { if (!ok) setHintFailure(true); }); }}
+              className="h-7 shrink-0 rounded-md bg-surface-2 px-2 text-[11px] text-muted"
+              aria-label="Show evaluation. This makes the current rated game unrated.">Show eval</button>
+          ))}
         </div>
       </div>
       <div className="game-moves min-h-0 [grid-area:moves] max-lg:px-3 max-lg:pt-2 lg:flex lg:flex-col">
@@ -501,13 +516,13 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         <div className="game-position relative flex w-full flex-col items-stretch gap-1">
           {settings.evalBar && (evalAllowed ? (
             // Phones: inset from the screen edges with breathing room above the board.
-            <div className="max-lg:px-4 max-lg:pb-4 max-lg:pt-2"><EvalBar score={shownEval.evaluation?.score ?? null} stale={shownEval.stale} orientation={orientation} depth={shownEval.evaluation?.depth} reducedMotion={reducedMotion} horizontal /></div>
+            <div className="hidden lg:block"><EvalBar score={shownEval.evaluation?.score ?? null} stale={shownEval.stale} orientation={orientation} depth={shownEval.evaluation?.depth} reducedMotion={reducedMotion} horizontal /></div>
           ) : (
             <button
               onClick={() => {
                 void chess.markAssisted("eval_bar").then((ok) => { if (!ok) setHintFailure(true); });
               }}
-              className="h-6 w-full shrink-0 rounded-[5px] bg-surface-2 text-xs max-lg:mx-4 max-lg:mb-4 max-lg:mt-2 max-lg:w-[calc(100%-2rem)]"
+              className="hidden h-6 w-full shrink-0 rounded-[5px] bg-surface-2 text-xs lg:block"
               aria-label="Show evaluation bar. This makes the current rated game unrated."
               title="Show evaluation (makes this game unrated)"
             >Show evaluation · makes this game unrated</button>
@@ -530,7 +545,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               coordinates={settings.coordinates}
               reducedMotion={reducedMotion}
               label={`Chess board, you play ${human === "w" ? "White" : "Black"}. ${reviewing && viewNode ? `Reviewing ${viewNode.ply === 0 ? "the start" : moveLabel(viewNode)}; moves are paused.` : active ? (turn === human ? "Your move." : `${botName} to move.`) : "Game over."}`}
-              onSelect={onSelectSound}
+              onFlip={flipBoard}
             />
           </div>
           {resultText && game && !reviewing && (
@@ -553,7 +568,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       </section>
 
         {/* Fixed-height status line: nothing here can resize the layout. */}
-        <div className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted empty:hidden [grid-area:status] max-lg:px-3 lg:justify-start" aria-live="polite">
+        <div data-game-status className="flex h-6 w-full items-center justify-end gap-2 overflow-hidden whitespace-nowrap text-xs text-muted [grid-area:status] max-lg:px-3 lg:justify-start" aria-live="polite">
           {shareNote && <span className="font-medium text-ok" role="status">{shareNote}</span>}
           {hintStatus && <span className="truncate font-medium text-ink" role="status">{hintStatus}</span>}
           {premove.uci && <button onClick={premove.cancel} className="shrink-0 underline" aria-label="Cancel premove">Premove queued · Cancel</button>}
@@ -648,7 +663,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           onShare: () => void shareGame(),
           onSettings: () => setShowSettings(true),
           onFriends: () => setShowFriends(true),
-          onFlip: () => setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w")),
+          onFlip: flipBoard,
           onSound: () => { unlockAudio(); update({ sound: !settings.sound }); if (!settings.sound) playSound("move", settings.volume); },
         }}
       />}

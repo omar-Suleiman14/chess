@@ -386,6 +386,7 @@ export function OnlineGame({ room, token }: { room: RoomView; token: string }) {
             <Board
               fen={fen}
               orientation={orientation}
+              onFlip={() => { setOrientationOverride((previous) => ((previous ?? you ?? "w") === "w" ? "b" : "w")); haptic("select"); }}
               movable={myTurn && !reviewing ? you : null}
               onMove={onMove}
               premovable={playing && active && !myTurn && !livePending && !reviewing ? you : null}
