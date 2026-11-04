@@ -49,6 +49,18 @@ H19–H21 describe the previous hill and are kept as history. The newest recordi
 | H26 | Remove the colored badge on an individual board square, move per-move evaluation to the top move strip on phones and top move history area on desktop. Reserve height so feedback doesn't jump. | Board no longer accepts `moveBadge`; phone top region has accessible `Move feedback` display; bottom status never shows move quality. |
 | H27 | Lock the mobile game viewport to `100dvh`, shrink internal flexible tracks, retain fixed controls and board lower-middle reach. | Browser at 390×844 checks `scrollHeight ≤ innerHeight + 2`, `scrollTo(0,400)` stays at zero, board top ≥150 and bottom ≤740. |
 
+### H28–H32: real-iPhone turn changes and controls (2026-11-04)
+
+The owner's 9-second Safari recording showed that the previous emulated-Chromium no-scroll gate was insufficient. These corrections do not imply that physical iOS Safari has been verified.
+
+| Hill | Correction | Measurable acceptance criterion |
+| --- | --- | --- |
+| H28 | Keep a silent, tactile piece selection. Do not fire a harsh `click` cue just for picking up a piece; retain recorded move/capture/illegal cues for the actual action. | No sound handler is attached to game-board selection; haptic selection and move sound remain. |
+| H29 | Remove `empty:hidden` from the 24px thinking/status row. It must not collapse when Maya's thinking text appears/disappears. | Browser asserts status height remains 24px before and after a move. |
+| H30 | Pin the phone game and body to the viewport and size the square board against `svh` rather than dynamic `dvh`, preventing Safari's browser-bar transitions from changing board size. | Browser checks fixed game position, no document scroll before/after move and lower-middle board reach. Real Safari must still be observed. |
+| H31 | Integrate the horizontal evaluation meter (or rated-game consent) into the feedback strip. Reserve a single, stable row and remove its doubled top border; the meter must not occupy space above the mobile board. | Browser asserts the meter/consent lives inside the feedback bar and is absent above the board. |
+| H32 | Flip the board with a deliberate two-finger vertical swipe without making a move or turning a pinch/tap into a flip. Keep the menu and keyboard option. | Unit tests for swipe/pinch, and touch-browser test flipping twice with unchanged piece state. Works on online as well as bot board. |
+
 Earlier browser CI for the first hill verified mouse p95 held-piece offset at **8px**, desktop drop, a CDP-emulated 390px touch drag and the broader experience checks. Its Lighthouse desktop startup TBT gate still failed at ~1039ms; a baseline run before the hill already failed around 1067ms. This is a tracked unrelated performance problem, **not a green CI claim**. The follow-up hill must pass its new browser checks before being considered validated.
 
 ## Verification protocol

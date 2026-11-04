@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type KeyboardEvent, type PointerEvent } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type KeyboardEvent, type PointerEvent, type TouchEvent } from "react";
 import { FILES, legalMoves, pieceName, piecesOf, type BoardPiece, type Color, type PromotionPiece, type Square } from "@/lib/chess/rules";
 import { premoveMoves } from "@/lib/chess/premove";
 import { useSettings } from "@/lib/client/settings";
@@ -9,7 +9,7 @@ import { playSound } from "@/lib/client/sound";
 import { haptic } from "@/lib/client/haptics";
 import { Piece } from "./Pieces";
 import { PromotionSheet } from "./PromotionSheet";
-import { dragActivated, squareFromClientPoint } from "@/lib/chess/boardGesture";
+import { dragActivated, isBoardFlipSwipe, squareFromClientPoint, type TouchPoint } from "@/lib/chess/boardGesture";
 
 export type BoardResult = { result?: string; reason?: string };
 
@@ -39,6 +39,8 @@ type Props = {
   /** Short, non-bouncy glide for replay/scrubbing. */
   fast?: boolean;
   onSelect?: () => void;
+  /** Flip by deliberate two-finger vertical swipe, independent of turn. */
+  onFlip?: () => void;
   result?: BoardResult;
 };
 
@@ -107,6 +109,7 @@ export const Board = memo(function Board({
   hintMove,
   label = "Chess board",
   onSelect,
+  onFlip,
   motionMove,
   fast = false,
   result,
@@ -122,6 +125,9 @@ export const Board = memo(function Board({
   // entire 64-cell motion tree for every touchmove made a held piece lag behind
   // the finger, especially on iOS. Only pickup/hover/drop cause React renders.
   const gesture = useRef<PointerGesture | null>(null);
+  const twoFinger = useRef<{ ids: [number, number]; start: [TouchPoint, TouchPoint]; flipped: boolean } | null>(null);
+  const suppressTouchPointer = useRef(false);
+  const suppressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const hoverRef = useRef<Square | null>(null);
   const [dragVisual, setDragVisual] = useState<DragVisual | null>(null);
@@ -255,8 +261,49 @@ export const Board = memo(function Board({
     setHoverSquare(null);
   };
 
+  // Native-style two-finger up/down swipe: keep all multi-touch input out of
+  // the chess move pipeline, even if one finger started lifting a piece.
+  const onTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (!onFlip || event.touches.length !== 2) return;
+    if (suppressTimer.current) clearTimeout(suppressTimer.current);
+    const [first, second] = Array.from(event.touches);
+    twoFinger.current = {
+      ids: [first.identifier, second.identifier],
+      start: [{ x: first.clientX, y: first.clientY }, { x: second.clientX, y: second.clientY }],
+      flipped: false,
+    };
+    suppressTouchPointer.current = true;
+    cancelGesture();
+    setSelected(null);
+  };
+
+  const onTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const active = twoFinger.current;
+    if (!active || active.flipped || event.touches.length !== 2) return;
+    const current = active.ids.map((id) => Array.from(event.touches).find((touch) => touch.identifier === id));
+    if (!current[0] || !current[1]) return;
+    if (isBoardFlipSwipe(active.start, [
+      { x: current[0].clientX, y: current[0].clientY },
+      { x: current[1].clientX, y: current[1].clientY },
+    ])) {
+      active.flipped = true;
+      onFlip?.();
+    }
+  };
+
+  const onTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (!twoFinger.current && !suppressTouchPointer.current) return;
+    if (event.touches.length < 2) twoFinger.current = null;
+    if (event.touches.length === 0) {
+      // Ignore synthetic pointer/click events from the just-finished gesture.
+      suppressTimer.current = setTimeout(() => { suppressTouchPointer.current = false; }, 90);
+    }
+  };
+
+  useEffect(() => () => { if (suppressTimer.current) clearTimeout(suppressTimer.current); }, []);
+
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 || promotion || gesture.current) return;
+    if (suppressTouchPointer.current || e.button !== 0 || promotion || gesture.current) return;
     const square = squareFromPoint(e.clientX, e.clientY);
     if (!square) return;
     const piece = bySquare.get(square);
@@ -268,6 +315,7 @@ export const Board = memo(function Board({
   };
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (suppressTouchPointer.current) return;
     const current = gesture.current;
     if (!current || current.pointerId !== e.pointerId) return;
     if (!current.active && dragActivated(current.startX, current.startY, e.clientX, e.clientY, e.pointerType)) {
@@ -291,6 +339,7 @@ export const Board = memo(function Board({
   };
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (suppressTouchPointer.current) { cancelGesture(); return; }
     const current = gesture.current;
     if (current && current.pointerId !== e.pointerId) return;
     const square = squareFromPoint(e.clientX, e.clientY);
@@ -472,6 +521,10 @@ export const Board = memo(function Board({
         aria-colcount={8}
         className={`board relative grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[10px] shadow-[var(--shadow)] ${dragVisual ? "[&_*]:!cursor-grabbing !cursor-grabbing" : ""}`}
         onPointerDown={onPointerDown}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={(event) => { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }}
