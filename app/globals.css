@@ -327,17 +327,30 @@ button {
 /* Phone game screen, native-app style: move list across the top, the board
    edge to edge with square corners, name + clock rows, one flat bottom bar. */
 @media (max-width: 1023px) {
-  .game-main { padding-inline: 0; }
+  /* The board is an app viewport, not a document. Both the fixed toolbar and
+     the board must fit without a second scrollable screen behind them. */
+  html:has(.game-main), body:has(.game-main) { height: 100dvh; overflow: hidden; overscroll-behavior: none; }
+  /* AppShell's min-height and pre-hydration tab-bar padding can leave a
+     second scrollable page even after the game itself fits. Pin that wrapper
+     for the entire mounted game (including every turn change). */
+  .app-content:has(.game-main) { height: 100dvh; min-height: 0; overflow: hidden; padding-bottom: 0; }
+  .game-main { height: 100dvh; min-height: 0; overflow: hidden; padding-inline: 0; }
   .game-layout {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
     /* Give the finger room above the board. Split spare height rather than
        pinning the whole chess surface directly below the move strip. On
        compact phones both flexible gaps shrink to zero before the board does. */
     grid-template-areas: "header" "strip" "." "group" "moves" "status" "footer";
     grid-template-rows: auto auto minmax(0, .54fr) auto minmax(0, .46fr) auto auto;
     /* Everything but the board: strip 44, two player rows (~66 each), eval 24, status 24, bar 60, plus safe areas. */
-    max-width: min(100%, max(300px, calc(100dvh - 288px - env(safe-area-inset-top) - env(safe-area-inset-bottom))));
+    /* Leave enough fixed room for the quality strip, both player rows,
+       evaluation bar, status and bottom controls on shorter phones. */
+    max-width: min(100%, max(230px, calc(100dvh - 344px - env(safe-area-inset-top) - env(safe-area-inset-bottom))));
   }
   .game-strip { grid-area: strip; border-bottom: 1px solid var(--line); background: var(--bg); }
+  .game-quality { border-top: 1px solid var(--line); background: var(--surface); }
   .game-opponent, .game-player { min-height: 64px; margin: 0; padding-block: 8px; }
   .game-layout .board { border-radius: 0; box-shadow: none; }
   .game-layout .game-position { gap: 0; }

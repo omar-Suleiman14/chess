@@ -17,9 +17,19 @@ export function premoveMoves(fen: string, color: Color) {
       if (!dx && !dy) continue;
       const ax = Math.abs(dx), ay = Math.abs(dy);
       let possible = false;
+      const target = occupied.get(to);
+      // A speculative reply can create an enemy on an empty diagonal, but it
+      // cannot pass through our own stationary pieces. In particular, a
+      // bishop on f1 must not offer g2/h3 while our g2 pawn still blocks it.
+      if (target?.color === color) continue;
       if (piece.type === "p") {
         const forward = color === "w" ? 1 : -1;
-        possible = (dy === forward && ax <= 1) || (dx === 0 && y === (color === "w" ? 2 : 7) && dy === 2 * forward);
+        const emptyForward = dx === 0 && !target;
+        const single = emptyForward && dy === forward;
+        const double = emptyForward && y === (color === "w" ? 2 : 7) && dy === 2 * forward &&
+          !occupied.has(`${FILES[x]}${y + forward}` as Square);
+        const possibleCapture = ax === 1 && dy === forward;
+        possible = single || double || possibleCapture;
       } else if (piece.type === "n") possible = ax * ay === 2;
       else if (piece.type === "b") possible = ax === ay;
       else if (piece.type === "r") possible = dx === 0 || dy === 0;
@@ -31,7 +41,16 @@ export function premoveMoves(fen: string, color: Color) {
         possible = Math.max(ax, ay) === 1 || castle;
       }
       if (!possible) continue;
-      const target = occupied.get(to);
+      if (piece.type === "b" || piece.type === "r" || piece.type === "q") {
+        const steps = Math.max(ax, ay);
+        const stepX = Math.sign(dx), stepY = Math.sign(dy);
+        let blocked = false;
+        for (let step = 1; step < steps; step++) {
+          const between = `${FILES[x + stepX * step]}${y + stepY * step}` as Square;
+          if (occupied.has(between)) { blocked = true; break; }
+        }
+        if (blocked) continue;
+      }
       moves.push({ from: piece.square, to, captured: target?.color !== color ? target?.type : undefined,
         promotion: piece.type === "p" && rank === (color === "w" ? 8 : 1) ? "q" : undefined });
     }

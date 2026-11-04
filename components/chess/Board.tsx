@@ -40,7 +40,6 @@ type Props = {
   fast?: boolean;
   onSelect?: () => void;
   result?: BoardResult;
-  moveBadge?: { square: Square; symbol: string; label: string; color: string };
 };
 
 const SQUARE_RE = /^[a-h][1-8]$/;
@@ -111,7 +110,6 @@ export const Board = memo(function Board({
   motionMove,
   fast = false,
   result,
-  moveBadge,
 }: Props) {
   const winner: Color | null = result?.result === "1-0" ? "w" : result?.result === "0-1" ? "b" : null;
   const drawn = result?.result === "1/2-1/2";
@@ -228,15 +226,16 @@ export const Board = memo(function Board({
         }
       }
       if (selected && selected !== square && tryMove(selected, square)) return;
-      if (piece && selectableColor && piece.color === selectableColor && targets.has(square)) {
+      // Selecting one of your pieces is never an illegal move, even when it
+      // is currently blocked. A mistake cue belongs to an attempted drop or
+      // destination, not the first tap on a piece.
+      if (piece && selectableColor && piece.color === selectableColor) {
         setSelected(selected === square ? null : square);
         if (selected !== square) haptic("select");
         onSelect?.();
       } else {
-        const ownPiece = !!piece && !!selectableColor && piece.color === selectableColor;
-        // Tried to move the selected piece somewhere it can't go, or picked a piece with no legal moves.
-        if (selected && selected !== square && !ownPiece) flagIllegal(selected);
-        else if (ownPiece) flagIllegal(square);
+        // This is an actual destination attempt from a selected piece.
+        if (selected && selected !== square) flagIllegal(selected);
         setSelected(null);
       }
     },
@@ -261,7 +260,7 @@ export const Board = memo(function Board({
     const square = squareFromPoint(e.clientX, e.clientY);
     if (!square) return;
     const piece = bySquare.get(square);
-    if (piece && selectableColor && piece.color === selectableColor && targets.has(square)) {
+    if (piece && selectableColor && piece.color === selectableColor) {
       (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
       const size = (boardRef.current?.getBoundingClientRect().width ?? 0) / 8;
       gesture.current = { pointerId: e.pointerId, from: square, startX: e.clientX, startY: e.clientY, size, active: false };
@@ -447,9 +446,6 @@ export const Board = memo(function Board({
                 {drawn ? "½" : piece.color === winner ? "♛" : result.reason === "resign" ? "⚑" : "×"}
               </motion.span>
             </>
-          )}
-          {moveBadge?.square === square && (
-            <span role="img" aria-label={moveBadge.label} className="pointer-events-none absolute right-0 top-0 z-30 grid h-[42%] min-w-[42%] place-items-center rounded-full px-0.5 text-[clamp(10px,3vw,20px)] font-bold text-white shadow-md" style={{ backgroundColor: moveBadge.color }}>{moveBadge.symbol}</span>
           )}
           {target && showLegalDots && !target.capture && (
             <div data-legal-target className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-[24%] w-[24%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: queuing ? "rgb(48 101 177 / .38)" : light ? "rgb(35 31 26 / .26)" : "rgb(25 23 20 / .31)" }} />

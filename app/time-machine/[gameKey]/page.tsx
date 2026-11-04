@@ -591,16 +591,6 @@ export default function ReplayPage({
             />
           </div>
           <Board
-            moveBadge={
-              selectedReview && selectedStyle && node
-                ? {
-                    square: node.uci.slice(2, 4) as Square,
-                    symbol: selectedStyle.symbol,
-                    color: selectedStyle.color,
-                    label: selectedStyle.label,
-                  }
-                : undefined
-            }
             result={
               game.meta.status === "finished" &&
               cursor === path.length &&

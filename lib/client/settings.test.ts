@@ -23,6 +23,11 @@ describe("isWeakDevice", () => {
 });
 
 describe("settings sync", () => {
+  it("migrates retired Studio artwork to Neo and rejects unknown piece sets", () => {
+    expect(fromSaved({ pieceSet: "studio" }).pieceSet).toBe("chesscom");
+    expect(fromSaved({ pieceSet: "chesscom" }).pieceSet).toBe("chesscom");
+    expect(fromSaved({ pieceSet: "not-a-piece-set" }).pieceSet).toBe(DEFAULT_SETTINGS.pieceSet);
+  });
   it("keeps a known board theme, drops unknown ones, and pulls it from the account", () => {
     expect(fromSaved(null).boardTheme).toBe("");
     expect(fromSaved({ boardTheme: "walnut" }).boardTheme).toBe("walnut");

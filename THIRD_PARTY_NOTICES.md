@@ -48,6 +48,10 @@ Licences as listed in [lila's COPYING.md](https://github.com/lichess-org/lila/bl
 
 ## Sounds
 
+### Optional Chess.com Standard recordings (rights unverified)
+
+On 2026-11-04, the project owner provided a `default.zip` archive containing 34 Standard MP3 cues. The exact MP3 bytes are included under `public/sounds/chesscom/`; `illegal.mp3` is used for failed move attempts and `incorrect.mp3` is a separate puzzle cue. The recordings belong to their respective rightsholder; supplying the archive does **not** prove a sublicence or public redistribution permission. These files are **not** covered by this repository's GPL-3.0 licence. Publication/redistribution requires rights clearance or removal. Source archive hashes for selected events are checked by `lib/client/chesscomSounds.test.ts`.
+
 ### Result chimes (CC0)
 
 `public/sounds/results/` contains three short cues from **Kenney Interface Sounds 1.0**, [official source and download](https://kenney.nl/assets/interface-sounds), **CC0 1.0**. The original licence is shipped as `public/sounds/results/LICENSE.txt`.
@@ -66,9 +70,9 @@ Source archive: [kenney_interface-sounds.zip](https://kenney.nl/media/pages/asse
 
 The earlier CSS/SVG refraction adaptation from Chris Kube's article was removed on 2026-10-29. The current renderer uses independently authored static CSS materials without displacement maps or the former per-pixel lens algorithm. Git history retains the original credit for the retired implementation.
 
-## Current gameplay sound packs
+## Current synthesized gameplay sound packs
 
-All current game-event cues are generated from original deterministic synthesis in `lib/experience/audio.ts`, distributed under this repository's GPL-3.0 licence. The complete asset/rights ledger is [docs/SOUND-LEDGER.md](docs/SOUND-LEDGER.md). No third-party instrument recordings or Chess.com audio are used by the current playback path. Only the cleared CC0 legacy result files remain distributed, with their original notices.
+The built-in generated game-event cues are original deterministic synthesis in `lib/experience/audio.ts`, distributed under GPL-3.0. The separate, optional Chess.com recorded-sound setting plays the user-supplied files documented above. The complete asset/rights ledger is [docs/SOUND-LEDGER.md](docs/SOUND-LEDGER.md).
 
 ## Original assets (GPL-3.0, this repository)
 
