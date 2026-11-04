@@ -90,7 +90,9 @@ try {
   await page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Studio/ }).click();
   await expect(page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Studio/ })).toHaveAttribute("aria-checked", "true");
   await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
-  await expect(page.locator("#sq-e2 svg")).toHaveCount(1);
+  // e2 is empty after the earlier e2→e4 drag; check every piece, not the
+  // original square. This catches partial theme swaps as well.
+  await expect(page.locator("svg.board-piece")).toHaveCount(32);
   await page.screenshot({ path: `${output}/desktop-studio.png` });
   results.push("Studio SVG set selects and persists across navigation");
   await page.goto(`${process.env.QA_URL ?? "http://127.0.0.1:3100"}/settings`);
