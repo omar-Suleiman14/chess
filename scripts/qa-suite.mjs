@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 for (const [script, ...args] of [
+  ["verify-board-feel.mjs"],
   ["verify-experience.mjs"],
   ["verify-hints.mjs"],
   ["verify-languages.mjs"],
