@@ -388,7 +388,8 @@ export const Board = memo(function Board({
           {isLast && <div className="absolute inset-0" style={{ background: "var(--hl-last)" }} />}
           {isPremove && <div className="pointer-events-none absolute inset-0 bg-[#4277b7]/35 ring-2 ring-inset ring-[#4277b7]/80" />}
           {isSelected && <div className="absolute inset-0" style={{ background: "var(--hl-select)" }} />}
-          {hovered && <div data-drop-target className="pointer-events-none absolute inset-[4%] z-20 rounded-[6px] ring-[3px] ring-inset ring-[var(--hl-target)]" />}
+          {dragVisual?.from === square && <div data-drag-origin className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-[26%] w-[26%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#20201c]/25" />}
+          {hovered && <div data-drop-target className="pointer-events-none absolute inset-[6%] z-20 rounded-full ring-[4px] ring-inset ring-[var(--hl-target)]" />}
           {isCheck && <div className="absolute inset-0" style={{ background: "radial-gradient(circle, var(--hl-check) 0%, transparent 72%)" }} />}
           {shaking && <div key={`flash-${illegal!.key}`} className="illegal-flash absolute inset-0" style={{ background: "rgba(220, 60, 50, 0.45)" }} />}
           {isHint && <div className="hint-square pointer-events-none absolute inset-0" />}
@@ -451,10 +452,10 @@ export const Board = memo(function Board({
             <span role="img" aria-label={moveBadge.label} className="pointer-events-none absolute right-0 top-0 z-30 grid h-[42%] min-w-[42%] place-items-center rounded-full px-0.5 text-[clamp(10px,3vw,20px)] font-bold text-white shadow-md" style={{ backgroundColor: moveBadge.color }}>{moveBadge.symbol}</span>
           )}
           {target && showLegalDots && !target.capture && (
-            <div className="absolute left-1/2 top-1/2 z-20 h-[28%] w-[28%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: "var(--hl-target)" }} />
+            <div data-legal-target className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-[24%] w-[24%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: queuing ? "rgb(48 101 177 / .38)" : light ? "rgb(35 31 26 / .26)" : "rgb(25 23 20 / .31)" }} />
           )}
           {target && showLegalDots && target.capture && (
-            <div className="absolute inset-[4%] z-20 rounded-full border-[5px]" style={{ borderColor: "var(--hl-target)" }} />
+            <div data-capture-target className="pointer-events-none absolute inset-[5%] z-20 rounded-full border-[5px]" style={{ borderColor: queuing ? "rgb(48 101 177 / .52)" : "rgb(29 27 24 / .28)" }} />
           )}
         </div>,
       );

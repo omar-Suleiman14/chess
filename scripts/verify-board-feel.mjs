@@ -23,6 +23,13 @@ try {
   const page = await context.newPage();
   await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   await expect(page.getByRole("grid")).toBeVisible();
+  for (const file of ["move-self", "capture", "move-check", "premove"]) {
+    const cue = await page.request.get(`${process.env.QA_URL ?? "http://127.0.0.1:3100"}/sounds/chesscom/${file}.mp3`);
+    if (!cue.ok() || !/audio|mpeg|octet-stream/i.test(cue.headers()["content-type"] ?? "")) {
+      throw new Error(`Chess.com recorded sound ${file} unavailable: ${cue.status()} ${cue.headers()["content-type"]}`);
+    }
+  }
+  results.push("four streamed Chess.com sound cues resolve with audio content");
   // The grid is server-rendered. A visible square does not mean the React
   // pointer handlers have hydrated yet; prove that they respond to a pickup
   // before measuring the compositor drag path.
@@ -48,6 +55,8 @@ try {
     if (box) offsets.push(Math.hypot(box.x + box.width / 2 - x, box.y + box.height / 2 - y));
   }
   await expect(ghost).toBeVisible();
+  await expect(page.locator("[data-drag-origin]")).toHaveCount(1);
+  await expect(page.locator("[data-legal-target]")).toHaveCount(2);
   const ghostBox = await ghost.boundingBox();
   if (!ghostBox) throw new Error("Drag ghost has no dimensions");
   const p95 = offsets.sort((a, b) => a - b)[Math.ceil(offsets.length * 0.95) - 1];
@@ -77,6 +86,21 @@ try {
   await page.getByRole("radiogroup", { name: "Bot move speed" }).getByRole("radio", { name: "Relaxed" }).click();
   expect(await page.evaluate(() => localStorage.getItem("cbc.bot.pace.v1"))).toBe("relaxed");
   results.push("piece-size and opponent pacing preferences");
+  await page.goto(`${process.env.QA_URL ?? "http://127.0.0.1:3100"}/settings`);
+  await page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Studio/ }).click();
+  await expect(page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Studio/ })).toHaveAttribute("aria-checked", "true");
+  await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
+  await expect(page.locator("#sq-e2 svg")).toHaveCount(1);
+  await page.screenshot({ path: `${output}/desktop-studio.png` });
+  results.push("Studio SVG set selects and persists across navigation");
+  await page.goto(`${process.env.QA_URL ?? "http://127.0.0.1:3100"}/settings`);
+  await page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Chess.com · Neo/ }).click();
+  await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
+  const chesscomPieces = page.locator("img[src^='/pieces/chesscom/']");
+  await expect(chesscomPieces).toHaveCount(32);
+  await expect.poll(async () => chesscomPieces.evaluateAll((images) => images.filter((img) => img.complete && img.naturalWidth > 0).length), { timeout: 15_000 }).toBe(32);
+  await page.screenshot({ path: `${output}/desktop-chesscom-neo.png` });
+  results.push("all 32 original Neo piece images load and persisted Chess.com artwork renders");
   await context.close();
 
   const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
@@ -84,6 +108,11 @@ try {
   const phone = await touch.newPage();
   await phone.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   await expect(phone.getByRole("grid")).toBeVisible();
+  await phone.screenshot({ path: `${output}/phone-before.png` });
+  const phoneBoard = await phone.getByRole("grid").boundingBox();
+  if (!phoneBoard || phoneBoard.y < 150 || phoneBoard.y + phoneBoard.height > 740) {
+    throw new Error(`Mobile board is outside finger-reachable lower-middle area: ${JSON.stringify(phoneBoard)}`);
+  }
   await phone.locator("#sq-e2").tap();
   await expect(phone.locator("#sq-e2")).toHaveAttribute("aria-label", /selected/);
   await phone.locator("#sq-e2").tap();
@@ -103,7 +132,7 @@ try {
   await expect(phone.locator("#sq-e4")).toHaveAttribute("aria-label", /white pawn/);
   await expect(phone.locator("[data-drag-ghost]")).toHaveCount(0);
   await phone.screenshot({ path: `${output}/phone-after.png` });
-  results.push("390px real touch pickup, follow and drop");
+  results.push("390px emulated touch pickup, follow and drop; board in lower-middle reach zone");
   await touch.close();
   console.log(`Board feel QA passed: ${results.join("; ")}`);
 } finally {

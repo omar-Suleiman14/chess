@@ -329,13 +329,16 @@ button {
 @media (max-width: 1023px) {
   .game-main { padding-inline: 0; }
   .game-layout {
-    grid-template-areas: "header" "strip" "group" "moves" "status" "footer";
-    grid-template-rows: auto auto auto 1fr auto auto;
+    /* Give the finger room above the board. Split spare height rather than
+       pinning the whole chess surface directly below the move strip. On
+       compact phones both flexible gaps shrink to zero before the board does. */
+    grid-template-areas: "header" "strip" "." "group" "moves" "status" "footer";
+    grid-template-rows: auto auto minmax(0, .54fr) auto minmax(0, .46fr) auto auto;
     /* Everything but the board: strip 44, two player rows (~66 each), eval 24, status 24, bar 60, plus safe areas. */
     max-width: min(100%, max(300px, calc(100dvh - 288px - env(safe-area-inset-top) - env(safe-area-inset-bottom))));
   }
   .game-strip { grid-area: strip; border-bottom: 1px solid var(--line); background: var(--bg); }
-  .game-opponent, .game-player { min-height: 56px; margin: 0; padding-block: 6px; }
+  .game-opponent, .game-player { min-height: 64px; margin: 0; padding-block: 8px; }
   .game-layout .board { border-radius: 0; box-shadow: none; }
   .game-layout .game-position { gap: 0; }
   .game-footer { padding-top: 0; }
