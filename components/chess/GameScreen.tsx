@@ -433,6 +433,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const backHold = useHoldRepeat(() => step(-1), moveCount === 0 || viewPly === 0);
   const forwardHold = useHoldRepeat(() => step(1), !reviewing);
   const hintDisabled = hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine();
+  const hintButtonLabel = hintStage === 1 ? "Show move" : hintStage ? "Hide hint" : hintCopy.hint;
   const resultText = game?.meta.status === "finished" ? resultLine(game.meta.result, game.meta.resultReason, human, botName) : null;
   // Stable object: the board only re-renders when the result really changes.
   const boardResult = useMemo(() => resultText && game && !reviewing ? { result: game.meta.result, reason: game.meta.resultReason } : undefined, [resultText, game?.meta.result, game?.meta.resultReason, reviewing]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -455,7 +456,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         <span className="sr-only">Chess</span>
         <div className="game-control-bar ms-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 lg:flex-nowrap lg:gap-1">
           <FriendsButton />
-          {coaching.hints && <Button disabled={hintBusy || !active || reviewing || turn !== human || chess.thinking || !supportsEngine()} onClick={() => void requestHint()} aria-expanded={hintStage !== null} className="min-h-11 min-w-11 rounded-full px-3 text-sm font-medium lg:px-2 lg:text-xs">{hintCopy.hint}</Button>}
+          {coaching.hints && <Button disabled={hintDisabled} onClick={() => void requestHint()} aria-label="Hint" aria-pressed={hintStage !== null} className="min-h-11 min-w-11 rounded-full px-3 text-sm font-medium lg:px-2 lg:text-xs">{hintButtonLabel}</Button>}
           <Button onClick={() => update({ evalBar: !settings.evalBar })} aria-label={settings.evalBar ? "Hide evaluation" : "Show evaluation"} aria-pressed={settings.evalBar} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-semibold">±</Button>
           <Button onClick={() => game?.meta.status === "finished" ? setResultVersion((version) => version + 1) : setShowNew(true)} className="h-11 shrink-0 rounded-full px-4 text-sm font-semibold lg:px-3" aria-label={game?.meta.status === "finished" ? "Show game result" : "New game"} aria-keyshortcuts="n">
             {game?.meta.status === "finished" ? "Result" : "New"}
@@ -578,9 +579,9 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
             Options
           </button>
           {coaching.hints ? (
-            <button disabled={hintDisabled} onClick={() => void requestHint()} aria-expanded={hintStage !== null} className="game-bar__item">
+            <button disabled={hintDisabled} onClick={() => void requestHint()} aria-label="Hint" aria-pressed={hintStage !== null} className={`game-bar__item ${hintStage ? "text-[var(--hint-arrow)]" : ""}`}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" /></svg>
-              {hintCopy.hint}
+              {hintButtonLabel}
             </button>
           ) : (
             <button disabled={!game || moveCount === 0} onClick={() => setConfirmUndo(true)} className="game-bar__item">
