@@ -1,0 +1,39 @@
+name: Board feel smoke
+on:
+  pull_request:
+    paths:
+      - 'app/globals.css'
+      - 'components/chess/**'
+      - 'lib/chess/**'
+      - 'lib/client/**'
+      - 'public/sounds/**'
+      - 'scripts/qa-server.mjs'
+      - 'scripts/verify-board-feel.mjs'
+      - '.github/workflows/board-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  board:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NEXT_PUBLIC_CONVEX_URL: ${{ vars.NEXT_PUBLIC_CONVEX_URL }}
+      NEXT_PUBLIC_CONVEX_SITE_URL: ${{ vars.NEXT_PUBLIC_CONVEX_SITE_URL }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Verify original cues, piece interaction and no-scroll turn change
+        run: pnpm test:board-feel
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: board-feel-screenshots
+          path: .cache/board-feel
+          retention-days: 14

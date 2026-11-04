@@ -12,6 +12,13 @@ for (const [key, value] of Object.entries(publicConfig)) {
   const local = localConfig.split("\n").find((line) => line.startsWith(`${key}=`))?.slice(key.length + 1).trim().replace(/^["']|["']$/g, "");
   if (!process.env[key]) process.env[key] = local || value;
 }
+// The temporary guest-only QA proxy always marks requests signed out. Clerk's
+// server initialization nevertheless requires a syntactically valid secret.
+// Derive a throwaway fixture string from the public *test* host; this is not
+// a real credential and is never used by the deployed middleware.
+if (!process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_")) {
+  process.env.CLERK_SECRET_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.replace(/^pk_test_/, "sk_test_");
+}
 const original = await readFile("proxy.ts", "utf8");
 let server;
 const run = (cmd, args) => new Promise((resolve, reject) => {
