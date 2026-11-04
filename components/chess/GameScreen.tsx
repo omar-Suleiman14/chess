@@ -483,7 +483,10 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           <MoveList line={line} cursor={viewPly ?? line.length} onSelect={jumpTo} className="flex h-[calc(100%-44px)]" />
         </details>
         {hintFailure && <p role="alert" className="p-3 text-sm text-danger">{hintCopy.error}</p>}
-        {coaching.explanations && <section aria-label="Coach explanation" className="shrink-0 rounded-2xl bg-surface p-3 text-sm lg:rounded-none lg:border-t lg:border-line" aria-live="polite">
+        {/* Phone coaching lives in the stable top quality strip. A variable
+            height explanation below the board was shifting the screen every
+            time the opponent replied. Full reasoning remains on desktop. */}
+        {coaching.explanations && <section aria-label="Coach explanation" className="hidden shrink-0 rounded-2xl bg-surface p-3 text-sm lg:block lg:rounded-none lg:border-t lg:border-line" aria-live="polite">
           {!coachingAllowed ? <button onClick={() => { void chess.markAssisted("engine_lines").then((ok) => { if (!ok) setHintFailure(true); }); }} className="min-h-11 underline">Show explanations · makes this game unrated</button>
             : coach?.kind === "ready" ? <p className="text-muted">{coach.review.quality === "best" ? "Matches the engine's best move." : `${coach.review.bestSan} was better. Evaluation loss: ${(coach.review.lossCp / 100).toFixed(2)} pawns.`}</p>
             : <p className="text-muted">{lastHumanMove ? "Reviewing your move…" : "Play a move to see the coach's take."}</p>}
