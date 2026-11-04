@@ -47,6 +47,9 @@ export const CHESSCOM_FILES: Partial<Record<SoundEvent, string>> = {
   illegal: "illegal", start: "game-start", end: "game-end", victory: "game-win", defeat: "game-lose",
   draw: "game-draw", checkmate: "game-end", stalemate: "game-draw", repetition: "game-draw",
   insufficient: "game-draw", lowtime: "tenseconds", notification: "notification", challenge: "notify", draw_offer: "drawoffer",
+  // Board pickup/UI touches and learning feedback use recorded cues as well.
+  // Never fall through to a synthesized selection sound in recorded mode.
+  select: "click", correct: "correct", wrong: "incorrect", sheet: "notify",
 };
 let chesscom = false;
 const chesscomBuffers = new Map<string, AudioBuffer>();

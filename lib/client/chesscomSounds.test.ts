@@ -10,6 +10,8 @@ describe("recorded Standard sound pack", () => {
     expect(CHESSCOM_FILES.victory).toBe("game-win");
     expect(CHESSCOM_FILES.defeat).toBe("game-lose");
     expect(CHESSCOM_FILES.draw).toBe("game-draw");
+    expect(CHESSCOM_FILES.select).toBe("click");
+    expect(CHESSCOM_FILES.wrong).toBe("incorrect");
   });
 
   it.each([
