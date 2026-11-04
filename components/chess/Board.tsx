@@ -9,6 +9,7 @@ import { playSound } from "@/lib/client/sound";
 import { haptic } from "@/lib/client/haptics";
 import { Piece } from "./Pieces";
 import { PromotionSheet } from "./PromotionSheet";
+import { dragActivated, squareFromClientPoint } from "@/lib/chess/boardGesture";
 
 export type BoardResult = { result?: string; reason?: string };
 
@@ -73,6 +74,23 @@ export function moveDuration(from: Square, to: Square, capture: boolean): number
 /** Fast out, soft landing: the piece is decisive but doesn't thud. */
 const MOVE_EASE = [0.22, 0.8, 0.3, 1] as const;
 
+type PointerGesture = {
+  pointerId: number;
+  from: Square;
+  startX: number;
+  startY: number;
+  size: number;
+  active: boolean;
+};
+
+type DragVisual = { from: Square; x: number; y: number; size: number };
+
+/** Keep the grabbed piece above the finger, without hiding the target square. */
+function ghostTransform(x: number, y: number, size: number): string {
+  // Ghost centre stays within 8 CSS px of the input point at every board size.
+  return `translate3d(${x - size * 0.55}px, ${y - size * 0.55 - Math.min(8, size * 0.18)}px, 0)`;
+}
+
 export const Board = memo(function Board({
   fen,
   orientation,
@@ -102,9 +120,15 @@ export const Board = memo(function Board({
   const { settings } = useSettings();
   const [selected, setSelected] = useState<Square | null>(null);
   const [cursor, setCursor] = useState<Square>(orientation === "w" ? "e2" : "e7");
-  const [drag, setDrag] = useState<{ from: Square; x: number; y: number; active: boolean; size: number } | null>(null);
+  // Pointer coordinates deliberately do not live in React state. Updating the
+  // entire 64-cell motion tree for every touchmove made a held piece lag behind
+  // the finger, especially on iOS. Only pickup/hover/drop cause React renders.
+  const gesture = useRef<PointerGesture | null>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+  const hoverRef = useRef<Square | null>(null);
+  const [dragVisual, setDragVisual] = useState<DragVisual | null>(null);
+  const [hoverSquare, setHoverSquare] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square; color: Color; queued: boolean } | null>(null);
-  const dragStart = useRef<{ x: number; y: number } | null>(null);
 
   const pieces = useMemo(() => piecesOf(fen), [fen]);
   const bySquare = useMemo(() => new Map<Square, BoardPiece>(pieces.map((p) => [p.square, p])), [pieces]);
@@ -138,9 +162,13 @@ export const Board = memo(function Board({
 
   // Drop selection whenever the position changes.
   useEffect(() => {
+    gesture.current = null;
+    hoverRef.current = null;
+    setDragVisual(null);
+    setHoverSquare(null);
     setSelected(null);
     setPromotion(null);
-  }, [fen]);
+  }, [fen, orientation]);
 
   // A piece dropped by drag is already on its square: don't slide it there again.
   const [dropped, setDropped] = useState<{ from: Square; to: Square } | null>(null);
@@ -218,45 +246,58 @@ export const Board = memo(function Board({
   const squareFromPoint = (clientX: number, clientY: number): Square | null => {
     const rect = boardRef.current?.getBoundingClientRect();
     if (!rect) return null;
-    const col = Math.floor(((clientX - rect.left) / rect.width) * 8);
-    const row = Math.floor(((clientY - rect.top) / rect.height) * 8);
-    if (col < 0 || col > 7 || row < 0 || row > 7) return null;
-    return squareAt(col, row, orientation);
+    return squareFromClientPoint(clientX, clientY, rect, orientation);
+  };
+
+  const cancelGesture = () => {
+    gesture.current = null;
+    hoverRef.current = null;
+    setDragVisual(null);
+    setHoverSquare(null);
   };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 || promotion) return;
+    if (e.button !== 0 || promotion || gesture.current) return;
     const square = squareFromPoint(e.clientX, e.clientY);
     if (!square) return;
     const piece = bySquare.get(square);
     if (piece && selectableColor && piece.color === selectableColor && targets.has(square)) {
       (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-      dragStart.current = { x: e.clientX, y: e.clientY };
       const size = (boardRef.current?.getBoundingClientRect().width ?? 0) / 8;
-      setDrag({ from: square, x: e.clientX, y: e.clientY, active: false, size });
+      gesture.current = { pointerId: e.pointerId, from: square, startX: e.clientX, startY: e.clientY, size, active: false };
     }
   };
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!drag || !dragStart.current) return;
-    const moved = Math.hypot(e.clientX - dragStart.current.x, e.clientY - dragStart.current.y) > 6;
-    if (moved || drag.active) {
-      if (!drag.active) {
-        setSelected(drag.from);
-        // Picking the piece up: one light tick, never a buzz while dragging.
-        if (selected !== drag.from) haptic("select");
-        onSelect?.();
+    const current = gesture.current;
+    if (!current || current.pointerId !== e.pointerId) return;
+    if (!current.active && dragActivated(current.startX, current.startY, e.clientX, e.clientY, e.pointerType)) {
+      current.active = true;
+      setSelected(current.from);
+      // Picking the piece up: one light tick, never a buzz while dragging.
+      if (selected !== current.from) haptic("select");
+      onSelect?.();
+      setDragVisual({ from: current.from, x: e.clientX, y: e.clientY, size: current.size });
+    }
+    if (current.active) {
+      // The compositor moves this single layer. React need not reconcile 64
+      // cells and dozens of Motion components at touch sampling frequency.
+      if (ghostRef.current) ghostRef.current.style.transform = ghostTransform(e.clientX, e.clientY, current.size);
+      const over = squareFromPoint(e.clientX, e.clientY);
+      if (hoverRef.current !== over) {
+        hoverRef.current = over;
+        setHoverSquare(over);
       }
-      setDrag({ ...drag, x: e.clientX, y: e.clientY, active: true });
     }
   };
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    const current = gesture.current;
+    if (current && current.pointerId !== e.pointerId) return;
     const square = squareFromPoint(e.clientX, e.clientY);
-    if (drag?.active) {
-      const from = drag.from;
-      setDrag(null);
-      dragStart.current = null;
+    if (current?.active) {
+      const from = current.from;
+      cancelGesture();
       // A dropped premove stays on its origin until it runs, so it must still slide then.
       if (square && square !== from && !queuing && targets.get(from)?.has(square)) setDropped({ from, to: square });
       if (square && square !== from && tryMove(from, square)) return;
@@ -264,8 +305,7 @@ export const Board = memo(function Board({
       setSelected(from);
       return;
     }
-    setDrag(null);
-    dragStart.current = null;
+    cancelGesture();
     if (square) {
       setCursor(square);
       setDropped(null);
@@ -286,6 +326,7 @@ export const Board = memo(function Board({
       e.preventDefault();
       activate(cursor);
     } else if (e.key === "Escape") {
+      cancelGesture();
       setSelected(null);
       onPremove?.(null);
     }
@@ -307,7 +348,8 @@ export const Board = memo(function Board({
       const shaking = !!illegal?.squares.includes(square);
       const isSelected = selected === square;
       const isHint = hintSquares.includes(square);
-      const hidden = drag?.active && drag.from === square;
+      const hidden = dragVisual?.from === square;
+      const hovered = !!dragVisual && hoverSquare === square && !!targets.get(dragVisual.from)?.has(square) && square !== dragVisual.from;
       const description = [
         square,
         piece ? `${piece.color === "w" ? "white" : "black"} ${pieceName(piece.type)}` : "empty",
@@ -346,6 +388,7 @@ export const Board = memo(function Board({
           {isLast && <div className="absolute inset-0" style={{ background: "var(--hl-last)" }} />}
           {isPremove && <div className="pointer-events-none absolute inset-0 bg-[#4277b7]/35 ring-2 ring-inset ring-[#4277b7]/80" />}
           {isSelected && <div className="absolute inset-0" style={{ background: "var(--hl-select)" }} />}
+          {hovered && <div data-drop-target className="pointer-events-none absolute inset-[4%] z-20 rounded-[6px] ring-[3px] ring-inset ring-[var(--hl-target)]" />}
           {isCheck && <div className="absolute inset-0" style={{ background: "radial-gradient(circle, var(--hl-check) 0%, transparent 72%)" }} />}
           {shaking && <div key={`flash-${illegal!.key}`} className="illegal-flash absolute inset-0" style={{ background: "rgba(220, 60, 50, 0.45)" }} />}
           {isHint && <div className="hint-square pointer-events-none absolute inset-0" />}
@@ -365,7 +408,7 @@ export const Board = memo(function Board({
               animate={{ opacity: 0, scale: 0.92 }}
               transition={{ duration: 0.09, delay: Math.max(0, (anim?.duration ?? 0.18) - 0.07), ease: "easeOut" }}
             >
-              <Piece type={fallen.piece.type} color={fallen.piece.color} set={settings.pieceSet} className="h-full w-full" />
+              <Piece type={fallen.piece.type} color={fallen.piece.color} set={settings.pieceSet} className="board-piece h-full w-full" />
             </motion.div>
           )}
           {piece && !hidden && (
@@ -388,7 +431,7 @@ export const Board = memo(function Board({
                 transition={{ duration: reducedMotion ? 0 : 0.45 }}
               >
                 <div key={shaking ? `shake-${illegal!.key}` : "still"} className={`h-full w-full ${shaking && !reducedMotion ? "illegal-shake" : ""}`}>
-                  <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="h-full w-full" />
+                  <Piece type={piece.type} color={piece.color} set={settings.pieceSet} className="board-piece h-full w-full" />
                 </div>
               </motion.div>
             </motion.div>
@@ -418,8 +461,8 @@ export const Board = memo(function Board({
     }
   }
 
-  const ghost = drag?.active ? bySquare.get(drag.from) : undefined;
-  const size = drag?.size ?? 0;
+  const ghost = dragVisual ? bySquare.get(dragVisual.from) : undefined;
+  const size = dragVisual?.size ?? 0;
 
   return (
     // The board is always left-to-right (files a-h), even when the page is RTL.
@@ -430,13 +473,14 @@ export const Board = memo(function Board({
         aria-label={label}
         aria-rowcount={8}
         aria-colcount={8}
-        className={`board relative grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[10px] shadow-[var(--shadow)] ${drag ? "[&_*]:!cursor-grabbing !cursor-grabbing" : ""}`}
+        className={`board relative grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[10px] shadow-[var(--shadow)] ${dragVisual ? "[&_*]:!cursor-grabbing !cursor-grabbing" : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={() => setDrag(null)}
+        onPointerCancel={(event) => { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }}
+        onLostPointerCapture={(event) => { if (gesture.current?.pointerId === event.pointerId) cancelGesture(); }}
         onKeyDown={onKeyDown}
-        onContextMenu={(event) => { event.preventDefault(); setSelected(null); onPremove?.(null); }}
+        onContextMenu={(event) => { event.preventDefault(); cancelGesture(); setSelected(null); onPremove?.(null); }}
       >
         {Array.from({ length: 8 }, (_, row) => <div key={row} role="row" className="contents">{cells.slice(row * 8, row * 8 + 8)}</div>)}
       </div>
@@ -445,12 +489,14 @@ export const Board = memo(function Board({
         return <svg aria-hidden="true" data-hint-arrow className="pointer-events-none absolute inset-0 z-30 h-full w-full" viewBox="0 0 8 8"><defs><marker id={arrowId} markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto"><path d="M0,0 L3,1.5 L0,3 Z" fill="var(--hint-arrow)" /></marker></defs><line x1={from.col + 0.5} y1={from.row + 0.5} x2={to.col + 0.5} y2={to.row + 0.5} stroke="var(--hint-arrow)" strokeWidth="0.14" strokeLinecap="round" markerEnd={`url(#${arrowId})`} /></svg>;
       })()}
       <span className="sr-only" aria-live="polite">{premove ? `Premove queued: ${premove.slice(0, 2)} to ${premove.slice(2, 4)}. Press Escape to cancel.` : ""}</span>
-      {ghost && drag && size > 0 && (
+      {ghost && dragVisual && size > 0 && (
         <div
-          className="pointer-events-none fixed z-50"
-          style={{ left: drag.x - size * 0.6, top: drag.y - size * 0.75, width: size * 1.2, height: size * 1.2 }}
+          ref={ghostRef}
+          data-drag-ghost
+          className="pointer-events-none fixed left-0 top-0 z-50 will-change-transform"
+          style={{ transform: ghostTransform(dragVisual.x, dragVisual.y, size), width: size * 1.1, height: size * 1.1 }}
         >
-          <Piece type={ghost.type} color={ghost.color} set={settings.pieceSet} className="h-full w-full drop-shadow-[0_8px_10px_rgba(0,0,0,0.3)]" />
+          <Piece type={ghost.type} color={ghost.color} set={settings.pieceSet} className="board-piece h-full w-full drop-shadow-[0_8px_10px_rgba(0,0,0,0.3)]" />
         </div>
       )}
       {promotion && (

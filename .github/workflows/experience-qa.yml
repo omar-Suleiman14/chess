@@ -31,6 +31,7 @@ jobs:
         with:
           name: experience-evidence
           path: |
+            .cache/board-feel
             .cache/experience-qa
             .cache/performance
           retention-days: 14

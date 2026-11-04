@@ -13,6 +13,9 @@ import { configureAudio, configureChesscomSounds, installAudioUnlock } from "./s
 import { configureHaptics, prepareHaptics, type HapticLevel } from "./haptics";
 
 export type Palette = "ivory" | "sage" | "slate" | "blue";
+export type BoardPieceSize = "compact" | "balanced" | "bold";
+const BOARD_PIECE_SCALE: Record<BoardPieceSize, string> = { compact: "1", balanced: "1.07", bold: "1.14" };
+const BOARD_PIECE_SIZE_KEY = "cbc.board.pieceSize.v1";
 
 export type Settings = {
   experience: Experience;
@@ -78,6 +81,9 @@ type Ctx = {
   /** Board theme id (colours + pieces), saved on this device. "" = the board palette. */
   boardTheme: string;
   setBoardTheme: (id: string) => void;
+  /** Visual size only, saved locally so a theme cannot unexpectedly resize pieces. */
+  boardPieceSize: BoardPieceSize;
+  setBoardPieceSize: (size: BoardPieceSize) => void;
 };
 const SettingsContext = createContext<Ctx | null>(null);
 
@@ -176,6 +182,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [hapticStrength, setHapticStrength] = useState<Exclude<HapticLevel, "off">>("standard");
   // Chess.com's official sounds are the default; "off" is remembered per device.
   const [chesscomSounds, setChesscomState] = useState(true);
+  const [boardPieceSize, setBoardPieceSizeState] = useState<BoardPieceSize>("balanced");
   // Newer backends also store the board theme; older ones would reject the field.
   const boardThemeSupported = useRef(false);
   /** Capabilities answered (or failed): pushes wait for it so newer fields aren't skipped. */
@@ -196,6 +203,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
     setHapticStrength(loadHapticStrength());
     try { setChesscomState(localStorage.getItem(CHESSCOM_KEY) !== "off"); } catch { /* Default on. */ }
+    try {
+      const stored = localStorage.getItem(BOARD_PIECE_SIZE_KEY);
+      if (stored === "compact" || stored === "bold") setBoardPieceSizeState(stored);
+    } catch { /* Default to balanced. */ }
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setSystemReduced(media.matches);
     const onChange = () => setSystemReduced(media.matches);
@@ -293,6 +304,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     configureChesscomSounds(on);
     try { localStorage.setItem(CHESSCOM_KEY, on ? "on" : "off"); } catch { /* This visit only. */ }
   }, []);
+  const setBoardPieceSize = useCallback((size: BoardPieceSize) => {
+    setBoardPieceSizeState(size);
+    try { localStorage.setItem(BOARD_PIECE_SIZE_KEY, size); } catch { /* This visit only. */ }
+  }, []);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--board-piece-scale", BOARD_PIECE_SCALE[boardPieceSize]);
+  }, [boardPieceSize]);
   const boardTheme = settings.boardTheme;
   const setBoardTheme = useCallback((id: string) => {
     const theme = findBoardTheme(id);
@@ -336,7 +354,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings.palette, settings.highContrast, settings.experience, systemDark, reducedMotion]);
 
 
-  const value = useMemo(() => ({ settings, update, updateExperience, syncsExperience: isAuthenticated && syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme, setBoardTheme }), [settings, update, updateExperience, isAuthenticated, syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme, setBoardTheme]);
+  const value = useMemo(() => ({ settings, update, updateExperience, syncsExperience: isAuthenticated && syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme, setBoardTheme, boardPieceSize, setBoardPieceSize }), [settings, update, updateExperience, isAuthenticated, syncsExperience, reducedTransparency, reducedMotion, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme, setBoardTheme, boardPieceSize, setBoardPieceSize]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 

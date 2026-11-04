@@ -13,6 +13,7 @@
     "calibrate": "esbuild scripts/calibrate.ts --bundle --platform=node --format=esm --packages=external --outfile=.cache/calibrate.mjs --log-level=warning && node .cache/calibrate.mjs",
     "slice-fatma": "node scripts/slice-fatma.mjs",
     "test:experience": "node scripts/qa-server.mjs -- node scripts/qa-suite.mjs",
+    "test:board-feel": "node scripts/qa-server.mjs -- node scripts/verify-board-feel.mjs",
     "bench:ui": "node scripts/benchmark-ui.mjs",
     "bench:lighthouse": "node scripts/lighthouse-ui.mjs",
     "check:docs": "node scripts/check-docs.mjs",

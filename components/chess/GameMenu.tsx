@@ -1,19 +1,21 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "@/components/navigation/PrefetchLink";
 import { Sheet } from "@/components/ui/Sheet";
 import { SwitchRow } from "@/components/ui/Switch";
 import { Segmented } from "./GameScreen";
 import { useSettings } from "@/lib/client/settings";
+import type { BoardPieceSize } from "@/lib/client/settings";
 import { useCoachingPreferences } from "@/lib/client/useCoachingPreferences";
 import { haptic, type HapticLevel } from "@/lib/client/haptics";
 import { BOARD_THEMES, findBoardTheme } from "@/lib/experience/boardThemes";
 import { NavIcon } from "@/components/shell/NavIcon";
 import { useShell } from "@/components/shell/AppShell";
 import type { TabId } from "@/components/shell/TabBar";
+import { readBotPace, saveBotPace, type BotPace } from "@/lib/client/botPace";
 
 const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 const Icon = ({ children }: { children: ReactNode }) => <svg viewBox="0 0 24 24" className="h-[22px] w-[22px] shrink-0" aria-hidden="true">{children}</svg>;
@@ -111,10 +113,13 @@ export function GameMenu({ anchor, onClose, actions }: { anchor: DOMRect; onClos
 
 /** The in-game settings drawer: the switches you reach for mid-game, with a link to everything else. */
 export function GameSettingsSheet({ onClose }: { onClose: () => void }) {
-  const { settings, update, updateExperience, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme } = useSettings();
+  const { settings, update, updateExperience, hapticLevel, setHapticLevel, chesscomSounds, setChesscomSounds, boardTheme, boardPieceSize, setBoardPieceSize } = useSettings();
   const { coaching, updateCoaching } = useCoachingPreferences();
   const theme = findBoardTheme(boardTheme || settings.palette) ?? BOARD_THEMES[0];
   const ambient = settings.experience.ambient;
+  // This sheet mounts only on user interaction, so reading the local device
+  // preference in the initializer has no server-rendered hydration mismatch.
+  const [botPace, setBotPace] = useState<BotPace>(readBotPace);
   return (
     <Sheet
       title="Settings"
@@ -142,6 +147,9 @@ export function GameSettingsSheet({ onClose }: { onClose: () => void }) {
           <SwitchRow label="Live background" checked={ambient.mode === "ambient"} onChange={(on) => updateExperience({ ambient: { ...ambient, mode: on ? "ambient" : "minimal" } })} />
         </div>
         <Segmented<HapticLevel> label="Haptics" value={hapticLevel} onChange={(level) => { setHapticLevel(level); if (level !== "off") haptic("capture"); }} options={[["off", "Off"], ["subtle", "Subtle"], ["standard", "Standard"]]} />
+        <Segmented<BotPace> label="Bot move speed" value={botPace} onChange={(pace) => { saveBotPace(pace); setBotPace(pace); }} options={[["instant", "Instant"], ["natural", "Natural"], ["relaxed", "Relaxed"]]} />
+        <p className="px-1 text-xs text-muted">Natural gives you a moment to follow Sherine’s moves. Timed games stay quick. Bot difficulty is unchanged.</p>
+        <Segmented<BoardPieceSize> label="Piece size" value={boardPieceSize} onChange={setBoardPieceSize} options={[["compact", "Compact"], ["balanced", "Balanced"], ["bold", "Bold"]]} />
       </div>
     </Sheet>
   );

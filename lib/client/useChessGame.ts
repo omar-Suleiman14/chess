@@ -15,6 +15,7 @@ import { getEngine, supportsEngine } from "./engine";
 import { newKey } from "./ids";
 import { store, type LocalGame, type LocalGameMeta } from "./store";
 import { useSync } from "./sync";
+import { minimumBotTurnMs, readBotPace } from "./botPace";
 
 export type NewGameOptions = {
   mode: LocalGameMeta["mode"];
@@ -162,6 +163,7 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
     const opponent = findOpponent(g.meta.opponentId, g.meta.opponentVersion ?? 1);
     if (!opponent) return;
     const generation = ++replyGeneration.current;
+    const startedAt = monotonicNow();
     setThinking(true);
     setEngineError(null);
     try {
@@ -187,7 +189,17 @@ export function useChessGame({ think, onMove, onFatma }: Options) {
       // Discard stale replies (undo, new game, branch switch while thinking).
       const current = gameRef.current;
       if (generation !== replyGeneration.current || !current || headNode(current.tree).key !== head.key) return;
-      if (uci) await play(uci, "fatma");
+      if (uci) {
+        // Fast engine searches could make Sherine appear to teleport. Give the
+        // player a readable beat, but do not add a full delay on top of a slow
+        // search or artificially stall a timed game. The preference is local.
+        const minimum = minimumBotTurnMs(readBotPace(), !!g.meta.timeControlId);
+        const remaining = minimum - (monotonicNow() - startedAt);
+        if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+        const latest = gameRef.current;
+        if (generation !== replyGeneration.current || !latest || headNode(latest.tree).key !== head.key) return;
+        await play(uci, "fatma");
+      }
     } catch (error) {
       if (error instanceof SearchCancelled) return;
       if (generation === replyGeneration.current) {

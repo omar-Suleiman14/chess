@@ -189,10 +189,14 @@ export function synthesize(
         value = sine(0.5) * Math.exp(-12 * u) + 0.8 * noise * Math.exp(-18 * u);
         break;
       case "classic":
+        // A short physical wood-and-piece contact, not a sustained electronic
+        // note. The first transient supplies the click; the softer low body
+        // supplies the board resonance. This is our own deterministic fallback
+        // when recorded sounds have not loaded or the user chooses Classic.
         value =
-          sine(0.7) * 0.7 +
-          noise * Math.exp(-20 * u) * 0.6 +
-          sine(2.4) * Math.exp(-13 * u) * 0.2;
+          noise * Math.exp(-45 * u) * 0.9 +
+          sine(0.47) * Math.exp(-15 * u) * 0.35 +
+          sine(1.65) * Math.exp(-25 * u) * 0.16;
         break;
       default:
         value = 0;
