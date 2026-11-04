@@ -19,7 +19,12 @@ async function centre(page, square) {
 
 try {
   const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
-  await context.addInitScript(() => localStorage.setItem("cbc.settings.v1", JSON.stringify({ sound: false, evalBar: false })));
+  // Seed preferences only once. addInitScript runs on EVERY navigation: an
+  // unconditional write would undo a piece-set choice before verifying that
+  // the setting survives a reload.
+  await context.addInitScript(() => {
+    if (!localStorage.getItem("cbc.settings.v1")) localStorage.setItem("cbc.settings.v1", JSON.stringify({ sound: false, evalBar: false }));
+  });
   const page = await context.newPage();
   await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   await expect(page.getByRole("grid")).toBeVisible();
@@ -92,8 +97,8 @@ try {
   await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   // e2 is empty after the earlier e2→e4 drag; check every piece, not the
   // original square. This catches partial theme swaps as well.
-  await expect(page.locator("svg.board-piece")).toHaveCount(32);
   await page.screenshot({ path: `${output}/desktop-studio.png` });
+  await expect(page.locator("svg.board-piece")).toHaveCount(32);
   results.push("Studio SVG set selects and persists across navigation");
   await page.goto(`${process.env.QA_URL ?? "http://127.0.0.1:3100"}/settings`);
   await page.getByRole("radiogroup", { name: "Piece style" }).getByRole("radio", { name: /Chess.com · Neo/ }).click();
