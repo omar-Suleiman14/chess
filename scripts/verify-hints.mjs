@@ -20,7 +20,7 @@ try {
     await expect(page.locator(".hint-square")).toHaveCount(1, { timeout: 20000 });
     await expect(status).toBeVisible();
     await expect(page.locator("[data-hint-arrow]")).toHaveCount(0);
-    await hint.click();
+    await page.getByRole("button", { name: "Show move", exact: true }).click();
     await expect(page.locator(".hint-square")).toHaveCount(2);
     await expect(page.locator("[data-hint-arrow]")).toHaveCount(1);
     expect(await page.getByRole("gridcell").allTextContents()).toEqual(boardBefore);
@@ -44,8 +44,8 @@ try {
     await consent.getByRole("button", { name: "Use hint", exact: true }).click();
     await expect(panel).toHaveCount(1, { timeout: 20000 });
     await expect(page.getByText("Unrated · assistance used", { exact: true })).toBeVisible();
-    await hint.click();
-    await hint.click();
+    await page.getByRole("button", { name: "Show move", exact: true }).click();
+    await page.getByRole("button", { name: "Hide hint", exact: true }).click();
     await expect(panel).toHaveCount(0);
     await expect(page.getByText("Unrated · assistance used", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Game options", exact: true }).click();

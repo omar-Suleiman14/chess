@@ -19,7 +19,7 @@ This change **keeps the custom Chess by Chaos board**. The benchmark is the *fee
 | H06 | Retained existing distance-bounded 130–240ms motion, rook/capture/replay treatment and reduced-motion support | Existing component; production build |
 | H07 | Opponent pacing: Instant, Natural (650ms untimed / 240ms timed) or Relaxed (1150ms / 600ms) minimum **total** think time, including search; stale replies remain cancellable | `botPace.test.ts`; manual QA steps below |
 | H08 | Device-local Compact/Balanced/Bold piece sizing (1.0×, 1.07×, 1.14×) that retains existing board themes and piece sets | Settings controls; real-browser QA script |
-| H09–H10 | Retained native evaluation and staged source-square/arrow hints; clarified Hint → Show move → Hide hint label; softened overlays for matte UI | Existing `verify-hints.mjs` and new components |
+| H09–H10 | Retained native evaluation and staged source-square/arrow hints; clarified Hint → Cancel hint while loading → Show move → Hide hint; accessible labels match the visible action; softened overlays for matte UI | Updated `verify-hints.mjs` and components |
 | H11 | Softer original wooden impact fallback when recorded Chess.com cues aren't available; existing selectable recorded-sound option, audio unlock and category cues preserved | Existing `sound.test.ts`, `experience.test.ts` |
 | H12 | Retained existing result modal, announcements and result cues | Existing `verify-experience.mjs` |
 

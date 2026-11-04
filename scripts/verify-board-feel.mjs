@@ -23,6 +23,13 @@ try {
   const page = await context.newPage();
   await page.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   await expect(page.getByRole("grid")).toBeVisible();
+  // The grid is server-rendered. A visible square does not mean the React
+  // pointer handlers have hydrated yet; prove that they respond to a pickup
+  // before measuring the compositor drag path.
+  await page.locator("#sq-e2").click();
+  await expect(page.locator("#sq-e2")).toHaveAttribute("aria-label", /selected/);
+  await page.locator("#sq-e2").click();
+  await expect(page.locator("#sq-e2")).not.toHaveAttribute("aria-label", /selected/);
   await page.screenshot({ path: `${output}/desktop-before.png` });
 
   const from = await centre(page, "e2");
@@ -77,6 +84,10 @@ try {
   const phone = await touch.newPage();
   await phone.goto(process.env.QA_URL ?? "http://127.0.0.1:3100");
   await expect(phone.getByRole("grid")).toBeVisible();
+  await phone.locator("#sq-e2").tap();
+  await expect(phone.locator("#sq-e2")).toHaveAttribute("aria-label", /selected/);
+  await phone.locator("#sq-e2").tap();
+  await expect(phone.locator("#sq-e2")).not.toHaveAttribute("aria-label", /selected/);
   const origin = await centre(phone, "e2");
   const target = await centre(phone, "e4");
   const session = await touch.newCDPSession(phone);
