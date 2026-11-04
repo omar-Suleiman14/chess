@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_POSITION } from "../rules";
 import { beginnerMove, hashSeed } from "./beginner";
 import { EngineController, EngineFailure, SearchCancelled, type WorkerLike } from "./controller";
-import { CLIMB_OPPONENTS, findOpponent, fullPowerOpponent } from "./opponents";
+import { botPersona, CLIMB_OPPONENTS, findOpponent, fullPowerOpponent, PERSONA_NAMES } from "./opponents";
 import { barFill, formatScore, parseBestMove, parseInfo, toWhiteScore } from "./uci";
 
 describe("UCI parsing", () => {
@@ -189,6 +189,18 @@ describe("EngineController", () => {
 });
 
 describe("opponents", () => {
+  it("calls every difficulty Sherine without changing the engine presets", () => {
+    for (const opponent of [...CLIMB_OPPONENTS, ...(["fast", "standard", "deep"] as const).map(fullPowerOpponent)]) {
+      expect(opponent.name).toMatch(/^Sherine/);
+      expect(botPersona(opponent)).toBe("sherine");
+      expect(PERSONA_NAMES[botPersona(opponent)]).toBe("Sherine");
+    }
+    expect(PERSONA_NAMES.maya).toBe("Sherine"); // legacy persona aliases are harmless
+    expect(findOpponent("climb-11", 1)?.policy).toEqual(fullPowerOpponent("standard").policy);
+    expect(fullPowerOpponent("fast").policy).toMatchObject({ options: {}, movetimeMs: 400 });
+    expect(fullPowerOpponent("deep").policy).toMatchObject({ options: {}, movetimeMs: 3500 });
+  });
+
   it("keeps an existing game's policy stable across ladder revisions", () => {
     const old = findOpponent("climb-07", 1)!;
     const current = findOpponent("climb-07")!;

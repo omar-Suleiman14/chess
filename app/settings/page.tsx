@@ -175,8 +175,8 @@ export default function SettingsPage() {
         </Group>
 
 
-        <Group title="Sherine & Maya">
-          <SwitchRow label="Dialogue sounds" hint="A quiet chime when Sherine or Maya speaks. No voice." checked={settings.fatmaSound} onChange={(fatmaSound) => { unlockAudio(); update({ fatmaSound }); }} />
+        <Group title="Sherine">
+          <SwitchRow label="Dialogue sounds" hint="A quiet chime when Sherine speaks. No voice." checked={settings.fatmaSound} onChange={(fatmaSound) => { unlockAudio(); update({ fatmaSound }); }} />
           <SwitchRow label="Auto language" hint="Browser language initially; follows Arabic, English or Arabizi when you say hi." checked={coaching.autoLanguage} onChange={(autoLanguage) => updateCoaching({ autoLanguage })} />
           <Segmented label="They speak" value={settings.fatmaLanguage} onChange={(fatmaLanguage) => update({ fatmaLanguage })} options={FATMA_LANGUAGES} />
           <div className="mt-3 grid gap-3">
@@ -187,9 +187,9 @@ export default function SettingsPage() {
           <p className="mt-2 px-1 text-xs text-muted">Franco is Egyptian Arabic in Latin letters (3 = ع, 7 = ح, 2 = ء). Tap Sherine during a game to talk to her.</p>
         </Group>
 
-        <Group title="Maya (Full Power)">
+        <Group title="Sherine (Full Power)">
           <Segmented label="Thinking time" value={settings.think} onChange={(think) => update({ think })} options={[["fast", "Fast · 0.4s"], ["standard", "Standard · 1.2s"], ["deep", "Deep · 3.5s"]]} />
-          <p className="mt-2 px-1 text-xs text-muted">Maya is the strongest bot: Stockfish 19 Lite on this device, never artificially limited. Sherine plays the weaker levels.</p>
+          <p className="mt-2 px-1 text-xs text-muted">Sherine plays at full strength with Stockfish 19 Lite in Full Power mode. The Climb offers easier versions of Sherine.</p>
         </Group>
       </div>
     </main>

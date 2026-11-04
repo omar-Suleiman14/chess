@@ -12,7 +12,7 @@ export { Dialog } from "@/components/ui/Dialog";
 import { useGameFocus } from "@/components/shell/AppShell";
 import { LoadingScreen } from "@/components/shell/LoadingScreen";
 import { findTimeControl, remaining } from "@/lib/chess/clock";
-import { botPersona, findOpponent, PERSONA_NAMES, type BotPersona } from "@/lib/chess/engine/opponents";
+import { botPersona, findOpponent, PERSONA_NAMES } from "@/lib/chess/engine/opponents";
 import { headNode, moveLabel, pathTo } from "@/lib/chess/history/tree";
 import { describeMove, kingSquare, positionStatus, sideToMove, type Color, type Square } from "@/lib/chess/rules";
 import { useEngineState, usePrewarmEngine } from "@/lib/client/engine";
@@ -57,9 +57,7 @@ type Props = {
 export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props) {
   const { settings, reducedMotion, update } = useSettings();
   const { coaching } = useCoachingPreferences();
-  // Maya in full-strength games, Sherine otherwise; follows the loaded game once it's known.
-  const [persona, setPersona] = useState<BotPersona>(() => botPersona({ id: defaults.opponentId }));
-  const fatma = useFatma(persona);
+  const fatma = useFatma();
   const sync = useSync();
   const engineState = useEngineState();
   const [announcement, setAnnouncement] = useState("");
@@ -191,9 +189,6 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const opponent = game ? findOpponent(game.meta.opponentId, game.meta.opponentVersion ?? 1) : undefined;
   const botName = PERSONA_NAMES[botPersona(opponent ?? { id: defaults.opponentId })];
   useEffect(() => { botNameRef.current = botName; }, [botName]);
-  const gamePersona = botPersona(opponent ?? { id: defaults.opponentId });
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setPersona(gamePersona), [gamePersona]);
   const active = game?.meta.status === "active";
   const ratedEligible = game?.meta.rated === "eligible";
   const evalAllowed = settings.evalBar && (!active || !ratedEligible);
@@ -318,7 +313,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
   const hintContextRef = useRef(hintContext);
   useEffect(() => { hintContextRef.current = hintContext; hintOperation.current++; }, [hintContext]);
   const hintStage = hintRequest?.context === hintContext && active && turn === human && !reviewing && !chess.thinking ? hintRequest.stage : null;
-  // Hints are app UI: always plain English. Only Sherine and Maya speak Arabic or Franco.
+  // Hints are app UI: always plain English. Sherine speaks Arabic or Franco too.
   const hintCopy = HINT_COPY.en;
   useEffect(() => {
     if (!hintStage) return;
@@ -768,9 +763,9 @@ function NewGameDialog({
     <Dialog title="New game" onClose={onClose}>
       <Segmented label="Play as" value={color} onChange={setColor} options={[["w", "White"], ["random", "Random"], ["b", "Black"]]} />
       {defaults.mode === "full_power" && (
-        <Segmented label="Maya thinks" value={think} onChange={onThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
+        <Segmented label="Sherine thinks" value={think} onChange={onThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
       )}
-      <p className="text-xs text-muted">Maya plays at full strength in every setting. Thinking time changes how long she searches, not a fake Elo.</p>
+      <p className="text-xs text-muted">Sherine plays at full strength in every setting. Thinking time changes how long she searches, not a fake Elo.</p>
       <button onClick={start} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text">
         Start
       </button>

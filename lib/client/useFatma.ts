@@ -14,8 +14,6 @@ import {
   type Mood,
 } from "../chess/personality/fatma";
 import { linesFor, type FatmaLanguage } from "../chess/personality/lines";
-import { mayaLinesFor } from "../chess/personality/maya";
-import type { BotPersona } from "../chess/engine/opponents";
 import { packLines, validatePack } from "../chess/personality/packs";
 import { useSettings } from "./settings";
 import { useCoachingPreferences } from "./useCoachingPreferences";
@@ -38,8 +36,7 @@ function loadLocal(): FatmaMemory {
  * Sherine's runtime: picks lines locally (no network per move), persists
  * memory in Convex when signed in, localStorage for guests.
  */
-/** Sherine by default; in Maya's games the same runtime speaks Maya's own lines. */
-export function useFatma(persona: BotPersona = "sherine") {
+export function useFatma() {
   const { isAuthenticated } = useConvexAuth();
   const { settings } = useSettings();
   const { coaching } = useCoachingPreferences();
@@ -98,9 +95,9 @@ export function useFatma(persona: BotPersona = "sherine") {
   }, [memory]);
 
   // Re-validate installed packs on the client too (defence in depth).
-  const linesOf = useCallback((lang: FatmaLanguage) => (persona === "maya" ? mayaLinesFor(lang) : linesFor(lang)), [persona]);
+  const linesOf = useCallback((lang: FatmaLanguage) => linesFor(lang), []);
   const lines = useMemo(
-    () => persona === "maya" ? mayaLinesFor(language) : [
+    () => [
       ...linesFor(language),
       // Installed upgrade packs are Sherine's.
       ...(remote?.packs ?? []).flatMap((p) => {
@@ -108,7 +105,7 @@ export function useFatma(persona: BotPersona = "sherine") {
         return checked.ok ? (packLines(checked.pack) as DialogueLine[]) : [];
       }),
     ],
-    [remote?.packs, language, persona],
+    [remote?.packs, language],
   );
 
   const saveLocal = useCallback((next: FatmaMemory) => {
