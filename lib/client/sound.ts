@@ -65,18 +65,22 @@ function loadChesscom(): void {
   const context = audio();
   for (const file of new Set(Object.values(CHESSCOM_FILES))) {
     const url = `${CHESSCOM_BASE}${file}.mp3`;
-    // Decoded buffers play with no latency; if the server refuses CORS, fall back to an <audio> element.
+    // Prepare a media fallback immediately. Previously this happened only
+    // after a failed fetch: the first several moves used the harsh synth while
+    // the network/decode was still in flight, and media playback failure could
+    // silently swallow the cue. Common moves get preload priority.
+    try {
+      const element = new Audio(url);
+      element.preload = ["move-self", "move-opponent", "capture", "move-check", "premove"].includes(file) ? "auto" : "metadata";
+      chesscomElements.set(file, element);
+    } catch { /* Web Audio remains available on media-less devices. */ }
+    // Decoded buffers are preferred: low-latency and less affected by Safari
+    // HTMLAudioElement autoplay policy after the initial user gesture.
     void fetch(url, { credentials: "omit" })
       .then((response) => { if (!response.ok) throw new Error(String(response.status)); return response.arrayBuffer(); })
       .then((data) => { if (!context) throw new Error("no audio"); return context.decodeAudioData(data); })
       .then((decoded) => { chesscomBuffers.set(file, decoded); })
-      .catch(() => {
-        try {
-          const element = new Audio(url);
-          element.preload = "auto";
-          chesscomElements.set(file, element);
-        } catch { /* No audio elements: the built-in cue plays. */ }
-      });
+      .catch(() => { /* The already-prepared media source may still work. */ });
   }
 }
 
@@ -86,7 +90,7 @@ export function configureChesscomSounds(on: boolean): void {
   if (on) loadChesscom();
 }
 
-function playChesscom(name: SoundEvent, gain: number): boolean {
+function playChesscom(name: SoundEvent, gain: number, fallback: () => void): boolean {
   const file = CHESSCOM_FILES[name];
   if (!chesscom || !file) return false;
   if (document.hidden) return true;
@@ -115,7 +119,7 @@ function playChesscom(name: SoundEvent, gain: number): boolean {
     clip.volume = Math.max(0, Math.min(1, gain));
     chesscomClips.add(clip);
     clip.onended = () => chesscomClips.delete(clip);
-    void clip.play().catch(() => chesscomClips.delete(clip));
+    void clip.play().catch(() => { chesscomClips.delete(clip); fallback(); });
     return true;
   }
   return false;
@@ -213,7 +217,7 @@ export function playSound(name: SoundName, volume = preferences.master, options:
     seen.set(options.key, Date.now());
     if (seen.size > 256) seen.delete(seen.keys().next().value!);
   }
-  if (!options.pack && !options.preview && playChesscom(name, Math.max(0, Math.min(1, volume)) * preferences.audio[options.channel ?? soundChannel(name)])) return;
+  if (!options.pack && !options.preview && playChesscom(name, Math.max(0, Math.min(1, volume)) * preferences.audio[options.channel ?? soundChannel(name)], () => playSound(name, volume, { ...options, pack, key: undefined }))) return;
   const context = audio();
   if (!context) return;
   const requested = performance.now();

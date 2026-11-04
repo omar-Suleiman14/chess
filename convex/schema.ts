@@ -14,7 +14,7 @@ export const settingsValidator = v.object({
     audio: zodToConvex(audioSchema.omit({ overrides: true })).extend({ overrides: v.record(v.string(), zodToConvex(soundPackSchema)) }),
   })),
   palette: v.optional(v.union(v.literal("ivory"), v.literal("sage"), v.literal("slate"), v.literal("blue"))),
-  pieceSet: v.optional(v.union(v.literal("cburnett"), v.literal("merida"), v.literal("chessnut"), v.literal("mpchess"), v.literal("fantasy"))),
+  pieceSet: v.optional(v.union(v.literal("cburnett"), v.literal("merida"), v.literal("chessnut"), v.literal("mpchess"), v.literal("fantasy"), v.literal("studio"), v.literal("chesscom"))),
   sound: v.optional(v.boolean()),
   volume: v.optional(v.number()),
   haptics: v.optional(v.boolean()),

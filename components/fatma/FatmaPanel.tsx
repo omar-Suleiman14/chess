@@ -32,7 +32,7 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, o
   const bubble = fatma.enabled && fatma.line && (
     <button
       onClick={fatma.dismiss}
-      className="bubble-in pointer-events-auto max-w-[min(100%,280px)] rounded-2xl rounded-es-sm bg-surface px-3 py-1.5 text-start text-sm leading-snug shadow-[var(--shadow)]"
+      className="bubble-in pointer-events-auto max-w-full rounded-2xl rounded-es-sm bg-surface px-3 py-2 text-start text-sm leading-[1.35] shadow-[var(--shadow)] lg:max-w-[280px]"
       aria-label={`${name} says: ${fatma.line.text}. Tap to dismiss.`}
     >
       <StreamedText text={text} visible={progress.visible} />
@@ -41,13 +41,13 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, o
 
   if (showName) {
     return (
-      <div className="pointer-events-none relative flex h-14 w-full min-w-0 items-center gap-2">
+      <div className="pointer-events-none relative flex h-16 w-full min-w-0 items-center gap-2 lg:h-14">
         {fatma.enabled && (
           <button onClick={() => { unlockAudio(); fatma.say("poke"); setChatOpen((open) => !open); }} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label={`Talk to ${name}`} aria-expanded={chatOpen} title={`Talk to ${name}`}>
             {persona === "maya" ? <MayaAvatar expression={expression} speaking={progress.speaking} size={44} reducedMotion={reducedMotion} /> : <FatmaSprite expression={expression} speaking={progress.speaking} size={48} reducedMotion={reducedMotion} />}
           </button>
         )}
-        <div className="min-w-0 max-w-[65%] shrink-0">
+        <div className="min-w-0 max-w-[46%] shrink-0 lg:max-w-[65%]">
           <div className="flex min-w-0 items-center gap-1"><span className="text-sm font-semibold">{name}</span><BotRatingBadge opponent={opponent} /></div>
           <CapturedPieces pieces={captures} color={capturedColor} advantage={advantage} />
         </div>

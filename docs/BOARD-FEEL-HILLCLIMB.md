@@ -25,6 +25,19 @@ This change **keeps the custom Chess by Chaos board**. The benchmark is the *fee
 
 This is a **code-level improvement**, not a claim that the 95/100 perceptual target has been measured or that all H00–H15 are verified. The benchmark atlas and human/device evaluation still matter.
 
+## Follow-up hill: input cues, hand reach and piece identity
+
+| Hill | Change | Verification |
+| --- | --- | --- |
+| H16 | Show a small muted origin disc while holding a piece, legal destination discs, capture rings and a subtle rounded hover/drop ring. Premove targets use a separate quiet blue. Preserve click selection, drag cancellation and board themes. | The browser drag test asserts one origin, two legal targets from e2, and an active drop target. |
+| H17 | Move the board down into the thumb-accessible lower-middle zone on tall mobile screens by splitting flexible whitespace above and below it, with the board and touch controls retaining priority on compact screens. | A 390 × 844 browser trace checks board top ≥150px and bottom ≤740px and captures before/drag/after screenshots. |
+| H18 | Give Sherine's spoken text a wider bubble, 64px mobile player row and more breathing space while keeping the desktop layout unchanged. | Review phone screenshot and compare at matching viewport with video reference. |
+| H19 | Include an original hand-authored inline SVG **Studio** piece set for all six piece types in both colors, preserving other existing piece sets and saved settings. | Twelve server-rendered SVG variants, schema-backed settings test and persisted piece-style selection in browser; `desktop-studio.png`. |
+| H20 | Prefer Chess.com recorded cues from the existing opt-in Chess.com sound pack sooner: prepare browser media immediately, decode Web Audio in parallel, retain the original built-in fallback if media cannot play. | Sound unit tests verify early media preparation and rejected-media fallback; browser QA requests original move, capture, check and premove cues and checks the response is audio. No third-party sound files are committed. |
+| H21 | Provide **Chess.com · Neo** as a separate, exact-source image set: transparently stream the original 150px PNG art through a same-origin route, with the existing six custom piece sets and Studio preserved. A hand-drawn SVG is not pixel-identical to the source artwork; this source-backed option is. | Unit-check 12 path mappings; browser-select and load all 32 actual images; capture `desktop-chesscom-neo.png` for reference comparison. Dependence on Chess.com's external asset host is explicit. |
+
+Earlier browser CI for the first hill verified mouse p95 held-piece offset at **8px**, desktop drop, a CDP-emulated 390px touch drag and the broader experience checks. Its Lighthouse desktop startup TBT gate still failed at ~1039ms; a baseline run before the hill already failed around 1067ms. This is a tracked unrelated performance problem, **not a green CI claim**. The follow-up hill must pass its new browser checks before being considered validated.
+
 ## Verification protocol
 
 ### Automated

@@ -100,4 +100,25 @@ describe("gameplay sound dispatch", () => {
     expect(created).toHaveLength(2);
     expect(created[0].close).toHaveBeenCalled();
   });
+  it("prepares a recorded move cue before decoding finishes and never drops it on media failure", async () => {
+    const attempted: string[] = [];
+    class Media {
+      preload = "";
+      onended: (() => void) | null = null;
+      volume = 1;
+      constructor(readonly src: string) { attempted.push(src); }
+      cloneNode() { return new Media(this.src); }
+      play() { return Promise.reject(new Error("media unavailable")); }
+      pause() {}
+    }
+    vi.stubGlobal("Audio", Media);
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    const { configureChesscomSounds, playSound } = await import("./sound");
+    configureChesscomSounds(true);
+    expect(attempted).toContain("/sounds/chesscom/move-self.mp3");
+    playSound("move");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(start).toHaveBeenCalledOnce(); // clean built-in cue, no silence
+  });
 });

@@ -51,8 +51,8 @@ describe("settings", () => {
   it("syncs the board theme and refuses unknown themes", async () => {
     const t = setup();
     const user = t.withIdentity(alice);
-    await user.mutation(api.settings.save, { settings: { boardTheme: "walnut", pieceSet: "merida" }, changedAt: 10 });
-    expect((await user.query(api.settings.mine, {}))?.settings).toMatchObject({ boardTheme: "walnut", pieceSet: "merida" });
+    await user.mutation(api.settings.save, { settings: { boardTheme: "walnut", pieceSet: "studio" }, changedAt: 10 });
+    expect((await user.query(api.settings.mine, {}))?.settings).toMatchObject({ boardTheme: "walnut", pieceSet: "studio" });
     await user.mutation(api.settings.save, { settings: { boardTheme: "" }, changedAt: 11 });
     expect((await user.query(api.settings.mine, {}))?.settings.boardTheme).toBe("");
     await expect(user.mutation(api.settings.save, { settings: { boardTheme: "neon" }, changedAt: 12 })).rejects.toThrow(/theme/i);

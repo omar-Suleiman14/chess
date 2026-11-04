@@ -46,7 +46,10 @@ const nextConfig: NextConfig = {
   // origin so every browser can decode them and the offline worker can keep
   // them. Nothing is stored in the repository.
   async rewrites() {
-    return [{ source: "/sounds/chesscom/:file([a-z-]+\\.mp3)", destination: "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/:file" }];
+    return [
+      { source: "/sounds/chesscom/:file([a-z-]+\\.mp3)", destination: "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/:file" },
+      { source: "/pieces/chesscom/:file([wb][pnbrqk]\\.png)", destination: "https://images.chesscomfiles.com/chess-themes/pieces/neo/150/:file" },
+    ];
   },
   // The cloud engine route starts Stockfish from node_modules; ship those two files with it.
   outputFileTracingIncludes: {
