@@ -11,7 +11,6 @@ import { unlockAudio } from "@/lib/client/sound";
 import { Dialog } from "@/components/ui/Dialog";
 import type { FatmaApi } from "@/lib/client/useFatma";
 import { FatmaSprite } from "./FatmaSprite";
-import { MayaAvatar } from "./MayaAvatar";
 import { botPersona, PERSONA_NAMES } from "@/lib/chess/engine/opponents";
 
 /**
@@ -23,7 +22,7 @@ import { botPersona, PERSONA_NAMES } from "@/lib/chess/engine/opponents";
 export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, opponent, captures, capturedColor, advantage }: { fatma: FatmaApi; thinking: boolean; reducedMotion: boolean; showName?: boolean; opponent?: Opponent; captures?: CapturedPiece[]; capturedColor?: Color; advantage?: number }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [greeting, setGreeting] = useState("");
-  // Maya (strongest bot) or Sherine (every weaker level): same voice system, own face and name.
+  // Sherine has the same name and original pixel avatar at every difficulty.
   const persona = botPersona(opponent);
   const name = PERSONA_NAMES[persona];
   const expression = fatma.line ? fatma.expression : thinking ? "thinking" : "idle";
@@ -44,7 +43,7 @@ export function FatmaPanel({ fatma, thinking, reducedMotion, showName = false, o
       <div className="pointer-events-none relative flex h-16 w-full min-w-0 items-center gap-2 lg:h-14">
         {fatma.enabled && (
           <button onClick={() => { unlockAudio(); fatma.say("poke"); setChatOpen((open) => !open); }} className="pointer-events-auto shrink-0 rounded-xl transition-transform active:scale-90" aria-label={`Talk to ${name}`} aria-expanded={chatOpen} title={`Talk to ${name}`}>
-            {persona === "maya" ? <MayaAvatar expression={expression} speaking={progress.speaking} size={44} reducedMotion={reducedMotion} /> : <FatmaSprite expression={expression} speaking={progress.speaking} size={48} reducedMotion={reducedMotion} />}
+            <FatmaSprite expression={expression} speaking={progress.speaking} size={48} reducedMotion={reducedMotion} />
           </button>
         )}
         <div className="min-w-0 max-w-[46%] shrink-0 lg:max-w-[65%]">

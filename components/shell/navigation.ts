@@ -8,7 +8,7 @@ export type NavIcon = "play" | "bots" | "learn" | "review" | "friends" | "profil
 
 /** The four main destinations (plus More on phones). */
 export const PRIMARY: NavItem[] = [
-  { href: "/", label: "Play", hint: "Maya · full strength", icon: "play" },
+  { href: "/", label: "Play", hint: "Sherine · full strength", icon: "play" },
   { href: "/climb", label: "Bots", hint: "Sherine and the Climb", icon: "bots" },
   { href: "/learn", label: "Learn", icon: "learn" },
   { href: "/time-machine", label: "Review", hint: "Time Machine", icon: "review" },

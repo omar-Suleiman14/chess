@@ -5,7 +5,7 @@ import { z } from "zod";
 import { checkFen } from "../chess/rules";
 import type { EngineOptions, SearchKind, SearchResult } from "../chess/engine/controller";
 
-/** The longest single search anyone can ask for (Maya's Deep setting is 3.5s). */
+/** The longest single search anyone can ask for (Sherine's Deep setting is 3.5s). */
 export const MAX_MOVETIME_MS = 4_000;
 export const MAX_DEPTH = 30;
 export const MAX_MULTIPV = 3;

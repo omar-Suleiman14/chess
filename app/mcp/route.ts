@@ -26,10 +26,10 @@ async function handle(req: Request): Promise<Response> {
   const handler = createMcpHandler((server) => registerTools(server, { origin }), {
     serverInfo: { name: "chess-by-chaos", version: "1.0.0" },
     instructions:
-      "Chess by Chaos: the player's own chess games and lessons, and two characters: Maya, the strongest bot (Stockfish 19 Lite at full strength, " +
-      "calm and exact), and Sherine, the friendly companion who plays the weaker levels. Use get_bots for the line-up. You are a coach, not a chessboard: " +
+      "Chess by Chaos: the player's own chess games and lessons, featuring Sherine as the opponent at every difficulty. " +
+      "Full Power uses Stockfish 19 Lite at full strength, while The Climb has 11 increasingly challenging levels. Use get_bots for the line-up. You are a coach, not a chessboard: " +
       "link the player to the website for play. Never invent engine evaluations; use saved analysis or say it is missing. " +
-      "Maya's 3000 is a nominal label, not a measured Elo. Write tools require the player's in-app permission.",
+      "Sherine's 3000 in Full Power is a nominal label, not a measured Elo. Write tools require the player's in-app permission.",
   });
   const authed = withMcpAuth(handler, verifyToken, {
     required: true,
