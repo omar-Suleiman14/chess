@@ -16,8 +16,10 @@ for (const [key, value] of Object.entries(publicConfig)) {
 // server initialization nevertheless requires a syntactically valid secret.
 // Derive a throwaway fixture string from the public *test* host; this is not
 // a real credential and is never used by the deployed middleware.
-if (!process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_")) {
-  process.env.CLERK_SECRET_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.replace(/^pk_test_/, "sk_test_");
+if (!process.env.CLERK_SECRET_KEY) {
+  const fixturePublicKey = publicConfig.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = fixturePublicKey;
+  process.env.CLERK_SECRET_KEY = fixturePublicKey.replace(/^pk_test_/, "sk_test_");
 }
 const original = await readFile("proxy.ts", "utf8");
 let server;
