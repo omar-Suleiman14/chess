@@ -7,26 +7,27 @@ import { markTabNavigation } from "@/lib/client/navIntent";
 import { NavIcon } from "./NavIcon";
 import { useInboxCount } from "@/lib/client/useInbox";
 
-export type TabId = "play" | "bots" | "learn" | "review" | "more";
+export type TabId = "play" | "puzzles" | "learn" | "bots" | "more";
 
 export type Tab = { id: TabId; label: string; href: string };
 
 /** The five top-level destinations on phones. Friends lives in its popup and in More; no chat. */
 export const TABS: Tab[] = [
   { id: "play", label: "Play", href: "/" },
-  { id: "bots", label: "Bots", href: "/climb" },
+  { id: "puzzles", label: "Puzzles", href: "/puzzles" },
   { id: "learn", label: "Learn", href: "/learn" },
-  { id: "review", label: "Review", href: "/time-machine" },
+  { id: "bots", label: "Bots", href: "/climb" },
   { id: "more", label: "More", href: "/more" },
 ];
 
 /** Which tab a route belongs to. Anything that isn't a game, bot, lesson or review lives under More (/more). */
 export function tabFor(pathname: string): TabId {
   const first = pathname.split("/")[1] ?? "";
-  if (first === "" || first === "game" || first === "play" || first === "timed") return "play";
+  // Like chess.com: Play holds games and their review; Puzzles and Learn have their own tabs.
+  if (first === "" || first === "game" || first === "play" || first === "timed" || first === "time-machine" || first === "analysis") return "play";
+  if (first === "puzzles") return "puzzles";
   if (first === "climb") return "bots";
-  if (first === "learn" || first === "puzzles") return "learn";
-  if (first === "time-machine" || first === "progress" || first === "analysis") return "review";
+  if (first === "learn") return "learn";
   return "more";
 }
 
@@ -84,7 +85,7 @@ export function TabBar({ visible, active, reducedMotion, hrefFor, onSelect }: Pr
                       animate={current && !reducedMotion ? { scale: [1, 1.12, 1] } : { scale: 1 }}
                       transition={{ duration: 0.28, ease: [0.3, 0.7, 0.2, 1] }}
                     >
-                      <NavIcon name={tab.id} active={current} />
+                      <NavIcon name={tab.id === "puzzles" ? "puzzle" : tab.id} active={current} />
                     </motion.span>
                     {tab.id === "more" && inbox > 0 && <span data-inbox-badge aria-label={`${inbox} waiting`} className="absolute right-2 top-0 grid h-[16px] min-w-[16px] place-items-center rounded-full bg-[#e05f4e] px-1 text-[10px] font-bold leading-none text-white">{inbox}</span>}
                   </span>

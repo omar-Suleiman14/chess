@@ -12,6 +12,16 @@ import { FatmaSprite } from "@/components/fatma/FatmaSprite";
 import { ListIcon, PathMap, StickyAction } from "@/components/ui/PathMap";
 import { CoachLine } from "@/components/ui/CoachLine";
 import { useSettings } from "@/lib/client/settings";
+import { Piece } from "@/components/chess/Pieces";
+
+const DECOR = ["q", "r", "p", "n", "b", "k"] as const;
+
+/** The piece that best stands for a lesson, shown on its tile. */
+function lessonPiece(id: string, topic: string): "k" | "q" | "r" | "b" | "n" | "p" {
+  const named = id.match(/(rook|bishop|knight|queen|king|pawn)/)?.[1];
+  if (named) return ({ rook: "r", bishop: "b", knight: "n", queen: "q", king: "k", pawn: "p" } as const)[named as "rook"];
+  return ({ rules: "k", checkmate: "q", tactics: "n", endgames: "p", openings: "b" } as Record<string, "k" | "q" | "r" | "b" | "n" | "p">)[topic] ?? "p";
+}
 
 export default function LearnPage() {
   const { isAuthenticated } = useConvexAuth();
@@ -29,7 +39,7 @@ export default function LearnPage() {
   }, []);
   const nextLesson = CURRICULUM.find((l) => !done.has(l.id)) ?? CURRICULUM[0];
   const allDone = done.size >= CURRICULUM.length;
-  const { reducedMotion } = useSettings();
+  const { reducedMotion, settings } = useSettings();
 
   return (
     <main className="mx-auto min-h-dvh max-w-3xl pb-32">
@@ -41,13 +51,19 @@ export default function LearnPage() {
           <PathMap
             label="Lesson path"
             reducedMotion={reducedMotion}
-            nodes={CURRICULUM.map((l, i) => ({
-              key: l.id,
-              face: i + 1,
-              title: l.title,
-              href: `/learn/${l.id}`,
-              state: done.has(l.id) ? "done" : l.id === nextLesson.id && !allDone ? "current" : "todo",
-            }))}
+            nodes={CURRICULUM.map((l, i) => {
+              const piece = lessonPiece(l.id, l.topic);
+              return {
+                key: l.id,
+                face: <Piece type={piece} color="w" set={settings.pieceSet} className="h-10 w-10 drop-shadow-[0_1px_1px_rgba(0,0,0,.35)]" />,
+                title: l.title,
+                caption: l.title,
+                header: i === 0 || CURRICULUM[i - 1].section !== l.section ? l.section : undefined,
+                decor: <Piece type={DECOR[i % DECOR.length]} color={i % 2 ? "b" : "w"} set={settings.pieceSet} className="h-16 w-16" />,
+                href: `/learn/${l.id}`,
+                state: done.has(l.id) ? "done" : l.id === nextLesson.id && !allDone ? "current" : "todo",
+              };
+            })}
             marker={<span className="block overflow-hidden rounded-xl bg-surface p-0.5 shadow-[var(--shadow)]"><FatmaSprite expression="idle" size={34} reducedMotion={reducedMotion} /></span>}
           />
           <h2 id="path-title" className="px-1 text-3xl font-black tracking-tight">{nextLesson.section ?? "Lessons"}</h2>

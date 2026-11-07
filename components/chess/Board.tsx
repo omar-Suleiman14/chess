@@ -171,14 +171,23 @@ export const Board = memo(function Board({
     return () => clearTimeout(t);
   }, [illegal]);
 
-  // Drop selection whenever the position changes.
+  // When the opponent moves, keep a piece you picked up (selected or mid-drag)
+  // if it's still yours on that square, like chess.com. A flip or a capture of
+  // that piece clears it.
+  const lastOrientation = useRef(orientation);
   useEffect(() => {
-    gesture.current = null;
-    hoverRef.current = null;
-    setDragVisual(null);
-    setHoverSquare(null);
-    setSelected(null);
+    const flipped = lastOrientation.current !== orientation;
+    lastOrientation.current = orientation;
+    const stillMine = (square: Square | null | undefined) => !flipped && !!square && !!selectableColor && bySquare.get(square)?.color === selectableColor;
+    if (!stillMine(gesture.current?.from)) {
+      gesture.current = null;
+      hoverRef.current = null;
+      setDragVisual(null);
+      setHoverSquare(null);
+    }
+    setSelected((current) => (stillMine(current) ? current : null));
     setPromotion(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fen, orientation]);
 
   // A piece dropped by drag is already on its square: don't slide it there again.
