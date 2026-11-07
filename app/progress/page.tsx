@@ -4,10 +4,13 @@ import { SignInButton } from "@clerk/nextjs";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shell/AppShell";
+import Link from "@/components/navigation/PrefetchLink";
+import { usePuzzleStats } from "@/lib/client/puzzleStats";
 
 export default function ProgressPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const summary = useQuery(api.progress.summary, isAuthenticated ? {} : "skip");
+  const { stats: puzzles } = usePuzzleStats();
 
   if (!isLoading && !isAuthenticated) {
     return (
@@ -52,6 +55,14 @@ export default function ProgressPage() {
             Glicko-2 ratings against this app&apos;s own opponent pool. They are not FIDE, Chess.com or Lichess ratings, and opponent strengths are uncalibrated estimates until benchmarked.
           </p>
         </section>
+
+        <Link href="/puzzles" className="flex items-baseline justify-between rounded-2xl bg-surface p-4 shadow-[var(--shadow)]">
+          <span className="font-semibold">Puzzles</span>
+          <span className="tabular-nums">
+            <span className="text-xl font-semibold">{Math.round(puzzles.rating)}</span>
+            <span className="text-sm text-muted"> · {puzzles.attempts} rated · best streak {puzzles.bestStreak} · Rush best {puzzles.rush3}</span>
+          </span>
+        </Link>
 
         <section className="rounded-2xl bg-surface p-4 shadow-[var(--shadow)]" aria-labelledby="climb">
           <h2 id="climb" className="font-semibold">The Climb</h2>

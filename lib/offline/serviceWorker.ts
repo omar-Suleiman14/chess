@@ -24,7 +24,7 @@ const ASSETS = "cbc-assets-" + VERSION;
 const RUNTIME = "cbc-runtime";
 const READY = "/__offline_ready";
 const FILE_SET = new Set(FILES);
-const DYNAMIC_PAGE = /^\/(game|time-machine|learn)\/[^/]+$/;
+const DYNAMIC_PAGE = /^\/(game|time-machine|learn|puzzles)\/[^/]+$/;
 const NETWORK_ONLY = /^\/(api|mcp|trpc|sw\.js|__clerk|\.well-known|_next\/image|bench)(\/|$)/;
 let progress = { done: 0, total: PAGES.length + FILES.length, error: null };
 

@@ -8,7 +8,7 @@ import { CHESSCOM_BASE, CHESSCOM_FILES } from "@/lib/client/sound";
 export const dynamic = "force-static";
 
 /** Same-origin pages that must open offline (fetched signed-out, so no private HTML is ever stored). */
-const PAGES = ["/", "/climb", "/timed", "/learn", "/time-machine", "/progress", "/settings", "/settings/theme", "/play", "/friends", ...ALL_STATIC_LESSONS.map((lesson) => `/learn/${lesson.id}`)];
+const PAGES = ["/", "/climb", "/timed", "/learn", "/time-machine", "/progress", "/settings", "/settings/theme", "/play", "/friends", "/puzzles", "/puzzles/rated", "/puzzles/rush", "/puzzles/daily", "/analysis", ...ALL_STATIC_LESSONS.map((lesson) => `/learn/${lesson.id}`)];
 
 function publicFiles(): string[] {
   const root = join(process.cwd(), "public");

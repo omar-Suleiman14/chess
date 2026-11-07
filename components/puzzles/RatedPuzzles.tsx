@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "@/components/navigation/PrefetchLink";
 import { PageHeader } from "@/components/shell/AppShell";
 import { pickPuzzle, THEMES, type Puzzle } from "@/lib/chess/puzzles";
@@ -8,7 +9,9 @@ import { usePuzzleStats } from "@/lib/client/puzzleStats";
 import { PuzzlePlayer } from "./PuzzlePlayer";
 
 /** Endless rated puzzles near the player's rating, optionally one theme. */
-export function RatedPuzzles({ theme }: { theme: string | null }) {
+export function RatedPuzzles() {
+  const requested = useSearchParams().get("theme");
+  const theme = THEMES.some((t) => t.id === requested) ? requested : null;
   const { stats, record } = usePuzzleStats();
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [delta, setDelta] = useState<number | null>(null);

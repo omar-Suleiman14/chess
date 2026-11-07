@@ -239,12 +239,13 @@ export function PuzzlePlayer({ puzzle, mode, onResult, onNext, delta = null, rat
           </span>
         </div>
 
-        {(ratingLabel || delta !== null) && (
+        {delta !== null && (
           <p className="flex items-baseline justify-between text-sm">
             <span className="text-muted">{ratingLabel ?? "Rating"}</span>
-            {delta !== null && delta !== 0 && (
+            {delta !== 0 && (
               <span data-rating-delta className={`font-bold tabular-nums ${delta > 0 ? "text-[#81b64c]" : "text-[#e05f4e]"}`}>{delta > 0 ? `+${delta}` : delta}</span>
             )}
+            {delta === 0 && <span className="text-muted">Already rated</span>}
           </p>
         )}
 
