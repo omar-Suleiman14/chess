@@ -31,7 +31,7 @@ try {
     await expect(panel).toHaveCount(0);
     await expect(page.locator("[data-hint-arrow]")).toHaveCount(0);
     await page.goto("http://127.0.0.1:3100/climb");
-    await page.getByRole("button", { name: /Wobbly Pawn, rating/ }).click();
+    await page.getByRole("button", { name: /Sherine \(learning\), rating/ }).click();
     await expect(page.getByRole("grid")).toBeVisible();
     await page.getByRole("button", { name: "Hint", exact: true }).click();
     const consent = page.getByRole("dialog", { name: "Hint", exact: true });

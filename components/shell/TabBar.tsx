@@ -24,8 +24,8 @@ export function tabFor(pathname: string): TabId {
   const first = pathname.split("/")[1] ?? "";
   if (first === "" || first === "game" || first === "play" || first === "timed") return "play";
   if (first === "climb") return "bots";
-  if (first === "learn") return "learn";
-  if (first === "time-machine" || first === "progress") return "review";
+  if (first === "learn" || first === "puzzles") return "learn";
+  if (first === "time-machine" || first === "progress" || first === "analysis") return "review";
   return "more";
 }
 

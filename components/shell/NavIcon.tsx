@@ -29,6 +29,9 @@ export function NavIcon({ name, active = false, className = "h-[25px] w-[25px]" 
       <circle cx="12" cy="12" r="8.5" {...s} fill="currentColor" fillOpacity={fill} />
       <circle cx="8.2" cy="12" r="1.15" fill="currentColor" /><circle cx="12" cy="12" r="1.15" fill="currentColor" /><circle cx="15.8" cy="12" r="1.15" fill="currentColor" />
     </>,
+    puzzle: <>
+      <path d="M9 4h3.2a1.8 1.8 0 1 1 3.6 0H19v4.2a1.8 1.8 0 1 1 0 3.6V16h-4.2a1.8 1.8 0 1 0-3.6 0H5v-4.2a1.8 1.8 0 1 0 0-3.6V4z" {...s} fill="currentColor" fillOpacity={fill} />
+    </>,
     friends: <><circle cx="9" cy="8" r="3" {...s} fill="currentColor" fillOpacity={fill} /><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2" {...s} /></>,
     profile: <><circle cx="12" cy="8.5" r="3.5" {...s} fill="currentColor" fillOpacity={fill} /><path d="M5 20a7 7 0 0 1 14 0" {...s} /></>,
     settings: <><circle cx="12" cy="12" r="3" {...s} /><path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6" {...s} /></>,

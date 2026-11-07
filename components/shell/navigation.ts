@@ -4,12 +4,13 @@
  * disagree.
  */
 export type NavItem = { href: string; label: string; hint?: string; icon?: NavIcon };
-export type NavIcon = "play" | "bots" | "learn" | "review" | "friends" | "profile" | "settings" | "clock" | "link" | "chart" | "search" | "info" | "more";
+export type NavIcon = "play" | "bots" | "learn" | "review" | "friends" | "profile" | "settings" | "clock" | "link" | "chart" | "search" | "info" | "more" | "puzzle";
 
 /** The four main destinations (plus More on phones). */
 export const PRIMARY: NavItem[] = [
   { href: "/", label: "Play", hint: "Sherine · full strength", icon: "play" },
   { href: "/climb", label: "Bots", hint: "Sherine and the Climb", icon: "bots" },
+  { href: "/puzzles", label: "Puzzles", hint: "Rated · Rush · Daily", icon: "puzzle" },
   { href: "/learn", label: "Learn", icon: "learn" },
   { href: "/time-machine", label: "Review", hint: "Time Machine", icon: "review" },
 ];
@@ -18,8 +19,10 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
   {
     title: "Play",
     items: [
+      { href: "/puzzles", label: "Puzzles", hint: "Rated · Puzzle Rush · Daily", icon: "puzzle" },
       { href: "/timed", label: "Timed games", hint: "Clock presets", icon: "clock" },
       { href: "/play", label: "Play a friend", hint: "Link · QR · PIN", icon: "link" },
+      { href: "/analysis", label: "Analysis board", hint: "Stockfish lines · FEN", icon: "search" },
     ],
   },
   {
@@ -52,6 +55,7 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
 export const SIDEBAR_SECONDARY: NavItem[] = [
   { href: "/timed", label: "Timed", icon: "clock" },
   { href: "/play", label: "Play a friend", icon: "link" },
+  { href: "/analysis", label: "Analysis", icon: "chart" },
   { href: "/friends", label: "Friends", icon: "friends" },
   { href: "/progress", label: "Progress", icon: "chart" },
 ];

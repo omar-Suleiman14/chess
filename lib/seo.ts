@@ -34,6 +34,8 @@ export const PUBLIC_PAGES = [
   { path: "/climb", title: "The Climb", description: "Build confidence with an 11-level chess bot ladder, from beginner opponents to full-power Stockfish. Undo, learn, and track your progress." },
   { path: "/timed", title: "Timed", description: "Practise chess with 3+2, 5+3, 10+5, and 15+10 clocks against browser-based chess bots. Choose your opponent and colour." },
   { path: "/play", title: "Play a friend", description: "Create a chess room and invite a friend with a link, QR code, or PIN. Play a live game together in your browsers." },
+  { path: "/puzzles", title: "Puzzles", description: "Solve rated chess puzzles, race the clock in Puzzle Rush, and try a new daily puzzle. Tactics by theme: mates, forks, sacrifices and endgames." },
+  { path: "/analysis", title: "Analysis board", description: "Analyse any chess position with Stockfish: move both sides, see the top engine lines, draw arrows and load a FEN." },
   { path: "/learn", title: "Learn", description: "Learn how chess pieces move, castling, checkmate, forks, pins, endgames, and popular openings through short interactive chess lessons." },
   { path: "/about", title: "About", description: "Meet Chess by Chaos, a free, open-source chess gym with local Stockfish, interactive lessons, game review, and optional AI coaching." },
   { path: "/help", title: "Help", description: "Get help with chess games, ratings, lessons, game analysis, PGN files, account sync, and optional AI coaches." },

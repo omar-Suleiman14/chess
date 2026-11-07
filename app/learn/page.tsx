@@ -36,6 +36,19 @@ export default function LearnPage() {
           <p className="mt-1 text-sm opacity-80">{nextLesson.summary}</p>
         </Link>
 
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { href: "/puzzles/rated", title: "Puzzles", detail: "Rated tactics" },
+            { href: "/puzzles/rush", title: "Rush", detail: "Beat the clock" },
+            { href: "/puzzles/daily", title: "Daily", detail: "Today's puzzle" },
+          ].map((item) => (
+            <Link key={item.href} href={item.href} className="rounded-2xl bg-surface p-3 shadow-[var(--shadow)]">
+              <span className="block font-semibold">{item.title}</span>
+              <span className="block text-xs text-muted">{item.detail}</span>
+            </Link>
+          ))}
+        </div>
+
         {isAuthenticated && practice && (practice.due.length > 0 || practice.upcoming.length > 0) && (
           <Link href="/learn/practice" className="flex items-center justify-between rounded-2xl bg-surface p-4 shadow-[var(--shadow)]">
             <span>

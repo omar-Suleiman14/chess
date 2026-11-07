@@ -29,7 +29,7 @@ describe("settings sync", () => {
     expect(fromSaved({ pieceSet: "not-a-piece-set" }).pieceSet).toBe(DEFAULT_SETTINGS.pieceSet);
   });
   it("keeps a known board theme, drops unknown ones, and pulls it from the account", () => {
-    expect(fromSaved(null).boardTheme).toBe("");
+    expect(fromSaved(null).boardTheme).toBe("green");
     expect(fromSaved({ boardTheme: "walnut" }).boardTheme).toBe("walnut");
     expect(fromSaved({ boardTheme: "neon" }).boardTheme).toBe("");
     expect(fromSaved({ boardTheme: 4 }).boardTheme).toBe("");

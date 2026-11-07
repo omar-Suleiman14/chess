@@ -44,10 +44,11 @@
   /* Desktop sidebar width (0 on phones). */
   --sidebar-w: 0px;
 
-  --sq-light: #efe6d5;
-  --sq-dark: #c3a982;
-  --sq-coord-light: #9a8462;
-  --sq-coord-dark: #f6efe2;
+  /* Classic green until settings load, so a new player's first board matches the default theme. */
+  --sq-light: #ebecd0;
+  --sq-dark: #779556;
+  --sq-coord-light: #779556;
+  --sq-coord-dark: #ebecd0;
   --hl-last: rgb(255 214 102 / 0.45);
   --hl-select: rgb(29 28 26 / 0.22);
   --hl-target: rgb(29 28 26 / 0.28);
@@ -72,6 +73,7 @@
   --focus: #8ab4ff;
 }
 
+:root[data-palette="ivory"] { --sq-light: #efe6d5; --sq-dark: #c3a982; --sq-coord-light: #9a8462; --sq-coord-dark: #f6efe2; }
 :root[data-palette="sage"] { --sq-light: #e8ecdf; --sq-dark: #93a57f; --sq-coord-light: #6f8159; --sq-coord-dark: #f0f3ea; }
 :root[data-palette="slate"] { --sq-light: #e3e6ea; --sq-dark: #8a96a3; --sq-coord-light: #66717d; --sq-coord-dark: #eef0f3; }
 :root[data-palette="blue"] { --sq-light: #e4ebf3; --sq-dark: #7d9bbd; --sq-coord-light: #587896; --sq-coord-dark: #eef3f8; }
@@ -413,3 +415,10 @@ button {
   .game-footer { padding: 0; min-height: 0; }
   .game-layout { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
 }
+
+/* Puzzles: Rush countdown and result pop. */
+@keyframes rush-count { from { transform: scale(1.6); opacity: 0; } 30% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
+.rush-count { animation: rush-count 420ms cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes result-pop { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.result-pop { animation: result-pop 260ms cubic-bezier(.2, .8, .3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .rush-count, .result-pop { animation: none; } }
