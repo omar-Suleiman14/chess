@@ -101,6 +101,14 @@ describe("friends", () => {
     expect(await nour.query(api.friends.search, { q: " " })).toEqual([]);
   });
 
+  it("explains duplicate requests instead of pretending to send them", async () => {
+    const { omar, sara } = await setup();
+    await omar.mutation(api.friends.request, { alias: "sara" });
+    await expect(omar.mutation(api.friends.request, { alias: "sara" })).rejects.toThrow(/already sent/i);
+    await sara.mutation(api.friends.respond, { alias: "omar", accept: true });
+    await expect(omar.mutation(api.friends.request, { alias: "sara" })).rejects.toThrow(/already friends/i);
+  });
+
   it("refuses requests to yourself or unknown players", async () => {
     const { omar } = await setup();
     await expect(omar.mutation(api.friends.request, { alias: "omar" })).rejects.toThrow(/that's you/i);

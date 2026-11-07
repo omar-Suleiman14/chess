@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "@/components/navigation/PrefetchLink";
-import { useLocalCardQuery } from "@/lib/client/localCardCache";
+import { useCardScope, useLocalCardQuery } from "@/lib/client/localCardCache";
+import { useConvexAuth } from "convex/react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useMemo } from "react";
 import { api } from "@/convex/_generated/api";
@@ -16,13 +17,19 @@ import { Fallible } from "@/components/ui/Fallible";
 /** Every player who made their card public, with Sherine among them. */
 export default function PlayersPage() {
   const cards = useLocalCardQuery(api.profiles.publicCards, {}, "public");
+  // Friends always see each other's cards, private ones included: list them here too.
+  const { isAuthenticated } = useConvexAuth();
+  const scope = useCardScope();
+  const friendCards = useLocalCardQuery(api.friends.cards, isAuthenticated ? {} : "skip", scope);
   const origin = useOrigin();
   const deck: DeckCard[] = useMemo(
     () => [
       { id: "sherine", face: "identity", data: FATMA_CARD, url: `${origin}/`, label: "Sherine" },
-      ...(cards ?? []).map((c) => ({ id: c.alias, face: "identity" as const, data: c, url: `${origin}/u/${c.alias}`, label: `@${c.alias}` })),
+      ...[...(friendCards ?? []), ...(cards ?? [])]
+        .filter((c, i, all) => all.findIndex((other) => other.alias === c.alias) === i)
+        .map((c) => ({ id: c.alias, face: "identity" as const, data: c, url: `${origin}/u/${c.alias}`, label: `@${c.alias}` })),
     ],
-    [cards, origin],
+    [cards, friendCards, origin],
   );
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col overflow-x-clip">
@@ -31,7 +38,7 @@ export default function PlayersPage() {
         <header className="mx-auto mt-4 max-w-xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">The chess community</p>
           <h2 className="mt-2 text-[clamp(30px,5vw,48px)] font-semibold leading-tight tracking-[-0.035em]">Discover players</h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-muted">Search anyone by username, or browse public cards below. Swipe or drag to browse; tap a card to open it.</p>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted">Search anyone by username, or browse your friends and public cards below. Swipe or drag to browse; tap a card to open it.</p>
         </header>
         <div className="mx-auto mt-5 w-full max-w-xl text-start">
           <Fallible><PlayerSearch /></Fallible>

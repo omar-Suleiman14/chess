@@ -75,7 +75,10 @@ export const request = mutation({
     const row = await pairRow(ctx, owner, target.owner);
     const now = Date.now();
     if (row) {
-      if (row.status === "pending" && row.addressee === owner) await ctx.db.patch("friendships", row._id, { status: "accepted", updatedAt: now });
+      if (row.status === "accepted") fail("already_friends", `You and @${target.alias} are already friends.`);
+      if (row.requester === owner) fail("already_requested", `You already sent @${target.alias} a request. They can accept it from Friends.`);
+      // They asked you first: sending one back accepts theirs.
+      await ctx.db.patch("friendships", row._id, { status: "accepted", updatedAt: now });
       return null;
     }
     const mine = await ctx.db.query("friendships").withIndex("by_requester_and_status", (q) => q.eq("requester", owner)).take(MAX_FRIENDS);
