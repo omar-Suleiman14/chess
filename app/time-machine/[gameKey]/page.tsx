@@ -10,6 +10,13 @@ import { readAnalysis, writeAnalysis } from "@/lib/client/analysisCache";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { GameReviewPanel } from "@/components/chess/GameReviewPanel";
+import { ReviewLoading, ReviewSummary, type ReviewPlayer } from "@/components/review/ReviewScreens";
+import { QualityIcon } from "@/components/review/QualityIcon";
+import { FatmaSprite } from "@/components/fatma/FatmaSprite";
+import { EvalBar } from "@/components/chess/EvalBar";
+import { gameAccuracy } from "@/lib/chess/accuracy";
+import { phaseAccuracy } from "@/lib/chess/reviewStats";
+import { MOVE_QUALITY as QUALITY_STYLE, type ReviewedMove } from "@/lib/chess/review";
 import { MOVE_QUALITY, reviewMove } from "@/lib/chess/review";
 import { Board, type LastMove } from "@/components/chess/Board";
 import { Dialog, Segmented } from "@/components/chess/GameScreen";
@@ -34,6 +41,7 @@ import {
 } from "@/lib/chess/history/tree";
 import { findMistakes } from "@/lib/chess/lessons/adaptive";
 import {
+  applyUci,
   kingSquare,
   legalUcis,
   positionStatus,
@@ -323,6 +331,10 @@ export default function ReplayPage({
     return index >= 0 ? [{ ...move, ply: index + 1 }] : [];
   }), [reviewed, path]);
   const [flipped, setFlipped] = useState(false);
+  // Game Review flow: "summary" shows the analysing screen, then the summary; "moves" is move-by-move.
+  const [reviewMode, setReviewMode] = useState<"off" | "summary" | "moves">("off");
+  // Each Game Review screen starts at the top (the summary is long; the board must be in view).
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [reviewMode]);
 
   // Finished positions need no engine: mate and draws have known scores.
   const reviewScores = useMemo(() => [tree.nodes.root, ...path].map((n) => {
@@ -427,7 +439,7 @@ export default function ReplayPage({
     if (autoReview.current || !game || path.length === 0 || !supportsEngine()) return;
     if (new URLSearchParams(window.location.search).get("review") !== "1") return;
     autoReview.current = true;
-    const t = setTimeout(() => void analyse(), 350);
+    const t = setTimeout(() => { setReviewMode("summary"); void analyse(); }, 350);
     return () => clearTimeout(t);
   }, [game, path.length, analyse]);
 
@@ -558,14 +570,55 @@ export default function ReplayPage({
   const bottomColor: Color = flipped ? (game.meta.humanColor === "w" ? "b" : "w") : game.meta.humanColor;
   const topColor: Color = bottomColor === "w" ? "b" : "w";
 
+  // The engine's top choices in the shown position (stored with each analysis).
+  const engineLines = (() => {
+    const entry = scores[node?.key ?? tree.nodes.root.key];
+    if (!entry?.candidates?.length) return [] as Array<{ uci: string; san: string; text: string; white: boolean; best: boolean }>;
+    return entry.candidates.slice(0, 2).flatMap((c, i) => {
+      const applied = applyUci(fen, c.uci);
+      if (!applied) return [];
+      const white = c.score.mate !== undefined ? c.score.mate > 0 : (c.score.cp ?? 0) >= 0;
+      return [{ uci: c.uci, san: applied.san, text: formatScore(c.score), white, best: i === 0 }];
+    });
+  })();
+
+  if (reviewMode === "summary") {
+    const percent = analysing && analysing.total ? Math.round((analysing.done / analysing.total) * 100) : 100;
+    if (analysing || (reviewedByIndex.length === 0 && path.length > 0)) {
+      return <ReviewLoading percent={analysing ? percent : 0} fen={tree.originFen} reducedMotion={reducedMotion} onClose={() => setReviewMode("off")} />;
+    }
+    const fens = [tree.nodes.root.fen, ...path.map((n) => n.fen)];
+    const accuracy = gameAccuracy(reviewScores, sideToMove(tree.originFen));
+    const human = game.meta.humanColor;
+    const players = (["w", "b"] as const).reduce((acc, c) => {
+      const isBot = game.meta.mode !== "import" && c !== human;
+      acc[c] = { name: playerNames[c], you: game.meta.mode !== "import" && c === human, bot: isBot };
+      return acc;
+    }, {} as Record<Color, ReviewPlayer>);
+    return (
+      <ReviewSummary
+        coach={reviewCoachLine(reviewedByIndex, accuracy, human, game.meta.result, game.meta.mode === "import", path.map((n) => n.san))}
+        scores={reviewScores}
+        reviewed={reviewedByIndex}
+        accuracy={accuracy}
+        phases={phaseAccuracy(reviewScores, fens, sideToMove(tree.originFen))}
+        players={players}
+        reducedMotion={reducedMotion}
+        onClose={() => setReviewMode("off")}
+        onSelect={(i) => { setReviewMode("moves"); selectPosition(i); }}
+        onStart={() => { setReviewMode("moves"); selectPosition(Math.min(1, path.length)); }}
+      />
+    );
+  }
+
   const alternatives = node
     ? childrenOf(tree, node.key).filter((c) => c.key !== path[cursor]?.key)
     : [];
   const branches = branchList(tree);
 
   return (
-    <main className="mx-auto min-h-dvh max-w-[1600px] px-3 pb-8">
-      <PageHeader title="Time Machine" />
+    <main className={`mx-auto min-h-dvh max-w-[1600px] px-3 ${reviewMode === "moves" ? "pb-32 lg:pb-8" : "pb-8"}`}>
+      <PageHeader title={reviewMode === "moves" ? "Game Review" : "Time Machine"} />
       <Link
         href="/time-machine"
         className="mb-3 inline-flex min-h-11 items-center text-sm underline"
@@ -610,6 +663,31 @@ export default function ReplayPage({
         }}
       >
         <div className="mx-auto w-full max-w-[min(96vw,calc(100dvh-245px),900px)]">
+          {reviewMode === "moves" && (
+            <div className="mb-2 flex items-end gap-2" aria-live="polite">
+              <span className="block h-12 w-12 shrink-0 overflow-hidden"><FatmaSprite expression={selectedReview && ["blunder", "mistake", "miss"].includes(selectedReview.quality) ? "amused" : selectedReview && ["brilliant", "great"].includes(selectedReview.quality) ? "impressed" : "idle"} size={48} reducedMotion={reducedMotion} /></span>
+              <p data-review-coach className="coach-bubble mb-1 flex min-w-0 flex-1 items-center gap-2 rounded-2xl rounded-bl-sm bg-surface px-3 py-2.5 text-[15px] font-medium leading-snug shadow-[var(--shadow)]">
+                {selectedReview && <QualityIcon quality={selectedReview.quality} size={24} />}
+                <span>{moveCoachText(cursor, node?.san, selectedReview)}</span>
+              </p>
+            </div>
+          )}
+          {reviewScores[cursor] && (
+            <div className="mb-2 grid gap-1.5" data-review-engine>
+              <EvalBar horizontal score={reviewScores[cursor]!} orientation={bottomColor} depth={node ? scores[node.key]?.depth : undefined} reducedMotion={reducedMotion} />
+              {engineLines.length > 0 && (
+                <ul aria-label="Engine lines" className="grid gap-1 text-sm">
+                  {engineLines.map((line) => (
+                    <li key={line.uci} className="flex items-center gap-2">
+                      <span className={`min-w-14 rounded-md px-1.5 py-0.5 text-center font-bold tabular-nums ${line.white ? "bg-white text-black ring-1 ring-line" : "bg-[#262522] text-white"}`}>{line.text}</span>
+                      <span className="font-semibold">{line.san}</span>
+                      <span className="text-muted">{line.best ? "best move here" : "alternative"}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           <div className="mb-2 flex min-h-10 items-center justify-between gap-2 text-sm">
             <span className="min-w-0 break-words font-semibold">
               {playerNames[topColor]}
@@ -657,7 +735,7 @@ export default function ReplayPage({
           </div>
           <nav
             aria-label="Position navigation"
-            className="mt-2 grid grid-cols-5 gap-2"
+            className={`mt-2 grid-cols-5 gap-2 ${reviewMode === "moves" ? "hidden lg:grid" : "grid"}`}
             dir="ltr"
           >
             {[
@@ -705,7 +783,7 @@ export default function ReplayPage({
               ⇅
             </Button>
           </nav>
-          {!hintDismissed && (
+          {!hintDismissed && reviewMode !== "moves" && (
             <div className="mt-2 flex items-center gap-2 text-xs text-muted">
               <p className="flex-1">
                 Tap a move to see the position. Focus this explorer and use ← →
@@ -790,12 +868,9 @@ export default function ReplayPage({
                               className={`min-h-11 w-full rounded-xl px-2 text-start font-mono ${cursor === cell.cursor ? "bg-accent font-bold text-accent-text" : "bg-surface-2"}`}
                             >
                               <bdi><SanText san={cell.node.san} white={side === "white"} /></bdi>
-                              {review && (
-                                <span
-                                  className="ms-1 text-xs"
-                                  aria-hidden="true"
-                                >
-                                  {MOVE_QUALITY[review.quality].symbol}
+                              {review && !["best", "excellent", "good", "book"].includes(review.quality) && (
+                                <span className="ms-1.5 inline-block align-[-4px]" aria-hidden="true">
+                                  <QualityIcon quality={review.quality} size={18} />
                                 </span>
                               )}
                             </button>
@@ -823,7 +898,7 @@ export default function ReplayPage({
             onSelect={selectPosition}
             analysing={analysing}
             canAnalyse={supportsEngine() && path.length > 0}
-            onStart={() => void analyse()}
+            onStart={() => { setReviewMode("summary"); void analyse(); }}
             onStop={() => {
               cancelAnalysis();
               setAnalysing(null);
@@ -975,6 +1050,15 @@ export default function ReplayPage({
           onStart={(opp) => void startBranch(continueFrom, opp)}
         />
       )}
+      {reviewMode === "moves" && (
+        <nav aria-label="Review controls" className="sticky-action pointer-events-none fixed inset-x-0 z-40 px-3 lg:hidden">
+          <div className="pointer-events-auto mx-auto grid max-w-xl grid-cols-[1fr_1fr_1.6fr] gap-2 rounded-[22px] bg-bg/90 p-2 backdrop-blur-md">
+            <button onClick={() => setReviewMode("summary")} className="min-h-14 rounded-2xl bg-surface-2 font-bold">Summary</button>
+            <button onClick={() => selectPosition(cursor - 1)} disabled={cursor === 0} aria-label="Previous move" className="min-h-14 rounded-2xl bg-surface-2 text-2xl font-black disabled:opacity-40">‹</button>
+            <button data-review-next onClick={() => selectPosition(cursor + 1)} disabled={cursor >= path.length} className="min-h-14 rounded-2xl bg-[#81b64c] text-xl font-black text-white shadow-[0_5px_0_#5d8a33] active:translate-y-[3px] active:shadow-[0_2px_0_#5d8a33] disabled:opacity-50">Next ›</button>
+          </div>
+        </nav>
+      )}
     </main>
   );
 }
@@ -1062,4 +1146,30 @@ function moveMotion(
         key: `rev-${node.key}-${cursor}`,
       }
     : { from, to, rookFrom, rookTo, key: `fwd-${node.key}-${cursor}` };
+}
+
+/** The summary's one-line verdict, in plain words. */
+function reviewCoachLine(moves: ReviewedMove[], accuracy: Record<Color, number | null>, human: Color, result: string | undefined, imported: boolean, sans: string[]): string {
+  const side = (c: Color) => (imported ? (c === "w" ? "White" : "Black") : c === human ? "You" : "Sherine");
+  const worst = moves.filter((m) => ["blunder", "miss", "mistake"].includes(m.quality)).sort((a, b) => b.lossCp - a.lossCp)[0];
+  const best = moves.find((m) => m.quality === "brilliant") ?? moves.find((m) => m.quality === "great");
+  const parts: string[] = [];
+  const winner = result === "1-0" ? "w" : result === "0-1" ? "b" : null;
+  if (winner) parts.push(`${side(winner)} won${accuracy[winner] !== null ? ` with ${accuracy[winner]!.toFixed(1)}% accuracy` : ""}.`);
+  else if (result === "1/2-1/2") parts.push("A hard-fought draw.");
+  else parts.push(`Accuracy: White ${accuracy.w ?? "–"}%, Black ${accuracy.b ?? "–"}%.`);
+  if (best) parts.push(`Look for ${sans[best.ply - 1]} on move ${Math.ceil(best.ply / 2)}: ${QUALITY_STYLE[best.quality].label.toLowerCase()}!`);
+  if (worst) parts.push(`The turning point was ${sans[worst.ply - 1]} on move ${Math.ceil(worst.ply / 2)}. Let's take a look.`);
+  return parts.join(" ");
+}
+
+/** What Sherine says about the shown move during the move-by-move review. */
+function moveCoachText(cursor: number, san: string | undefined, review: ReviewedMove | undefined): string {
+  if (cursor === 0 || !san) return "Here's the starting position. Tap Next to step through the game.";
+  if (!review) return `${san} hasn't been analysed yet.`;
+  const label = QUALITY_STYLE[review.quality].label.toLowerCase();
+  if (review.quality === "best") return `${san} is the best move.`;
+  if (review.quality === "book") return `${san} is a book move.`;
+  if (["brilliant", "great", "excellent", "good"].includes(review.quality)) return `${san} is ${review.quality === "excellent" ? "an" : "a"} ${label} move. ${review.bestSan} was best.`;
+  return `${san} is ${review.quality === "inaccuracy" ? "an" : "a"} ${label}. ${review.bestSan} was best.`;
 }
