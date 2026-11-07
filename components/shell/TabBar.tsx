@@ -5,6 +5,7 @@ import Link from "@/components/navigation/PrefetchLink";
 import { haptic } from "@/lib/client/haptics";
 import { markTabNavigation } from "@/lib/client/navIntent";
 import { NavIcon } from "./NavIcon";
+import { useInboxCount } from "@/lib/client/useInbox";
 
 export type TabId = "play" | "bots" | "learn" | "review" | "more";
 
@@ -24,8 +25,8 @@ export function tabFor(pathname: string): TabId {
   const first = pathname.split("/")[1] ?? "";
   if (first === "" || first === "game" || first === "play" || first === "timed") return "play";
   if (first === "climb") return "bots";
-  if (first === "learn") return "learn";
-  if (first === "time-machine" || first === "progress") return "review";
+  if (first === "learn" || first === "puzzles") return "learn";
+  if (first === "time-machine" || first === "progress" || first === "analysis") return "review";
   return "more";
 }
 
@@ -52,6 +53,7 @@ type Props = {
 
 /** Native-style bottom tabs for phones. Desktop keeps the header menu. */
 export function TabBar({ visible, active, reducedMotion, hrefFor, onSelect }: Props) {
+  const inbox = useInboxCount();
   return (
     <AnimatePresence initial={false}>
       {visible && (
@@ -84,6 +86,7 @@ export function TabBar({ visible, active, reducedMotion, hrefFor, onSelect }: Pr
                     >
                       <NavIcon name={tab.id} active={current} />
                     </motion.span>
+                    {tab.id === "more" && inbox > 0 && <span data-inbox-badge aria-label={`${inbox} waiting`} className="absolute right-2 top-0 grid h-[16px] min-w-[16px] place-items-center rounded-full bg-[#e05f4e] px-1 text-[10px] font-bold leading-none text-white">{inbox}</span>}
                   </span>
                   <span className={`text-[11px] leading-none tracking-[0.01em] ${current ? "font-semibold text-ink" : "font-medium"}`}>{tab.label}</span>
                 </>

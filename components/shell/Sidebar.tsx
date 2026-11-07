@@ -3,10 +3,13 @@
 import Link from "@/components/navigation/PrefetchLink";
 import { AccountCard } from "./AppShell";
 import { AppMark, NavIcon } from "./NavIcon";
+import { useInboxCount } from "@/lib/client/useInbox";
 import { isActive, PRIMARY, SIDEBAR_SECONDARY, type NavItem } from "./navigation";
 
 function Item({ item, pathname }: { item: NavItem; pathname: string }) {
   const active = isActive(pathname, item.href);
+  const inbox = useInboxCount();
+  const badge = item.href === "/friends" && inbox > 0 ? inbox : 0;
   return (
     <li>
       <Link
@@ -15,7 +18,12 @@ function Item({ item, pathname }: { item: NavItem; pathname: string }) {
         title={item.label}
         className={`group flex min-h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-semibold transition-colors max-xl:flex-col max-xl:justify-center max-xl:gap-1 max-xl:px-1 max-xl:py-2 max-xl:text-[11px] ${active ? "bg-[color-mix(in_srgb,var(--brand)_16%,transparent)] text-ink" : "text-muted hover:bg-surface-2 hover:text-ink"}`}
       >
-        {item.icon && <NavIcon name={item.icon} active={active} className="h-6 w-6 shrink-0" />}
+        {item.icon && (
+          <span className="relative shrink-0">
+            <NavIcon name={item.icon} active={active} className="h-6 w-6" />
+            {badge > 0 && <span data-inbox-badge className="absolute -right-2 -top-1.5 grid h-[16px] min-w-[16px] place-items-center rounded-full bg-[#e05f4e] px-1 text-[10px] font-bold leading-none text-white">{badge}</span>}
+          </span>
+        )}
         <span className="truncate max-xl:max-w-full">{item.label}</span>
       </Link>
     </li>

@@ -59,7 +59,8 @@ export const DEFAULT_SETTINGS: Settings = {
   highContrast: false,
   glass: "off",
   livingBackground: false,
-  boardTheme: "",
+  // New players start on the classic green board; existing choices are kept.
+  boardTheme: "green",
 };
 
 const KEY = "cbc.settings.v1";

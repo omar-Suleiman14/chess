@@ -15,6 +15,8 @@ import { useSync } from "@/lib/client/sync";
 import { SocialPrefetch } from "@/lib/client/socialCache";
 import { Button } from "@/components/ui/Button";
 import { Sidebar } from "./Sidebar";
+import { NavIcon } from "./NavIcon";
+import { useInboxCount } from "@/lib/client/useInbox";
 
 type ShellCtx = {
   /** Opens More (the page that lists everything else). */
@@ -173,8 +175,31 @@ export function PageHeader({ title, back = true }: { title: string; back?: boole
   return (
     <header className="safe-top sticky top-0 z-30 flex min-h-[60px] items-center gap-2 bg-bg/95 px-4 pb-2 lg:pt-6">
       {back && <BackButton />}
-      <h1 className="truncate text-[28px] font-bold leading-tight tracking-[-0.02em] sm:text-3xl">{title}</h1>
+      <h1 className="min-w-0 flex-1 truncate text-[28px] font-bold leading-tight tracking-[-0.02em] sm:text-3xl">{title}</h1>
+      <HeaderShortcuts />
     </header>
+  );
+}
+
+/** Friends (with a badge) and Settings, one tap away on every phone page. Desktop has the sidebar. */
+function HeaderShortcuts() {
+  const pathname = usePathname();
+  const inbox = useInboxCount();
+  const icon = "press-overlay relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink";
+  return (
+    <div className="flex shrink-0 items-center gap-0.5 lg:hidden">
+      {pathname !== "/friends" && (
+        <Link href="/friends" aria-label={inbox ? `Friends, ${inbox} waiting` : "Friends"} className={icon}>
+          <NavIcon name="friends" className="h-[22px] w-[22px]" />
+          {inbox > 0 && <span data-inbox-badge className="absolute right-0.5 top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#e05f4e] px-1 text-[10px] font-bold leading-none text-white">{inbox}</span>}
+        </Link>
+      )}
+      {!pathname.startsWith("/settings") && (
+        <Link href="/settings" aria-label="Settings" className={icon}>
+          <NavIcon name="settings" className="h-[22px] w-[22px]" />
+        </Link>
+      )}
+    </div>
   );
 }
 

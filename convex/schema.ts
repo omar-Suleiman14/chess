@@ -209,6 +209,45 @@ export default defineSchema({
     .index("by_gameId", ["gameId"])
     .index("by_owner_and_pool", ["owner", "pool"]),
 
+  /** Browser push endpoints, so friends hear about challenges with the site closed. */
+  pushSubscriptions: defineTable({
+    owner: v.string(),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_owner", ["owner"])
+    .index("by_endpoint", ["endpoint"]),
+
+  /** One row per player: puzzle rating and streaks. */
+  puzzleStats: defineTable({
+    owner: v.string(),
+    rating: v.number(),
+    rd: v.number(),
+    volatility: v.number(),
+    attempts: v.number(),
+    solved: v.number(),
+    streak: v.number(),
+    bestStreak: v.number(),
+    rush3: v.number(),
+    rush5: v.number(),
+    survival: v.number(),
+    updatedAt: v.number(),
+  }).index("by_owner", ["owner"]),
+
+  /** Rated puzzle attempts; only a player's first try at a puzzle is rated. */
+  puzzleAttempts: defineTable({
+    owner: v.string(),
+    puzzleId: v.string(),
+    solved: v.boolean(),
+    ratingBefore: v.number(),
+    ratingAfter: v.number(),
+    at: v.number(),
+  })
+    .index("by_owner_and_puzzleId", ["owner", "puzzleId"])
+    .index("by_owner_and_at", ["owner", "at"]),
+
   climbProgress: defineTable({
     owner: v.string(),
     unlockedLevel: v.number(),
@@ -342,6 +381,18 @@ export default defineSchema({
     changedAt: v.number(),
     updatedAt: v.number(),
   }).index("by_owner", ["owner"]),
+
+  /** Players looking for a random opponent; each owns a waiting room. */
+  onlineSeeks: defineTable({
+    token: v.string(),
+    pool: v.string(),
+    code: v.string(),
+    roomId: v.id("onlineRooms"),
+    lastSeenAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_pool_and_lastSeenAt", ["pool", "lastSeenAt"])
+    .index("by_token", ["token"]),
 
   onlineRooms: defineTable({
     code: v.string(),

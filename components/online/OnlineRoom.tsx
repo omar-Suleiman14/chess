@@ -86,8 +86,44 @@ function colorWord(c: "w" | "b") {
   return c === "w" ? "White" : "Black";
 }
 
+/** Play online: a matchmaking room waits in the pool instead of showing an invite. */
+function Seeking({ room }: { room: RoomView }) {
+  const router = useRouter();
+  const keep = useMutation(api.online.keepSeeking);
+  const stop = useMutation(api.online.stopSeeking);
+  const [started] = useState(() => Date.now());
+  const [now, setNow] = useState(started);
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    const beat = setInterval(() => void keep({ token: playerToken(), code: room.code }).catch(() => {}), 15_000);
+    return () => { clearInterval(tick); clearInterval(beat); };
+  }, [keep, room.code]);
+  const seconds = Math.floor((now - started) / 1000);
+  return (
+    <section className="grid place-items-center gap-6 py-10 text-center" aria-labelledby="seek-title" aria-live="polite">
+      <div className="relative grid h-32 w-32 place-items-center" aria-hidden="true">
+        <span className="absolute inset-0 animate-ping rounded-full bg-[#81b64c]/25" />
+        <span className="absolute inset-3 animate-pulse rounded-full bg-[#81b64c]/30" />
+        <span className="relative grid h-20 w-20 place-items-center rounded-full bg-[#81b64c] text-4xl text-white shadow-[0_6px_0_#5d8a33]">♟</span>
+      </div>
+      <div>
+        <h2 id="seek-title" className="text-2xl font-bold">Searching for an opponent…</h2>
+        <p className="mt-1 text-sm text-muted">{timeControlLabel(room.initialMs, room.incrementMs)} · {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}</p>
+      </div>
+      <p className="max-w-xs text-sm text-muted">The game starts as soon as another player looking for the same clock is found.</p>
+      <button
+        onClick={() => { void stop({ token: playerToken() }).then(() => router.push("/play")); }}
+        className="min-h-12 w-full max-w-xs rounded-2xl bg-surface-2 font-semibold"
+      >
+        Cancel
+      </button>
+    </section>
+  );
+}
+
 function Waiting({ room }: { room: RoomView }) {
   const router = useRouter();
+  const [seeking] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("seek") === "1");
   const cancel = useMutation(api.online.cancel);
   const [url, setUrl] = useState("");
   const [svg, setSvg] = useState("");
@@ -102,6 +138,8 @@ function Waiting({ room }: { room: RoomView }) {
     setCanShare(typeof navigator.share === "function");
     void QRCode.toString(link, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#14161fff", light: "#00000000" } }).then(setSvg);
   }, [room.code]);
+
+  if (seeking) return <Seeking room={room} />;
 
   const share = async () => {
     try {

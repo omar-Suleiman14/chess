@@ -9,6 +9,8 @@ import { playSound } from "@/lib/client/sound";
 import { haptic } from "@/lib/client/haptics";
 import { Piece } from "./Pieces";
 import { PromotionSheet } from "./PromotionSheet";
+import { MARK_FILL, markColor, toggleMark, useBoardMarks } from "@/lib/chess/marks";
+import { MarkArrows } from "./MarkArrows";
 import { dragActivated, isBoardFlipSwipe, squareFromClientPoint, type TouchPoint } from "@/lib/chess/boardGesture";
 
 export type BoardResult = { result?: string; reason?: string };
@@ -42,6 +44,8 @@ type Props = {
   /** Flip by deliberate two-finger vertical swipe, independent of turn. */
   onFlip?: () => void;
   result?: BoardResult;
+  /** Puzzle feedback: a tick or cross on the square a move landed on. */
+  badge?: { square: Square; kind: "correct" | "wrong" } | { square: Square; kind: "glyph"; symbol: string; color: string } | null;
 };
 
 const SQUARE_RE = /^[a-h][1-8]$/;
@@ -113,6 +117,7 @@ export const Board = memo(function Board({
   motionMove,
   fast = false,
   result,
+  badge = null,
 }: Props) {
   const winner: Color | null = result?.result === "1-0" ? "w" : result?.result === "0-1" ? "b" : null;
   const drawn = result?.result === "1/2-1/2";
@@ -133,6 +138,8 @@ export const Board = memo(function Board({
   const [dragVisual, setDragVisual] = useState<DragVisual | null>(null);
   const [hoverSquare, setHoverSquare] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square; color: Color; queued: boolean } | null>(null);
+  const [marks, setMarks] = useBoardMarks(`${fen}|${orientation}`);
+  const markStart = useRef<{ from: Square; pointerId: number } | null>(null);
 
   const pieces = useMemo(() => piecesOf(fen), [fen]);
   const bySquare = useMemo(() => new Map<Square, BoardPiece>(pieces.map((p) => [p.square, p])), [pieces]);
@@ -302,10 +309,21 @@ export const Board = memo(function Board({
 
   useEffect(() => () => { if (suppressTimer.current) clearTimeout(suppressTimer.current); }, []);
 
+  const startMark = (e: PointerEvent<HTMLDivElement>) => {
+    const from = squareFromPoint(e.clientX, e.clientY);
+    if (from) markStart.current = { from, pointerId: e.pointerId };
+  };
+
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.button === 2 && e.pointerType === "mouse" && !promotion) {
+      startMark(e);
+      return;
+    }
     if (suppressTouchPointer.current || e.button !== 0 || promotion || gesture.current) return;
     const square = squareFromPoint(e.clientX, e.clientY);
     if (!square) return;
+    // A left click clears arrows and highlights, like chess.com and lichess.
+    if (marks.length) setMarks(() => []);
     const piece = bySquare.get(square);
     if (piece && selectableColor && piece.color === selectableColor) {
       (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
@@ -340,6 +358,13 @@ export const Board = memo(function Board({
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
     if (suppressTouchPointer.current) { cancelGesture(); return; }
+    if (e.button === 2 && markStart.current) {
+      const start = markStart.current;
+      markStart.current = null;
+      const to = squareFromPoint(e.clientX, e.clientY);
+      if (to) setMarks((current) => toggleMark(current, { from: start.from, to, color: markColor(e, to !== start.from) }));
+      return;
+    }
     const current = gesture.current;
     if (current && current.pointerId !== e.pointerId) return;
     const square = squareFromPoint(e.clientX, e.clientY);
@@ -381,6 +406,8 @@ export const Board = memo(function Board({
   };
 
   const arrowId = useId();
+  const squareMarks = useMemo(() => new Map(marks.filter((m) => m.from === m.to).map((m) => [m.from, m.color])), [marks]);
+  const arrowMarks = marks.filter((m) => m.from !== m.to);
   const selectedTargets = selected ? targets.get(selected) : undefined;
 
   const cells: ReactNode[] = [];
@@ -441,6 +468,24 @@ export const Board = memo(function Board({
           {isCheck && <div className="absolute inset-0" style={{ background: "radial-gradient(circle, var(--hl-check) 0%, transparent 72%)" }} />}
           {shaking && <div key={`flash-${illegal!.key}`} className="illegal-flash absolute inset-0" style={{ background: "rgba(220, 60, 50, 0.45)" }} />}
           {isHint && <div className="hint-square pointer-events-none absolute inset-0" />}
+          {squareMarks.get(square) && <div data-mark-square className="pointer-events-none absolute inset-0" style={{ background: MARK_FILL[squareMarks.get(square)!], opacity: 0.85 }} />}
+          {badge?.square === square && (
+            <>
+              <div className="pointer-events-none absolute inset-0" style={{ background: badge.kind === "glyph" ? `color-mix(in srgb, ${badge.color} 38%, transparent)` : badge.kind === "correct" ? "rgb(129 182 76 / .45)" : "rgb(235 97 80 / .45)" }} />
+              <motion.span
+                key={`badge-${badge.kind}-${badge.kind === "glyph" ? badge.symbol : ""}-${fen}`}
+                data-move-badge={badge.kind === "glyph" ? badge.symbol : badge.kind}
+                aria-hidden="true"
+                className="pointer-events-none absolute right-[2%] top-[2%] z-40 grid h-[40%] w-[40%] place-items-center rounded-full text-[clamp(10px,3.2vw,22px)] font-black leading-none text-white shadow-[0_2px_6px_rgba(0,0,0,.35)]"
+                style={{ backgroundColor: badge.kind === "glyph" ? badge.color : badge.kind === "correct" ? "#81b64c" : "#e05f4e" }}
+                initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 600, damping: 22, delay: reducedMotion ? 0 : 0.12 }}
+              >
+                {badge.kind === "glyph" ? badge.symbol : badge.kind === "correct" ? "✓" : "✕"}
+              </motion.span>
+            </>
+          )}
           {coordinates && col === 0 && (
             <span aria-hidden="true" className={`pointer-events-none absolute left-[3%] top-[2%] text-[clamp(8px,2.2vw,12px)] font-semibold ${light ? "coord-on-light" : "coord-on-dark"}`}>{square[1]}</span>
           )}
@@ -538,6 +583,7 @@ export const Board = memo(function Board({
         const from = coordsOf(hintMove.from, orientation), to = coordsOf(hintMove.to, orientation);
         return <svg aria-hidden="true" data-hint-arrow className="pointer-events-none absolute inset-0 z-30 h-full w-full" viewBox="0 0 8 8"><defs><marker id={arrowId} markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto"><path d="M0,0 L3,1.5 L0,3 Z" fill="var(--hint-arrow)" /></marker></defs><line x1={from.col + 0.5} y1={from.row + 0.5} x2={to.col + 0.5} y2={to.row + 0.5} stroke="var(--hint-arrow)" strokeWidth="0.14" strokeLinecap="round" markerEnd={`url(#${arrowId})`} /></svg>;
       })()}
+      {arrowMarks.length > 0 && <MarkArrows marks={arrowMarks} orientation={orientation} />}
       <span className="sr-only" aria-live="polite">{premove ? `Premove queued: ${premove.slice(0, 2)} to ${premove.slice(2, 4)}. Press Escape to cancel.` : ""}</span>
       {ghost && dragVisual && size > 0 && (
         <div

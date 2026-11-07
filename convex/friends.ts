@@ -2,6 +2,7 @@
 // and "play me" challenges that hand a friend an online room PIN.
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
+import { notify } from "./push";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { fail, optionalOwner, requireOwner, type Owner } from "./model/auth";
 import { cardData } from "./profiles";
@@ -69,7 +70,7 @@ export const request = mutation({
   args: { alias: v.string() },
   handler: async (ctx, args) => {
     const owner = await requireOwner(ctx);
-    await requireMyProfile(ctx, owner);
+    const me = await requireMyProfile(ctx, owner);
     const target = await requireTarget(ctx, owner, args.alias);
     const row = await pairRow(ctx, owner, target.owner);
     const now = Date.now();
@@ -80,6 +81,7 @@ export const request = mutation({
     const mine = await ctx.db.query("friendships").withIndex("by_requester_and_status", (q) => q.eq("requester", owner)).take(MAX_FRIENDS);
     if (mine.length >= MAX_FRIENDS) fail("limit", "You have too many pending or accepted friends.");
     await ctx.db.insert("friendships", { requester: owner, addressee: target.owner, status: "pending", createdAt: now, updatedAt: now });
+    await notify(ctx, target.owner, { title: "Friend request", body: `@${me.alias} wants to be friends`, url: "/friends", tag: `friend-${me.alias}` });
     return null;
   },
 });
@@ -121,6 +123,8 @@ export const challenge = mutation({
     const previous = await ctx.db.query("friendChallenges").withIndex("by_from_and_to", (q) => q.eq("from", owner).eq("to", target.owner)).take(10);
     for (const p of previous) await ctx.db.delete("friendChallenges", p._id);
     await ctx.db.insert("friendChallenges", { from: owner, to: target.owner, code: args.code, createdAt: Date.now() });
+    const me = await profileByOwner(ctx, owner);
+    await notify(ctx, target.owner, { title: "New challenge", body: `@${me?.alias ?? "A friend"} challenged you to a game`, url: `/play/${args.code}`, tag: `challenge-${args.code}` });
     return null;
   },
 });
@@ -136,6 +140,35 @@ export const dismissChallenge = mutation({
 });
 
 const person = v.object({ alias: v.string(), avatarSeed: v.string(), hue: v.number() });
+
+/**
+ * Find players by username prefix. Every player with a username is findable
+ * (that's how friends add each other); only the username and avatar are shown.
+ */
+export const search = query({
+  args: { q: v.string() },
+  returns: v.array(v.object({ alias: v.string(), avatarSeed: v.string(), hue: v.number(), isPublic: v.boolean(), relation: v.union(v.literal("me"), v.literal("friends"), v.literal("outgoing"), v.literal("incoming"), v.literal("none")) })),
+  handler: async (ctx, args) => {
+    const prefix = args.q.trim().replace(/^@/, "").toLowerCase().slice(0, 30);
+    if (prefix.length < 1) return [];
+    const viewer = await optionalOwner(ctx);
+    const rows = await ctx.db
+      .query("chessProfiles")
+      .withIndex("by_alias", (q) => q.gte("alias", prefix).lt("alias", `${prefix}\uffff`))
+      .take(20);
+    return await Promise.all(
+      rows.map(async (p) => {
+        let relation: "me" | "friends" | "outgoing" | "incoming" | "none" = "none";
+        if (viewer && p.owner === viewer) relation = "me";
+        else if (viewer) {
+          const row = await pairRow(ctx, viewer, p.owner);
+          if (row) relation = row.status === "accepted" ? "friends" : row.requester === viewer ? "outgoing" : "incoming";
+        }
+        return { ...publicPerson(p), isPublic: p.visibility === "public", relation };
+      }),
+    );
+  },
+});
 
 /** Everything the Friends page and the challenge banner need. */
 export const overview = query({

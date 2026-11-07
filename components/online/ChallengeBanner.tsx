@@ -13,6 +13,19 @@ import { IOS_SPRING } from "@/components/ui/Switch";
 import { playSound } from "@/lib/client/sound";
 import { useSettings } from "@/lib/client/settings";
 
+/** Shows a notification through the service worker (works in background tabs), if allowed. */
+async function showSystemNotification(title: string, url: string, tag: string) {
+  try {
+    if (!("Notification" in window) || Notification.permission !== "granted" || !("serviceWorker" in navigator)) return;
+    const registration = await navigator.serviceWorker.getRegistration();
+    // With push on, the server's notification is already on its way; don't double up.
+    if (await registration?.pushManager?.getSubscription()) return;
+    await registration?.showNotification(title, { body: "Tap to play", tag, icon: "/icon-192.png", data: { url } });
+  } catch {
+    // Notifications are a nicety; the banner is still shown.
+  }
+}
+
 /** "@sara challenged you": shown on every page while a friend's invite is open. */
 export function ChallengeBanner() {
   const { isAuthenticated } = useConvexAuth();
@@ -24,13 +37,26 @@ export function ChallengeBanner() {
   const challenge = data?.challenges.find((c) => !pathname.startsWith(`/play/${c.code}`));
   const hidden = pathname === "/friends";
 
-  // A soft ping when a new invite arrives.
+  // Every signed-in player gets a username straight away, so friends can find them.
+  const ensure = useMutation(api.profiles.ensure);
+  const needsProfile = isAuthenticated && data !== undefined && data !== null && data.me === null;
+  useEffect(() => { if (needsProfile) void ensure({}).catch(() => {}); }, [needsProfile, ensure]);
+
+  // A soft ping when a new invite arrives; a system notification if this tab is in the background.
   const announced = useRef<string | null>(null);
   useEffect(() => {
     if (!challenge || announced.current === challenge.id) return;
     announced.current = challenge.id;
     if (settings.sound) playSound("challenge", settings.volume);
+    if (document.visibilityState === "hidden") void showSystemNotification(`@${challenge.from.alias} challenged you`, `/play/${challenge.code}`, `challenge-${challenge.code}`);
   }, [challenge, settings.sound, settings.volume]);
+
+  // "(2) Chess by Chaos" while challenges or requests wait.
+  const waiting = (data?.challenges.length ?? 0) + (data?.incoming.length ?? 0);
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\) /, "");
+    document.title = waiting > 0 ? `(${waiting}) ${base}` : base;
+  }, [waiting, pathname]);
 
   return (
     <AnimatePresence>

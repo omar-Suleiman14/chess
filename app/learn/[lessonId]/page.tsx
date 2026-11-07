@@ -23,12 +23,12 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
   const related = ALL_STATIC_LESSONS.filter((item) => item.id !== lesson.id && (item.topic === lesson.topic || item.section === lesson.section)).slice(0, 4);
   return (
     <>
-    <main id="main-content" className="mx-auto min-h-dvh max-w-2xl px-3 pb-6">
+    <main id="main-content" className="mx-auto min-h-dvh max-w-6xl px-3 pb-6">
       <PageHeader title={lesson.title} />
       <nav aria-label="Breadcrumb" className="px-2 py-3 text-sm text-muted"><Link href="/">Home</Link> / <Link href="/learn">Learn chess</Link> / <span aria-current="page">{lesson.title}</span></nav>
       <p className="mb-4 px-2 text-muted">{lesson.summary}</p>
       <StaticLesson lesson={lesson} />
-      <section className="mt-8 grid gap-3 px-2 text-sm leading-7"><h2 className="text-lg font-semibold">What you’ll practise</h2>
+      <section className="mt-8 grid max-w-2xl gap-3 px-2 text-sm leading-7"><h2 className="text-lg font-semibold">What you’ll practise</h2>
         <p>Make the requested move on the board. If you get stuck, ask for a hint and try again. This lesson has {lesson.steps.length} interactive {lesson.steps.length === 1 ? "position" : "positions"}.</p>
         <ul className="list-disc pl-5">{lesson.steps.map((step) => <li key={step.id}>{step.prompt}</li>)}</ul>
         {related.length > 0 && <><h2 className="text-lg font-semibold">Keep learning</h2><ul>{related.map((item) => <li key={item.id}><Link className="underline" href={`/learn/${item.id}`}>{item.title}</Link> — {item.summary}</li>)}</ul></>}

@@ -76,6 +76,7 @@ The built-in generated game-event cues are original deterministic synthesis in `
 
 ## Original assets (GPL-3.0, this repository)
 
+- **Tactics puzzles** (`lib/chess/puzzles/data.json`): generated for this repository by `scripts/generate-puzzles.mjs` from Stockfish self-play; no third-party puzzle database is included.
 - **Board palettes, icon and UI.**
 
 ## Sherine sprite

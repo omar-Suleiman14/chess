@@ -47,6 +47,9 @@ describe("friends", () => {
 
   it("shows private cards only to friends", async () => {
     const { t, omar, sara, nour } = await setup();
+    // New profiles are public; Sara opts out.
+    expect(await t.query(api.profiles.publicCard, { alias: "sara" })).toMatchObject({ alias: "sara" });
+    await sara.mutation(api.profiles.update, { visibility: "private" });
     expect(await t.query(api.profiles.publicCard, { alias: "sara" })).toBeNull();
     await omar.mutation(api.friends.request, { alias: "sara" });
     await sara.mutation(api.friends.respond, { alias: "omar", accept: true });
@@ -68,6 +71,34 @@ describe("friends", () => {
     // Once someone joins, the invite disappears.
     await t.mutation(api.online.join, { code, token: "sara-device-token-0123456789", name: "Sara" });
     expect((await sara.query(api.friends.overview, { now: Date.now() }))?.challenges).toEqual([]);
+  });
+
+  it("queues a push to the challenged friend's devices only when they subscribed", async () => {
+    const { t, omar, sara } = await setup();
+    await omar.mutation(api.friends.request, { alias: "sara" });
+    await sara.mutation(api.friends.respond, { alias: "omar", accept: true });
+    const scheduled = async () => (await t.run((ctx) => ctx.db.system.query("_scheduled_functions").collect())).filter((f) => f.name.includes("pushSend"));
+    const { code: first } = await t.mutation(api.online.create, { token: "omar-device-token-0123456789", name: "Omar", color: "w" });
+    await omar.mutation(api.friends.challenge, { alias: "sara", code: first });
+    expect(await scheduled()).toHaveLength(0);
+
+    await sara.mutation(api.push.subscribe, { endpoint: "https://push.example.com/abc", p256dh: "key", auth: "auth" });
+    expect(await sara.query(api.push.status, { endpoint: "https://push.example.com/abc" })).toEqual({ subscribed: true, devices: 1 });
+    const { code } = await t.mutation(api.online.create, { token: "omar-device-token-0123456789", name: "Omar", color: "w" });
+    await omar.mutation(api.friends.challenge, { alias: "sara", code });
+    const jobs = await scheduled();
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].args[0]).toMatchObject({ body: "@omar challenged you to a game", url: `/play/${code}` });
+    await expect(sara.mutation(api.push.subscribe, { endpoint: "http://insecure", p256dh: "k", auth: "a" })).rejects.toThrow();
+  });
+
+  it("finds players by username prefix with the viewer's relation", async () => {
+    const { omar, sara, nour } = await setup();
+    await omar.mutation(api.friends.request, { alias: "sara" });
+    expect((await omar.query(api.friends.search, { q: "@SA" })).map((p) => [p.alias, p.relation])).toEqual([["sara", "outgoing"]]);
+    expect((await sara.query(api.friends.search, { q: "om" }))[0]).toMatchObject({ alias: "omar", relation: "incoming" });
+    expect((await nour.query(api.friends.search, { q: "nour" }))[0].relation).toBe("me");
+    expect(await nour.query(api.friends.search, { q: " " })).toEqual([]);
   });
 
   it("refuses requests to yourself or unknown players", async () => {

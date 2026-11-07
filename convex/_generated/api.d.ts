@@ -22,6 +22,9 @@ import type * as model_ratings from "../model/ratings.js";
 import type * as online from "../online.js";
 import type * as profiles from "../profiles.js";
 import type * as progress from "../progress.js";
+import type * as puzzles from "../puzzles.js";
+import type * as push from "../push.js";
+import type * as pushSend from "../pushSend.js";
 import type * as settings from "../settings.js";
 import type * as users from "../users.js";
 
@@ -46,6 +49,9 @@ declare const fullApi: ApiFromModules<{
   online: typeof online;
   profiles: typeof profiles;
   progress: typeof progress;
+  puzzles: typeof puzzles;
+  push: typeof push;
+  pushSend: typeof pushSend;
   settings: typeof settings;
   users: typeof users;
 }>;

@@ -9,6 +9,7 @@ import { CardStack } from "@/components/profile/CardStack";
 import { FATMA_CARD } from "@/components/profile/ChessCard";
 import { PageHeader } from "@/components/shell/AppShell";
 import { useOrigin } from "@/lib/client/useOrigin";
+import { PlayerSearch } from "@/components/friends/PlayerSearch";
 
 /** Every player who made their card public, with Sherine among them. */
 export default function PlayersPage() {
@@ -28,8 +29,11 @@ export default function PlayersPage() {
         <header className="mx-auto mt-4 max-w-xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">The chess community</p>
           <h2 className="mt-2 text-[clamp(30px,5vw,48px)] font-semibold leading-tight tracking-[-0.035em]">Discover players</h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-muted">Everyone with a public card, and Sherine. Swipe or drag to browse. Tap a card to open it.</p>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted">Search anyone by username, or browse public cards below. Swipe or drag to browse; tap a card to open it.</p>
         </header>
+        <div className="mx-auto mt-5 w-full max-w-xl text-start">
+          <PlayerSearch />
+        </div>
         {cards === undefined ? (
           <LoadingSpinner label="Loading players" className="py-28" />
         ) : (

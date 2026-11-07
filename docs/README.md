@@ -6,6 +6,7 @@ Choose the task you want to finish.
 | --- | --- |
 | Run a local copy | [Getting started](GETTING-STARTED.md) |
 | Play Sherine or a friend | [Gameplay](GAMEPLAY.md) |
+| Solve puzzles, Puzzle Rush, or analyse a position | [Puzzles and analysis](PUZZLES.md) |
 | Inspect or branch a saved game | [Time Machine](TIME-MACHINE.md) |
 | Understand ratings and hints | [Ratings and fair play](RATINGS.md) |
 | Change design, board colors, background, or sound | [Settings](SETTINGS.md) |

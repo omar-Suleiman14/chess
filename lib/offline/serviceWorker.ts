@@ -24,7 +24,7 @@ const ASSETS = "cbc-assets-" + VERSION;
 const RUNTIME = "cbc-runtime";
 const READY = "/__offline_ready";
 const FILE_SET = new Set(FILES);
-const DYNAMIC_PAGE = /^\/(game|time-machine|learn)\/[^/]+$/;
+const DYNAMIC_PAGE = /^\/(game|time-machine|learn|puzzles)\/[^/]+$/;
 const NETWORK_ONLY = /^\/(api|mcp|trpc|sw\.js|__clerk|\.well-known|_next\/image|bench)(\/|$)/;
 let progress = { done: 0, total: PAGES.length + FILES.length, error: null };
 
@@ -179,5 +179,33 @@ self.addEventListener("fetch", (event) => {
   if (request.headers.get("RSC") || url.searchParams.has("_rsc")) return;
   if (url.pathname.startsWith("/_next/static/")) { event.respondWith(cacheFirst(request, RUNTIME)); return; }
   if (FILE_SET.has(url.pathname) || OPTIONAL.includes(url.pathname)) event.respondWith(cacheFirst(request, ASSETS));
+});
+
+// Friend challenges and requests arrive as Web Push messages.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (error) { data = { body: event.data ? event.data.text() : "" }; }
+  const url = typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/friends";
+  event.waitUntil(self.registration.showNotification(data.title || "Chess by Chaos", {
+    body: data.body || "",
+    tag: data.tag || url,
+    renotify: true,
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    data: { url },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+    for (const client of windows) {
+      if (new URL(client.url).origin === self.location.origin && "focus" in client) {
+        return client.focus().then((focused) => (focused && "navigate" in focused ? focused.navigate(url) : null));
+      }
+    }
+    return self.clients.openWindow(url);
+  }));
 });
 `;

@@ -13,6 +13,8 @@ Source of requested work: [live Chess checklist](https://app.notion.com/p/408448
 - Larger accessible results and server-backed request/decline/cancel/expiry/accept rematches.
 - Manual Time Machine navigation, row move table, optional insights, preserved PGN names/variations, shared-position branch switching, and session cursor memory.
 - Three-stage hints with legal engine evidence and committed unrated consent; pool-correct player ratings, honest bot labels, and committed-only deltas.
+- Puzzles: original Stockfish-mined tactics with a replay test, rated solving (Glicko-2, first attempt only, signed-in sync), themes, hints, retry and solution; Puzzle Rush (3 min, 5 min, survival) and a daily puzzle. [Guide](PUZZLES.md).
+- Analysis board with Stockfish top lines, eval bar, best-move arrow and FEN loading; right-click arrows and square highlights on every board; green board for new players.
 - Reproducible interaction/Lighthouse tooling, local Web Vitals dashboard, CI artifact capture, and shorter task guides.
 
 ## Evidence

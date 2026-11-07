@@ -37,7 +37,8 @@ export const ensure = mutation({
       cardTheme: "sky",
       memberNumber: await nextMemberNumber(ctx),
       boardPalette: "ivory",
-      visibility: "private",
+      // Like other chess sites, new profiles are public; players can switch to private in Profile.
+      visibility: "public",
       showRatings: true,
       updatedAt: Date.now(),
     });

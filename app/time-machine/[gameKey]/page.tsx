@@ -9,7 +9,7 @@ import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter"
 import { readAnalysis, writeAnalysis } from "@/lib/client/analysisCache";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
-import { MoveReview } from "@/components/chess/MoveReview";
+import { GameReviewPanel } from "@/components/chess/GameReviewPanel";
 import { MOVE_QUALITY, reviewMove } from "@/lib/chess/review";
 import { Board, type LastMove } from "@/components/chess/Board";
 import { Dialog, Segmented } from "@/components/chess/GameScreen";
@@ -316,6 +316,18 @@ export default function ReplayPage({
     [path, scores, tree.nodes],
   );
   const reviewedByPly = useMemo(() => new Map(reviewed.map((move) => [move.ply, move])), [reviewed]);
+  // Game Review works in board positions (0 = start), whatever ply the line started at.
+  const reviewedByIndex = useMemo(() => reviewed.flatMap((move) => {
+    const index = path.findIndex((n) => n.ply === move.ply);
+    return index >= 0 ? [{ ...move, ply: index + 1 }] : [];
+  }), [reviewed, path]);
+  // Finished positions need no engine: mate and draws have known scores.
+  const reviewScores = useMemo(() => [tree.nodes.root, ...path].map((n) => {
+    if (scores[n.key]) return scores[n.key].score;
+    const over = positionStatus(n.fen);
+    if (!over.over) return undefined;
+    return over.reason === "checkmate" ? { mate: sideToMove(n.fen) === "w" ? -1 : 1 } : { cp: 0 };
+  }), [tree.nodes.root, path, scores]);
   const selectedReview = node ? reviewedByPly.get(node.ply) : undefined;
   const selectedStyle = selectedReview
     ? MOVE_QUALITY[selectedReview.quality]
@@ -405,6 +417,16 @@ export default function ReplayPage({
     }
     if (run === analysisRun.current) setAnalysing(null);
   }, [game, path, scores, tree.nodes, isAuthenticated, sync]);
+
+  // Arriving from "Game Review" on the result screen starts the review straight away.
+  const autoReview = useRef(false);
+  useEffect(() => {
+    if (autoReview.current || !game || path.length === 0 || !supportsEngine()) return;
+    if (new URLSearchParams(window.location.search).get("review") !== "1") return;
+    autoReview.current = true;
+    const t = setTimeout(() => void analyse(), 350);
+    return () => clearTimeout(t);
+  }, [game, path.length, analyse]);
 
   const cancelAnalysis = useCallback(() => {
     analysisRun.current++;
@@ -610,6 +632,8 @@ export default function ReplayPage({
             }
             coordinates={settings.coordinates}
             reducedMotion={reducedMotion}
+            badge={selectedReview && node ? { square: node.uci.slice(2, 4) as Square, kind: "glyph", symbol: MOVE_QUALITY[selectedReview.quality].symbol, color: MOVE_QUALITY[selectedReview.quality].color } : null}
+            hintMove={selectedReview && !["best", "book", "brilliant", "great"].includes(selectedReview.quality) ? { from: selectedReview.bestmove.slice(0, 2) as Square, to: selectedReview.bestmove.slice(2, 4) as Square } : undefined}
             label={`Review board at ${cursor === 0 ? "starting position" : node?.san}`}
           />
           <div className="mt-2 flex min-h-10 items-center justify-between gap-2 text-sm">
@@ -774,66 +798,47 @@ export default function ReplayPage({
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 text-sm">
-            {analysing ? (
-              <button
-                onClick={() => {
-                  cancelAnalysis();
-                  setAnalysing(null);
-                }}
-                className="min-h-11 rounded-xl bg-surface-2 px-3"
-              >
-                Stop analysis ({analysing.done}/{analysing.total})
-              </button>
-            ) : (
-              <button
-                disabled={!supportsEngine() || path.length === 0}
-                onClick={() => void analyse()}
-                className="min-h-11 rounded-xl bg-surface-2 px-3 disabled:opacity-40"
-              >
-                Analyze game
-              </button>
-            )}
-            {mistakes.length > 0 && (
-              <button
-                onClick={() => {
-                  const next =
-                    mistakes.find((move) => move.ply > (node?.ply ?? 0)) ??
-                    mistakes[0];
-                  const index = path.findIndex((move) => move.ply === next.ply);
-                  if (index >= 0) selectPosition(index + 1);
-                }}
-                className="min-h-11 rounded-xl bg-surface-2 px-3"
-              >
-                Next key moment ({mistakes.length})
-              </button>
-            )}
-          </div>
+          <GameReviewPanel
+            scores={reviewScores}
+            reviewed={reviewedByIndex}
+            sans={path.map((n) => n.san)}
+            cursor={cursor}
+            onSelect={selectPosition}
+            analysing={analysing}
+            canAnalyse={supportsEngine() && path.length > 0}
+            onStart={() => void analyse()}
+            onStop={() => {
+              cancelAnalysis();
+              setAnalysing(null);
+            }}
+            names={playerNames}
+            human={game.meta.humanColor}
+            reducedMotion={reducedMotion}
+          />
+          {mistakes.length > 0 && !analysing && (
+            <button
+              onClick={() => {
+                const next =
+                  mistakes.find((move) => move.ply > (node?.ply ?? 0)) ??
+                  mistakes[0];
+                const index = path.findIndex((move) => move.ply === next.ply);
+                if (index >= 0) selectPosition(index + 1);
+              }}
+              className="min-h-11 rounded-xl bg-surface-2 px-3 text-sm font-semibold"
+            >
+              Next key moment ({mistakes.length})
+            </button>
+          )}
           {message && (
             <p className="text-sm text-danger" role="alert">
               {message}
             </p>
           )}
-          <details className="rounded-2xl bg-surface p-3">
-            <summary className="cursor-pointer py-2 font-semibold">
-              Insights &amp; analysis details
-            </summary>
-            <p className="my-2 text-sm text-muted">
-              {node && scores[node.key]
-                ? `Evaluation ${formatScore(scores[node.key].score)} · depth ${scores[node.key].depth ?? "unknown"} · Stockfish on this device`
-                : "Not analyzed. Analysis is optional; selecting moves works without it."}
+          {node && scores[node.key] && (
+            <p className="px-1 text-xs text-muted">
+              Evaluation {formatScore(scores[node.key].score)} · depth {scores[node.key].depth ?? "unknown"} · Stockfish on this device
             </p>
-            <MoveReview
-              moves={reviewed}
-              total={path.length}
-              human={game.meta.humanColor}
-              cursor={node?.ply ?? 0}
-              onSelect={(ply) => {
-                const index = path.findIndex((move) => move.ply === ply);
-                if (index >= 0) selectPosition(index + 1);
-              }}
-            />
-          </details>
+          )}
           {alternatives.length > 0 && (
             <div className="rounded-2xl bg-surface p-3 text-sm shadow-[var(--shadow)]">
               <p className="mb-1 text-muted">Other moves tried here</p>

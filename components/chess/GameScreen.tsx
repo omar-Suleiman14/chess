@@ -19,6 +19,7 @@ import { useEngineState, usePrewarmEngine } from "@/lib/client/engine";
 import { useSettings } from "@/lib/client/settings";
 import { installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
 import { haptic, type HapticEvent } from "@/lib/client/haptics";
+import { VARIANTS, variantFen, type VariantId } from "@/lib/chess/variants";
 import { useSync } from "@/lib/client/sync";
 import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from "@/lib/client/useChessGame";
 import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useDisplayedEvaluation, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
@@ -386,6 +387,12 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     }
   }, [chess, game, navigationFeedback]);
 
+  // Like chess.com bot games, takebacks are instant; only a still-rated game asks first (undo makes it unrated).
+  const requestUndo = useCallback(() => {
+    if (game?.meta.rated === "eligible" && game.meta.status === "active") setConfirmUndo(true);
+    else void onUndo();
+  }, [game, onUndo]);
+
   // Keyboard shortcuts (press ? for the list). Ignored while typing or inside a dialog.
   const [showKeys, setShowKeys] = useState(false);
   useEffect(() => {
@@ -397,7 +404,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       if (!inBoard && e.key === "ArrowRight") step(1);
       if (!inBoard && e.key === "Home") jumpTo(0);
       if (!inBoard && e.key === "End") jumpTo(line.length);
-      if (e.key === "u" && game && (head?.ply ?? 0) > 0) setConfirmUndo(true);
+      if (e.key === "u" && game && (head?.ply ?? 0) > 0) requestUndo();
       if (e.key === "f") setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"));
       if (e.key === "n") setShowNew(true);
       if (e.key === "m") update({ sound: !settings.sound });
@@ -405,7 +412,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [game, head?.ply, human, step, jumpTo, line.length, update, settings.sound]);
+  }, [game, head?.ply, human, step, jumpTo, line.length, update, settings.sound, requestUndo]);
 
   const tc = game?.meta.timeControlId ? findTimeControl(game.meta.timeControlId) : undefined;
   const now = monotonicNow();
@@ -604,7 +611,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               {hintButtonLabel}
             </button>
           ) : (
-            <button disabled={!game || moveCount === 0} onClick={() => setConfirmUndo(true)} className="game-bar__item">
+            <button disabled={!game || moveCount === 0} onClick={requestUndo} className="game-bar__item">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" /></svg>
               Undo
             </button>
@@ -629,7 +636,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </Button>
         <Button
           variant="tint"
-          onClick={() => setConfirmUndo(true)}
+          onClick={requestUndo}
           disabled={!game || moveCount === 0}
           className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold lg:px-4"
           aria-keyshortcuts="u"
@@ -653,7 +660,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           canUndo: !!game && moveCount > 0,
           sound: settings.sound,
           onNew: () => { if (game?.meta.status === "finished") setResultVersion((v) => v + 1); else setShowNew(true); },
-          onUndo: () => setConfirmUndo(true),
+          onUndo: requestUndo,
           onResign: () => setConfirmResign(true),
           onShare: () => void shareGame(),
           onSettings: () => setShowSettings(true),
@@ -666,7 +673,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       {showFriends && <FriendsSheet onClose={() => setShowFriends(false)} />}
 
       {confirmUndo && (
-        <Dialog title="Undo your last move?" onClose={() => setConfirmUndo(false)}>
+        <Dialog title="Undo your last move?" description="Taking a move back makes this game unrated." onClose={() => setConfirmUndo(false)}>
           <button
             onClick={() => {
               setConfirmUndo(false);
@@ -755,9 +762,18 @@ function NewGameDialog({
   onClose: () => void;
 }) {
   const [color, setColor] = useState<"w" | "b" | "random">(defaults.humanColor);
+  const [variant, setVariant] = useState<VariantId>("standard");
   const start = () => {
     const humanColor: Color = color === "random" ? (Math.random() < 0.5 ? "w" : "b") : color;
-    onStart({ ...defaults, humanColor, parentGameKey: undefined, parentNodeKey: undefined, originFen: undefined });
+    const custom = variant !== "standard";
+    onStart({
+      ...defaults,
+      humanColor,
+      parentGameKey: undefined,
+      parentNodeKey: undefined,
+      originFen: custom ? variantFen(variant, humanColor) : undefined,
+      label: custom ? VARIANTS.find((v) => v.id === variant)?.label : defaults.label,
+    });
   };
   return (
     <Dialog title="New game" onClose={onClose}>
@@ -766,11 +782,29 @@ function NewGameDialog({
         <Segmented label="Sherine thinks" value={think} onChange={onThink} options={[["fast", "Fast"], ["standard", "Standard"], ["deep", "Deep"]]} />
       )}
       <p className="text-xs text-muted">Sherine plays at full strength in every setting. Thinking time changes how long she searches, not a fake Elo.</p>
+      <div role="radiogroup" aria-label="Start position">
+        <p className="mb-1 px-1 text-sm text-muted">Start position</p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {VARIANTS.map((v) => (
+            <button
+              key={v.id}
+              role="radio"
+              aria-checked={variant === v.id}
+              title={v.detail}
+              onClick={() => { if (v.id !== variant) haptic("select"); setVariant(v.id); }}
+              className={`min-h-11 rounded-xl px-1.5 text-xs font-semibold leading-tight ${variant === v.id ? "bg-accent text-accent-text" : "bg-surface-2"}`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 px-1 text-xs text-muted">{VARIANTS.find((v) => v.id === variant)?.detail}{variant !== "standard" ? " Unrated." : ""}</p>
+      </div>
       <button onClick={start} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text">
         Start
       </button>
       <Link href="/play" className="grid min-h-12 w-full place-items-center rounded-2xl bg-surface-2 text-sm font-medium">
-        Play a friend online instead
+        Play online or with a friend instead
       </Link>
     </Dialog>
   );

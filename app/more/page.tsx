@@ -4,9 +4,11 @@ import Link from "@/components/navigation/PrefetchLink";
 import { AccountCard, PageHeader } from "@/components/shell/AppShell";
 import { NavIcon } from "@/components/shell/NavIcon";
 import { MORE_SECTIONS } from "@/components/shell/navigation";
+import { useInboxCount } from "@/lib/client/useInbox";
 
 /** Everything beyond the four main tabs, as a native-style grouped list (replaces the old drawer). */
 export default function MorePage() {
+  const inbox = useInboxCount();
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-10">
       <PageHeader title="More" />
@@ -21,6 +23,7 @@ export default function MorePage() {
                   <Link href={item.href} className="press-overlay flex min-h-[52px] items-center gap-3 px-4 py-2.5">
                     {item.icon ? <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-ink"><NavIcon name={item.icon} className="h-[18px] w-[18px]" /></span> : <span className="w-8 shrink-0" aria-hidden="true" />}
                     <span className="min-w-0 flex-1 font-medium">{item.label}</span>
+                    {item.href === "/friends" && inbox > 0 && <span data-inbox-badge className="grid h-6 min-w-6 shrink-0 place-items-center rounded-full bg-[#e05f4e] px-1.5 text-xs font-bold text-white">{inbox}</span>}
                     {item.hint && <span className="shrink-0 text-sm text-muted">{item.hint}</span>}
                     <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted rtl:rotate-180" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   </Link>

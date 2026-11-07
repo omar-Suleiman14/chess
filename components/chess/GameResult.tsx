@@ -53,6 +53,7 @@ const COPY = {
     accepted: "Rematch accepted",
     unavailable: "Opponent unavailable",
     review: "Review game",
+    gameReview: "Game Review",
     board: "Back to board",
     close: "Close result",
     newGame: "New game",
@@ -86,6 +87,7 @@ const COPY = {
     accepted: "الريفانش اتقبل",
     unavailable: "المنافس مش متاح",
     review: "راجع الدور",
+    gameReview: "مراجعة الدور",
     board: "ارجع للبورد",
     close: "اقفل النتيجة",
     newGame: "دور جديد",
@@ -119,6 +121,7 @@ const COPY = {
     accepted: "El revanche et2ebel",
     unavailable: "El monafes mesh mota7",
     review: "Rage3 el dor",
+    gameReview: "Moraga3et el dor",
     board: "Erga3 lel board",
     close: "E2fel el nateega",
     newGame: "Dor gedid",
@@ -308,6 +311,16 @@ export function GameResult({
             )}
           </dl>
         )}
+        {!onReview && reviewUrl && (
+          <Link
+            href={`${reviewUrl}${reviewUrl.includes("?") ? "&" : "?"}review=1`}
+            prefetch={false}
+            data-game-review
+            className="grid min-h-14 place-items-center rounded-2xl bg-[#81b64c] px-5 text-base font-bold text-white shadow-[0_4px_0_#5d8a33] transition-transform active:translate-y-[2px] active:shadow-[0_2px_0_#5d8a33]"
+          >
+            {copy.gameReview}
+          </Link>
+        )}
         <button
           onClick={onRematch}
           disabled={
@@ -333,15 +346,6 @@ export function GameResult({
           >
             {copy.review}
           </button>
-        )}
-        {!onReview && reviewUrl && (
-          <Link
-            href={reviewUrl}
-            prefetch={false}
-            className="grid min-h-12 place-items-center rounded-2xl border border-line bg-surface-2 px-4 text-sm font-semibold"
-          >
-            {copy.review}
-          </Link>
         )}
         <button
           onClick={() => setDismissed(true)}
