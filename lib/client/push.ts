@@ -4,6 +4,7 @@
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "@/convex/_generated/api";
+import { useBackendFeatures } from "./backendFeatures";
 
 export type PushState = "unsupported" | "unavailable" | "signed-out" | "denied" | "off" | "on" | "working";
 
@@ -27,14 +28,15 @@ async function currentSubscription(): Promise<PushSubscription | null> {
 
 export function usePushNotifications() {
   const { isAuthenticated } = useConvexAuth();
-  const publicKey = useQuery(api.push.publicKey, {});
+  const pushOnServer = useBackendFeatures()?.push === true;
+  const publicKey = useQuery(api.push.publicKey, pushOnServer ? {} : "skip");
   const [endpoint, setEndpoint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Feature checks differ between server and browser; decide after hydration.
   const isSupported = useSyncExternalStore(() => () => {}, supported, () => false);
   const hydrated = useSyncExternalStore(() => () => {}, () => true, () => false);
-  const status = useQuery(api.push.status, isAuthenticated ? { endpoint } : "skip");
+  const status = useQuery(api.push.status, isAuthenticated && pushOnServer ? { endpoint } : "skip");
   const save = useMutation(api.push.subscribe);
   const remove = useMutation(api.push.unsubscribe);
 
@@ -45,7 +47,7 @@ export function usePushNotifications() {
   }, []);
 
   let state: PushState;
-  if (!hydrated) state = "unavailable";
+  if (!hydrated || !pushOnServer) state = "unavailable";
   else if (!isSupported) state = "unsupported";
   else if (publicKey === null) state = "unavailable";
   else if (!isAuthenticated) state = "signed-out";

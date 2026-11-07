@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Avatar } from "@/components/profile/ChessCard";
 import { ChallengeDialog } from "@/components/online/ChallengeDialog";
 import { errorText } from "@/components/online/OnlineShared";
+import { useBackendFeatures } from "@/lib/client/backendFeatures";
 
 const pill = "grid min-h-9 place-items-center rounded-full px-3.5 text-sm font-semibold";
 
@@ -15,7 +16,8 @@ export function PlayerSearch({ myAlias, autoFocus = false }: { myAlias?: string;
   const { isAuthenticated } = useConvexAuth();
   const [q, setQ] = useState("");
   const query = useDeferredValue(q.trim());
-  const results = useQuery(api.friends.search, query ? { q: query } : "skip");
+  const canSearch = useBackendFeatures()?.search === true;
+  const results = useQuery(api.friends.search, query && canSearch ? { q: query } : "skip");
   const request = useMutation(api.friends.request);
   const respond = useMutation(api.friends.respond);
   const [busy, setBusy] = useState<string | null>(null);
@@ -47,7 +49,13 @@ export function PlayerSearch({ myAlias, autoFocus = false }: { myAlias?: string;
         />
       </label>
       {message && <p role="status" className={`px-1 text-sm ${message.ok ? "text-ok" : "text-danger"}`}>{message.text}</p>}
-      {query && (
+      {query && !canSearch && isAuthenticated && (
+        // Older server: no search yet, but adding by exact username still works.
+        <button onClick={() => void act(query.replace(/^@/, "").toLowerCase(), () => request({ alias: query.replace(/^@/, "").toLowerCase() }), `Request sent to @${query.replace(/^@/, "").toLowerCase()}.`)} className="min-h-12 rounded-2xl bg-accent font-semibold text-accent-text">
+          Add @{query.replace(/^@/, "").toLowerCase()} as a friend
+        </button>
+      )}
+      {query && canSearch && (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]" aria-label="Search results">
           {results === undefined && <li className="px-4 py-3 text-sm text-muted">Searching…</li>}
           {results && results.length === 0 && <li className="px-4 py-3 text-sm text-muted">No player called “{query.replace(/^@/, "")}”.</li>}

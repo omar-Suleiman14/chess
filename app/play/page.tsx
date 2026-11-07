@@ -10,6 +10,7 @@ import { NeedsInternet } from "@/components/shell/NeedsInternet";
 import { errorText, NameField, useDefaultName } from "@/components/online/OnlineShared";
 import { ONLINE_TIME_CONTROLS, playerToken, saveName, useOnlineAvatar, withAvatarFallback } from "@/lib/client/online";
 import { navigateWithTransition, PLAY_STAGE } from "@/lib/client/viewTransition";
+import { useBackendFeatures } from "@/lib/client/backendFeatures";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function PlayPage() {
   const create = useMutation(api.online.create);
   const join = useMutation(api.online.join);
   const seek = useMutation(api.online.seek);
+  const matchmaking = useBackendFeatures()?.matchmaking !== false;
   const avatar = useOnlineAvatar();
 
   const onCreate = async () => {
@@ -74,7 +76,9 @@ export default function PlayPage() {
         <p className="text-sm text-muted">Play a random opponent, or invite a friend with a link, QR code or 6-digit PIN. No account needed.</p>
         <Segmented label="Mode" value={tab} onChange={(t) => { setTab(t); setError(null); }} options={[["online", "Play online"], ["invite", "Invite a friend"], ["join", "Join with PIN"]]} />
 
-        {tab === "online" ? (
+        {tab === "online" && !matchmaking ? (
+          <p className="rounded-2xl bg-surface p-4 text-sm text-muted shadow-[var(--shadow)]">Random opponents arrive with the next server update. For now, invite a friend with a link or PIN.</p>
+        ) : tab === "online" ? (
           <>
             <NameField value={name} onChange={setName} />
             <div className="grid gap-1 text-sm">

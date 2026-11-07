@@ -10,6 +10,7 @@ import { FATMA_CARD } from "@/components/profile/ChessCard";
 import { PageHeader } from "@/components/shell/AppShell";
 import { useOrigin } from "@/lib/client/useOrigin";
 import { PlayerSearch } from "@/components/friends/PlayerSearch";
+import { Fallible } from "@/components/ui/Fallible";
 
 /** Every player who made their card public, with Sherine among them. */
 export default function PlayersPage() {
@@ -32,7 +33,7 @@ export default function PlayersPage() {
           <p className="mt-3 text-[15px] leading-relaxed text-muted">Search anyone by username, or browse public cards below. Swipe or drag to browse; tap a card to open it.</p>
         </header>
         <div className="mx-auto mt-5 w-full max-w-xl text-start">
-          <PlayerSearch />
+          <Fallible><PlayerSearch /></Fallible>
         </div>
         {cards === undefined ? (
           <LoadingSpinner label="Loading players" className="py-28" />
