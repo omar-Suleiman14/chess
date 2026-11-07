@@ -1,14 +1,19 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Link from "@/components/navigation/PrefetchLink";
 import { PageHeader } from "@/components/shell/AppShell";
 import { dailyPuzzle, puzzlesFor, PUZZLES, RUSH_MODES, THEMES } from "@/lib/chess/puzzles";
 import { rushBest, usePuzzleStats } from "@/lib/client/puzzleStats";
 import { RatingSparkline } from "./RatingSparkline";
 
+const subscribeNever = () => () => {};
+
 export function PuzzlesHome() {
   const { stats, synced } = usePuzzleStats();
-  const daily = dailyPuzzle(new Date());
+  // Dates depend on the visitor's clock and time zone: render them in the browser only.
+  const today = useSyncExternalStore(subscribeNever, () => new Date().toDateString(), () => null);
+  const daily = dailyPuzzle(today ? new Date(today) : new Date(0));
   const solvedPct = stats.attempts ? Math.round((stats.solved / stats.attempts) * 100) : null;
   const themes = THEMES.map((t) => ({ ...t, count: puzzlesFor(t.id).length })).filter((t) => t.count > 0);
 
@@ -48,8 +53,8 @@ export function PuzzlesHome() {
           </Link>
           <Link href="/puzzles/daily" className="rounded-3xl bg-surface p-5 shadow-[var(--shadow)] transition-transform active:scale-[.99]">
             <span className="text-sm font-semibold uppercase tracking-wide text-[#5aa0d6]">Daily puzzle</span>
-            <span className="mt-1 block text-xl font-bold">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</span>
-            <span className="mt-1 block text-sm text-muted">One new puzzle every day · rated {daily.rating}</span>
+            <span className="mt-1 block text-xl font-bold">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) : "Today"}</span>
+            <span className="mt-1 block text-sm text-muted">One new puzzle every day{today ? ` · rated ${daily.rating}` : ""}</span>
           </Link>
         </div>
 

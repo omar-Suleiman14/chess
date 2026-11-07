@@ -33,6 +33,10 @@ Everyone gets the same puzzle each UTC day. It isn't rated.
 
 Open **Analysis** from the sidebar or **More**. Move both sides freely; Stockfish shows its top three lines, an evaluation bar and an arrow for its best move. Tap a line to play its first move. Use ←/→, Home/End to step through moves, **F** to flip, and **FEN** to load a position. After a puzzle, **Analyse this position** opens it here.
 
+## Game Review
+
+After a game, tap **Game Review** on the result screen (or **Start Review** in Time Machine). Sherine grades every move while the evaluation graph draws itself, then shows each side's accuracy, the move labels (Best, Excellent, Inaccuracy, Mistake, Blunder, Great, Brilliant…), a badge on the moved piece and an arrow for the better move. Tap the graph to jump to any moment.
+
 ## Board annotations
 
 On every board, right-click a square to highlight it, or right-drag to draw an arrow. Hold Shift (green), Alt (blue) or Ctrl (another colour) while clicking. Knight moves bend into an L. A left click clears them; they also clear after a move.

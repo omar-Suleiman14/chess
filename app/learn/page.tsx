@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shell/AppShell";
 import { CURRICULUM, searchTopics, TOPIC_LESSONS } from "@/lib/chess/lessons/curriculum";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { MiniBoard } from "@/components/chess/MiniBoard";
 
 export default function LearnPage() {
   const { isAuthenticated } = useConvexAuth();
@@ -25,15 +26,19 @@ export default function LearnPage() {
   const nextLesson = CURRICULUM.find((l) => !done.has(l.id)) ?? CURRICULUM[0];
 
   return (
-    <main className="mx-auto min-h-dvh max-w-xl pb-12">
+    <main className="mx-auto min-h-dvh max-w-3xl pb-12">
       <PageHeader title="Learn" />
       <div className="grid gap-6 px-4">
         <p className="text-sm leading-6 text-muted">Learn chess with short, interactive lessons: start with how the pieces move, then practise rules, checkmate, tactics, endgames, and openings. Make moves on the board, use hints, and learn at your own pace. No account is needed for the curated lessons.</p>
         <Link href="/search" className="text-sm underline">Search all lessons and help</Link>
-        <Link href={`/learn/${nextLesson.id}`} className="rounded-3xl bg-accent p-5 text-accent-text">
-          <p className="text-sm opacity-70">{done.size === 0 ? "Start here" : "Continue"}</p>
-          <p className="text-2xl font-semibold">{nextLesson.title}</p>
-          <p className="mt-1 text-sm opacity-80">{nextLesson.summary}</p>
+        <Link href={`/learn/${nextLesson.id}`} className="flex items-center gap-4 rounded-3xl bg-accent p-4 text-accent-text transition-transform active:scale-[.99]">
+          <MiniBoard fen={nextLesson.steps[0].fen} size={88} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm opacity-70">{done.size === 0 ? "Start here" : "Continue"} · {done.size}/{CURRICULUM.length} lessons</span>
+            <span className="block text-2xl font-bold leading-tight">{nextLesson.title}</span>
+            <span className="mt-1 block text-sm opacity-80">{nextLesson.summary}</span>
+            <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-white/20"><span className="block h-full rounded-full bg-[#81b64c]" style={{ width: `${(done.size / CURRICULUM.length) * 100}%` }} /></span>
+          </span>
         </Link>
 
         <div className="grid grid-cols-3 gap-2">
@@ -59,27 +64,37 @@ export default function LearnPage() {
           </Link>
         )}
 
-        <section aria-labelledby="path">
-          <h2 id="path" className="mb-2 px-1 text-sm font-medium uppercase tracking-wide text-muted">Path</h2>
-          <div className="grid gap-3">
-            {sections.map(([title, lessons]) => (
-              <div key={title}>
-                <p className="mb-1 px-1 text-sm font-medium">{title}</p>
-                <ul className="overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]">
+        <section aria-labelledby="path" className="grid gap-5">
+          <h2 id="path" className="px-1 text-sm font-medium uppercase tracking-wide text-muted">Path</h2>
+          {sections.map(([title, lessons]) => {
+            const finished = lessons.filter((l) => done.has(l.id)).length;
+            return (
+              <div key={title} className="rounded-3xl bg-surface p-4 shadow-[var(--shadow)]">
+                <div className="mb-3 flex items-end justify-between gap-3 px-1">
+                  <div>
+                    <h3 className="text-lg font-bold">{title}</h3>
+                    <p className="text-xs text-muted">{lessons.length} {lessons.length === 1 ? "lesson" : "lessons"} · {finished} done</p>
+                  </div>
+                  <div className="h-2 w-24 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label={`${title} progress`} aria-valuemin={0} aria-valuemax={lessons.length} aria-valuenow={finished}>
+                    <div className="h-full rounded-full bg-[#81b64c] transition-[width] duration-500" style={{ width: `${(finished / lessons.length) * 100}%` }} />
+                  </div>
+                </div>
+                <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                   {lessons.map((l) => (
-                    <li key={l.id} className="border-b border-line last:border-b-0">
-                      <Link href={`/learn/${l.id}`} className="flex min-h-12 items-center justify-between px-4 py-3">
-                        <span>{l.title}</span>
-                        <span className="text-sm text-muted" aria-label={done.has(l.id) ? "completed" : `${l.steps.length} steps`}>
-                          {done.has(l.id) ? "✓" : `${l.steps.length} steps`}
+                    <li key={l.id}>
+                      <Link href={`/learn/${l.id}`} className="group relative flex h-full flex-col gap-2 rounded-2xl bg-surface-2 p-2.5 transition-transform hover:-translate-y-0.5 active:scale-[.98]">
+                        <MiniBoard fen={l.steps[0].fen} size={112} className="mx-auto transition-transform group-hover:scale-[1.03]" />
+                        <span className="text-sm font-semibold leading-tight">{l.title}</span>
+                        <span className="text-xs text-muted" aria-label={done.has(l.id) ? "completed" : `${l.steps.length} ${l.steps.length === 1 ? "step" : "steps"}`}>
+                          {done.has(l.id) ? <span className="font-semibold text-[#5d8a33]">✓ Completed</span> : `${l.steps.length} ${l.steps.length === 1 ? "step" : "steps"}`}
                         </span>
                       </Link>
                     </li>
                   ))}
                 </ul>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </section>
 
         <section aria-labelledby="topics">

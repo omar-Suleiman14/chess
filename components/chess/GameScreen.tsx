@@ -386,6 +386,12 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     }
   }, [chess, game, navigationFeedback]);
 
+  // Like chess.com bot games, takebacks are instant; only a still-rated game asks first (undo makes it unrated).
+  const requestUndo = useCallback(() => {
+    if (game?.meta.rated === "eligible" && game.meta.status === "active") setConfirmUndo(true);
+    else void onUndo();
+  }, [game, onUndo]);
+
   // Keyboard shortcuts (press ? for the list). Ignored while typing or inside a dialog.
   const [showKeys, setShowKeys] = useState(false);
   useEffect(() => {
@@ -397,7 +403,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       if (!inBoard && e.key === "ArrowRight") step(1);
       if (!inBoard && e.key === "Home") jumpTo(0);
       if (!inBoard && e.key === "End") jumpTo(line.length);
-      if (e.key === "u" && game && (head?.ply ?? 0) > 0) setConfirmUndo(true);
+      if (e.key === "u" && game && (head?.ply ?? 0) > 0) requestUndo();
       if (e.key === "f") setOrientationOverride((o) => ((o ?? human) === "w" ? "b" : "w"));
       if (e.key === "n") setShowNew(true);
       if (e.key === "m") update({ sound: !settings.sound });
@@ -405,7 +411,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [game, head?.ply, human, step, jumpTo, line.length, update, settings.sound]);
+  }, [game, head?.ply, human, step, jumpTo, line.length, update, settings.sound, requestUndo]);
 
   const tc = game?.meta.timeControlId ? findTimeControl(game.meta.timeControlId) : undefined;
   const now = monotonicNow();
@@ -604,7 +610,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
               {hintButtonLabel}
             </button>
           ) : (
-            <button disabled={!game || moveCount === 0} onClick={() => setConfirmUndo(true)} className="game-bar__item">
+            <button disabled={!game || moveCount === 0} onClick={requestUndo} className="game-bar__item">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" /></svg>
               Undo
             </button>
@@ -629,7 +635,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
         </Button>
         <Button
           variant="tint"
-          onClick={() => setConfirmUndo(true)}
+          onClick={requestUndo}
           disabled={!game || moveCount === 0}
           className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold lg:px-4"
           aria-keyshortcuts="u"
@@ -653,7 +659,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
           canUndo: !!game && moveCount > 0,
           sound: settings.sound,
           onNew: () => { if (game?.meta.status === "finished") setResultVersion((v) => v + 1); else setShowNew(true); },
-          onUndo: () => setConfirmUndo(true),
+          onUndo: requestUndo,
           onResign: () => setConfirmResign(true),
           onShare: () => void shareGame(),
           onSettings: () => setShowSettings(true),
@@ -666,7 +672,7 @@ export function GameScreen({ defaults, gameKey, startFresh, resumeMode }: Props)
       {showFriends && <FriendsSheet onClose={() => setShowFriends(false)} />}
 
       {confirmUndo && (
-        <Dialog title="Undo your last move?" onClose={() => setConfirmUndo(false)}>
+        <Dialog title="Undo your last move?" description="Taking a move back makes this game unrated." onClose={() => setConfirmUndo(false)}>
           <button
             onClick={() => {
               setConfirmUndo(false);

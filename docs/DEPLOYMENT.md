@@ -7,6 +7,24 @@
 5. Configure Vercel to build the reviewed revision. The existing integrated build uses `npx convex deploy --cmd 'pnpm build'` with the matching deploy key.
 6. Verify the deployed browser → API → saved state flow. Confirm old games load, new preferences save, and rematches work on the deployed backend.
 
+Challenge notifications use Web Push and are off until you add VAPID keys to the Convex deployment (in-app banners and badges work without them):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+```bash
+npx convex env set VAPID_PUBLIC_KEY <public key>
+```
+
+```bash
+npx convex env set VAPID_PRIVATE_KEY <private key>
+```
+
+```bash
+npx convex env set VAPID_SUBJECT mailto:<support address>
+```
+
 Never deploy the guest QA artifact made by `scripts/qa-server.mjs`. Run a normal build with the real `proxy.ts`. Public configuration belongs in `NEXT_PUBLIC_*`; Clerk secrets and Convex deploy keys do not.
 
 The new backend fields are optional for existing documents. An older backend keeps experience preferences device-only. Deploy matching backend functions before relying on new rematch responses or rating nameplates.

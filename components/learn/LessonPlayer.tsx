@@ -124,61 +124,70 @@ export function LessonPlayer({ lesson, onComplete }: { lesson: Lesson; onComplet
   const status = useMemo(() => positionStatus(fen), [fen]);
   const hintTarget = hintLevel > step.hints.length ? (feedback?.text.match(/on ([a-h][1-8])/)?.[1] as Square | undefined) : undefined;
 
+  const progress = ((stepIndex + (stepDone || finished ? 1 : 0)) / lesson.steps.length) * 100;
   return (
-    <div className="mx-auto w-full max-w-[min(92vw,calc(100dvh-250px),640px)]">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-lg font-medium leading-snug">{step.prompt}</p>
-        <span className="shrink-0 text-sm tabular-nums text-muted" aria-label={`Step ${stepIndex + 1} of ${lesson.steps.length}`}>
-          {stepIndex + 1}/{lesson.steps.length}
-        </span>
+    <div className="grid w-full gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+      <div className="mx-auto w-full max-w-[min(100%,calc(100dvh-220px),720px)]">
+        <Board
+          fen={fen}
+          orientation={learner}
+          movable={stepDone || finished ? null : learner}
+          onMove={onMove}
+          lastMove={lastMove}
+          checkSquare={status.check ? kingSquare(fen, sideToMove(fen)) ?? null : null}
+          showLegalDots={settings.legalDots}
+          coordinates={settings.coordinates}
+          reducedMotion={reducedMotion}
+          hintSquares={hintTarget ? [hintTarget] : []}
+          badge={feedback?.kind === "done" && lastMove ? { square: lastMove.to, kind: "correct" } : feedback?.kind === "wrong" && lastMove ? { square: lastMove.to, kind: "wrong" } : null}
+          label={`Lesson board. ${step.prompt}`}
+        />
       </div>
-      <Board
-        fen={fen}
-        orientation={learner}
-        movable={stepDone || finished ? null : learner}
-        onMove={onMove}
-        lastMove={lastMove}
-        checkSquare={status.check ? kingSquare(fen, sideToMove(fen)) ?? null : null}
-        showLegalDots={settings.legalDots}
-        coordinates={settings.coordinates}
-        reducedMotion={reducedMotion}
-        hintSquares={hintTarget ? [hintTarget] : []}
-        label={`Lesson board. ${step.prompt}`}
-      />
-      <div className="mt-3 flex min-h-16 items-center gap-3" aria-live="polite">
-        {feedback && (
-          <>
-            <FatmaSprite
-              expression={feedback.kind === "wrong" ? "amused" : feedback.kind === "done" ? "impressed" : "idle"}
-              size={48}
-              reducedMotion={reducedMotion}
-            />
-            <p className={`bubble-in rounded-2xl px-3 py-2 text-sm ${feedback.kind === "wrong" ? "bg-surface text-danger" : "bg-surface"}`}>{feedback.text}</p>
-          </>
-        )}
-      </div>
-      <div className="safe-bottom mt-2 flex gap-2">
-        {!finished && !stepDone && (
-          <button onClick={showHint} disabled={hintLevel >= maxHintLevel(step)} className="min-h-12 flex-1 rounded-2xl bg-surface shadow-[var(--shadow)] disabled:opacity-40">
-            Hint
-          </button>
-        )}
-        {stepDone && !finished && (
-          <button onClick={() => resetStep(stepIndex + 1)} className="min-h-12 flex-1 rounded-2xl bg-accent font-semibold text-accent-text">
-            Next
-          </button>
-        )}
-        {finished && (
-          <>
-            <button onClick={() => { resetStep(0); setFinished(false); setTotals({ hints: 0, mistakes: 0 }); }} className="min-h-12 flex-1 rounded-2xl bg-surface shadow-[var(--shadow)]">
-              Replay
+      <aside className="grid gap-3 rounded-2xl bg-surface p-4 shadow-[var(--shadow)]">
+        <div className="flex items-center gap-3">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label="Lesson progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+            <div className="h-full rounded-full bg-[#81b64c] transition-[width] duration-500" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="shrink-0 text-sm tabular-nums text-muted" aria-label={`Step ${stepIndex + 1} of ${lesson.steps.length}`}>
+            {stepIndex + 1}/{lesson.steps.length}
+          </span>
+        </div>
+        <div className="flex items-start gap-3" aria-live="polite">
+          <FatmaSprite
+            expression={feedback?.kind === "wrong" ? "amused" : feedback?.kind === "done" ? "impressed" : "idle"}
+            size={52}
+            reducedMotion={reducedMotion}
+          />
+          <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm bg-surface-2 px-3 py-2.5">
+            <p data-lesson-prompt className="font-semibold leading-snug">{step.prompt}</p>
+            {feedback && (
+              <p key={feedback.text} className={`bubble-in mt-1 text-sm ${feedback.kind === "wrong" ? "text-danger" : feedback.kind === "done" || feedback.kind === "right" ? "font-semibold text-[#5d8a33]" : "text-muted"}`}>{feedback.text}</p>
+            )}
+          </div>
+        </div>
+        <div className="safe-bottom flex gap-2">
+          {!finished && !stepDone && (
+            <button onClick={showHint} disabled={hintLevel >= maxHintLevel(step)} className="min-h-12 flex-1 rounded-xl bg-surface-2 font-semibold disabled:opacity-40">
+              Hint
             </button>
-            <Link href="/learn" className="grid min-h-12 flex-1 place-items-center rounded-2xl bg-accent font-semibold text-accent-text">
-              More lessons
-            </Link>
-          </>
-        )}
-      </div>
+          )}
+          {stepDone && !finished && (
+            <button onClick={() => resetStep(stepIndex + 1)} className="min-h-12 flex-1 rounded-xl bg-[#81b64c] text-lg font-bold text-white shadow-[0_4px_0_#5d8a33] active:translate-y-[2px] active:shadow-[0_2px_0_#5d8a33]">
+              Next
+            </button>
+          )}
+          {finished && (
+            <>
+              <button onClick={() => { resetStep(0); setFinished(false); setTotals({ hints: 0, mistakes: 0 }); }} className="min-h-12 flex-1 rounded-xl bg-surface-2 font-semibold">
+                Replay
+              </button>
+              <Link href="/learn" className="grid min-h-12 flex-1 place-items-center rounded-xl bg-[#81b64c] font-bold text-white shadow-[0_4px_0_#5d8a33]">
+                More lessons
+              </Link>
+            </>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }

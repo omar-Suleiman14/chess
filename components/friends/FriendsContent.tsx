@@ -17,6 +17,8 @@ import { CardStack } from "@/components/profile/CardStack";
 import { Avatar } from "@/components/profile/ChessCard";
 import { PageHeader } from "@/components/shell/AppShell";
 import { useOrigin } from "@/lib/client/useOrigin";
+import { PlayerSearch } from "./PlayerSearch";
+import { NotificationsCard } from "./NotificationsCard";
 
 type Person = { alias: string; avatarSeed: string; hue: number };
 
@@ -48,11 +50,9 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
   const mountedAt = useSocialTime();
   const data = useQuery(api.friends.overview, isAuthenticated ? { now: mountedAt } : "skip");
   const ensure = useMutation(api.profiles.ensure);
-  const request = useMutation(api.friends.request);
   const respond = useMutation(api.friends.respond);
   const remove = useMutation(api.friends.remove);
   const dismiss = useMutation(api.friends.dismissChallenge);
-  const [alias, setAlias] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [challenging, setChallenging] = useState<string | null>(null);
@@ -83,21 +83,6 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
     if (isAuthenticated && data && !data.me) void ensure({});
   }, [isAuthenticated, data, ensure]);
 
-  const add = async () => {
-    const target = alias.trim().replace(/^@/, "").toLowerCase();
-    if (!target || busy) return;
-    setBusy(true);
-    setMessage(null);
-    try {
-      await request({ alias: target });
-      setAlias("");
-      setMessage({ ok: true, text: `Request sent to @${target}.` });
-    } catch (e) {
-      setMessage({ ok: false, text: errorText(e) });
-    } finally {
-      setBusy(false);
-    }
-  };
   const act = async (action: () => Promise<unknown>) => {
     if (busy) return;
     setBusy(true);
@@ -123,26 +108,7 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
 
   const addForm = (
       <>
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void add();
-          }}
-        >
-          <input
-            value={alias}
-            onChange={(e) => setAlias(e.target.value)}
-            placeholder="Add by username, e.g. @omar"
-            aria-label="Friend's username"
-            autoCapitalize="none"
-            autoCorrect="off"
-            className="min-h-12 min-w-0 flex-1 rounded-2xl bg-surface px-4 shadow-[var(--shadow)] outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          />
-          <button type="submit" disabled={!alias.trim() || busy} className="min-h-12 shrink-0 rounded-2xl bg-accent px-3 font-semibold text-accent-text disabled:opacity-40">
-            {busy ? "Working…" : "Add Friend"}
-          </button>
-        </form>
+        <PlayerSearch myAlias={data?.me?.alias} />
         {message && <p role="status" className={`text-sm ${message.ok ? "text-ok" : "text-danger"}`}>{message.text}</p>}
         {data?.me && (
           <p className="text-xs text-muted">
@@ -158,6 +124,7 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
       {!embedded && <PageHeader title="Friends" />}
       <div className={embedded ? "grid gap-3" : "grid gap-4 px-4"}>
         {!embedded && addForm}
+        {!embedded && <NotificationsCard />}
         {(data === undefined || (!embedded && view === "cards" && cards === undefined)) && <LoadingSpinner label="Loading friends" />}
 
         {data && data.challenges.length > 0 && (

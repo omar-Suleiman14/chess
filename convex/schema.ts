@@ -209,6 +209,17 @@ export default defineSchema({
     .index("by_gameId", ["gameId"])
     .index("by_owner_and_pool", ["owner", "pool"]),
 
+  /** Browser push endpoints, so friends hear about challenges with the site closed. */
+  pushSubscriptions: defineTable({
+    owner: v.string(),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_owner", ["owner"])
+    .index("by_endpoint", ["endpoint"]),
+
   /** One row per player: puzzle rating and streaks. */
   puzzleStats: defineTable({
     owner: v.string(),

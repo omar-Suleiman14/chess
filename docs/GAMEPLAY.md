@@ -27,6 +27,15 @@ Only a current, legal, sufficiently searched suggestion unlocks the later steps.
 
 The request expires after the server's two-minute deadline. A closed result dialog does not cancel it. Live engine help is unavailable in human games.
 
+## Find and challenge friends
+
+1. Open **Friends** (the people icon at the top of any phone page, or the sidebar) or **Players**.
+2. Type part of a username. Results show whether you're already friends; tap **Add friend**, **Accept**, or **Challenge**.
+3. A challenge opens a waiting room for you and alerts your friend: a banner on any page, a badge on Friends and More, and the count in the tab title.
+4. Turn on **Challenge notifications** on the Friends page to be alerted on this device even when Chess by Chaos is closed.
+
+Every signed-in player gets a username automatically. New profiles are public, so their card appears on Players; switch to private in **Profile** to show your card only to friends. Usernames stay searchable so friends can add you.
+
 ## Talk to Sherine
 
 Tap her sprite and send a short greeting. Choose English, Egyptian Arabic, Franco, or automatic language following in Settings. Her dialogue never chooses the chess moves. [Character rules](SHERINE.md)

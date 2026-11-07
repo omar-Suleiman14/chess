@@ -45,7 +45,7 @@ type Props = {
   onFlip?: () => void;
   result?: BoardResult;
   /** Puzzle feedback: a tick or cross on the square a move landed on. */
-  badge?: { square: Square; kind: "correct" | "wrong" } | null;
+  badge?: { square: Square; kind: "correct" | "wrong" } | { square: Square; kind: "glyph"; symbol: string; color: string } | null;
 };
 
 const SQUARE_RE = /^[a-h][1-8]$/;
@@ -471,18 +471,18 @@ export const Board = memo(function Board({
           {squareMarks.get(square) && <div data-mark-square className="pointer-events-none absolute inset-0" style={{ background: MARK_FILL[squareMarks.get(square)!], opacity: 0.85 }} />}
           {badge?.square === square && (
             <>
-              <div className="pointer-events-none absolute inset-0" style={{ background: badge.kind === "correct" ? "rgb(129 182 76 / .45)" : "rgb(235 97 80 / .45)" }} />
+              <div className="pointer-events-none absolute inset-0" style={{ background: badge.kind === "glyph" ? `color-mix(in srgb, ${badge.color} 38%, transparent)` : badge.kind === "correct" ? "rgb(129 182 76 / .45)" : "rgb(235 97 80 / .45)" }} />
               <motion.span
-                key={`badge-${badge.kind}-${fen}`}
-                data-move-badge={badge.kind}
+                key={`badge-${badge.kind}-${badge.kind === "glyph" ? badge.symbol : ""}-${fen}`}
+                data-move-badge={badge.kind === "glyph" ? badge.symbol : badge.kind}
                 aria-hidden="true"
                 className="pointer-events-none absolute right-[2%] top-[2%] z-40 grid h-[40%] w-[40%] place-items-center rounded-full text-[clamp(10px,3.2vw,22px)] font-black leading-none text-white shadow-[0_2px_6px_rgba(0,0,0,.35)]"
-                style={{ backgroundColor: badge.kind === "correct" ? "#81b64c" : "#e05f4e" }}
+                style={{ backgroundColor: badge.kind === "glyph" ? badge.color : badge.kind === "correct" ? "#81b64c" : "#e05f4e" }}
                 initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 600, damping: 22, delay: reducedMotion ? 0 : 0.12 }}
               >
-                {badge.kind === "correct" ? "✓" : "✕"}
+                {badge.kind === "glyph" ? badge.symbol : badge.kind === "correct" ? "✓" : "✕"}
               </motion.span>
             </>
           )}

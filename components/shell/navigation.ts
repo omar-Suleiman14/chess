@@ -17,6 +17,14 @@ export const PRIMARY: NavItem[] = [
 
 export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
   {
+    title: "Social",
+    items: [
+      { href: "/friends", label: "Friends", hint: "Challenges · requests", icon: "friends" },
+      { href: "/u", label: "Players", hint: "Find people", icon: "search" },
+      { href: "/profile", label: "Profile & Sherine", icon: "profile" },
+    ],
+  },
+  {
     title: "Play",
     items: [
       { href: "/puzzles", label: "Puzzles", hint: "Rated · Puzzle Rush · Daily", icon: "puzzle" },
@@ -28,8 +36,6 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
   {
     title: "You",
     items: [
-      { href: "/friends", label: "Friends", hint: "Requests · challenges", icon: "friends" },
-      { href: "/profile", label: "Profile & Sherine", icon: "profile" },
       { href: "/progress", label: "Progress", icon: "chart" },
       { href: "/settings", label: "Settings", icon: "settings" },
     ],
@@ -45,7 +51,6 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
       { href: "/terms", label: "Terms of use" },
       { href: "/cookies", label: "Cookies & storage" },
       { href: "/accessibility", label: "Accessibility" },
-      { href: "/u", label: "Players" },
       { href: "/licenses", label: "Licences & engine source" },
     ],
   },
@@ -57,6 +62,7 @@ export const SIDEBAR_SECONDARY: NavItem[] = [
   { href: "/play", label: "Play a friend", icon: "link" },
   { href: "/analysis", label: "Analysis", icon: "chart" },
   { href: "/friends", label: "Friends", icon: "friends" },
+  { href: "/u", label: "Players", icon: "search" },
   { href: "/progress", label: "Progress", icon: "chart" },
 ];
 
