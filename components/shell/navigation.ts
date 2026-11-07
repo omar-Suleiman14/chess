@@ -29,7 +29,7 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { href: "/puzzles", label: "Puzzles", hint: "Rated · Puzzle Rush · Daily", icon: "puzzle" },
       { href: "/timed", label: "Timed games", hint: "Clock presets", icon: "clock" },
-      { href: "/play", label: "Play a friend", hint: "Link · QR · PIN", icon: "link" },
+      { href: "/play", label: "Play online", hint: "Random opponent · friends", icon: "link" },
       { href: "/analysis", label: "Analysis board", hint: "Stockfish lines · FEN", icon: "search" },
     ],
   },
@@ -59,7 +59,7 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
 /** Desktop sidebar: the main destinations, then the most used extras. */
 export const SIDEBAR_SECONDARY: NavItem[] = [
   { href: "/timed", label: "Timed", icon: "clock" },
-  { href: "/play", label: "Play a friend", icon: "link" },
+  { href: "/play", label: "Play online", icon: "link" },
   { href: "/analysis", label: "Analysis", icon: "chart" },
   { href: "/friends", label: "Friends", icon: "friends" },
   { href: "/u", label: "Players", icon: "search" },

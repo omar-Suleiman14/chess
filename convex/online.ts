@@ -175,6 +175,103 @@ export const create = mutation({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Play online: pair with a random opponent at the same clock.
+
+/** A search is live while its client keeps checking in. */
+const SEEK_FRESH_MS = 45_000;
+
+function poolOf(initialMs: number | undefined, incrementMs: number | undefined): string {
+  return initialMs === undefined ? "none" : `${initialMs}+${incrementMs ?? 0}`;
+}
+
+async function dropSeeks(ctx: MutationCtx, token: string, cancelRooms: boolean) {
+  const mine = await ctx.db.query("onlineSeeks").withIndex("by_token", (q) => q.eq("token", token)).take(10);
+  for (const seek of mine) {
+    if (cancelRooms) {
+      const room = await ctx.db.get("onlineRooms", seek.roomId);
+      if (room?.status === "waiting") await ctx.db.patch("onlineRooms", room._id, { status: "cancelled", updatedAt: Date.now() });
+    }
+    await ctx.db.delete("onlineSeeks", seek._id);
+  }
+}
+
+/**
+ * Find an opponent: join the longest-waiting fresh search at this clock, or
+ * open a room and wait in the pool. Returns the room PIN either way.
+ */
+export const seek = mutation({
+  args: { token: v.string(), name: v.string(), avatar: v.optional(onlineAvatarValidator), ...timeControlArgs },
+  returns: v.object({ code: v.string(), matched: v.boolean() }),
+  handler: async (ctx, args) => {
+    checkToken(args.token);
+    checkTimeControl(args.initialMs, args.incrementMs);
+    const pool = poolOf(args.initialMs, args.incrementMs);
+    const now = Date.now();
+    await dropSeeks(ctx, args.token, true);
+    const waiting = await ctx.db
+      .query("onlineSeeks")
+      .withIndex("by_pool_and_lastSeenAt", (q) => q.eq("pool", pool).gt("lastSeenAt", now - SEEK_FRESH_MS))
+      .take(20);
+    for (const candidate of waiting.sort((a, b) => a.createdAt - b.createdAt)) {
+      if (candidate.token === args.token) continue;
+      const room = await ctx.db.get("onlineRooms", candidate.roomId);
+      await ctx.db.delete("onlineSeeks", candidate._id);
+      if (!room || room.status !== "waiting") continue;
+      await ctx.db.patch("onlineRooms", room._id, { guestToken: args.token, guestName: cleanName(args.name), guestAvatar: cleanAvatar(args.avatar), status: "active", startedAt: now, updatedAt: now });
+      return { code: room.code, matched: true };
+    }
+    const limit = await rateLimiter.limit(ctx, "onlineCreate", { key: args.token });
+    if (!limit.ok) fail("rate_limited", "Too many new games. Try again in a few minutes.");
+    const code = await freshCode(ctx);
+    const timed = args.initialMs !== undefined;
+    const roomId = await ctx.db.insert("onlineRooms", {
+      code,
+      status: "waiting",
+      hostToken: args.token,
+      hostName: cleanName(args.name),
+      hostAvatar: cleanAvatar(args.avatar),
+      hostColor: Math.random() < 0.5 ? "w" : "b",
+      initialMs: args.initialMs,
+      incrementMs: timed ? (args.incrementMs ?? 0) : undefined,
+      fen: DEFAULT_POSITION,
+      ply: 0,
+      clockW: args.initialMs,
+      clockB: args.initialMs,
+      turnStartedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert("onlineSeeks", { token: args.token, pool, code, roomId, lastSeenAt: now, createdAt: now });
+    return { code, matched: false };
+  },
+});
+
+/** Keeps a search alive while its page is open. */
+export const keepSeeking = mutation({
+  args: { token: v.string(), code: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    checkToken(args.token);
+    const mine = await ctx.db.query("onlineSeeks").withIndex("by_token", (q) => q.eq("token", args.token)).take(10);
+    const current = mine.find((s) => s.code === args.code);
+    if (!current) return false;
+    await ctx.db.patch("onlineSeeks", current._id, { lastSeenAt: Date.now() });
+    return true;
+  },
+});
+
+/** Stops searching and closes the waiting room. */
+export const stopSeeking = mutation({
+  args: { token: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    checkToken(args.token);
+    await dropSeeks(ctx, args.token, true);
+    return null;
+  },
+});
+
 export const join = mutation({
   args: { code: v.string(), token: v.string(), name: v.string(), avatar: v.optional(onlineAvatarValidator) },
   handler: async (ctx, args) => {

@@ -13,7 +13,7 @@ import { navigateWithTransition, PLAY_STAGE } from "@/lib/client/viewTransition"
 
 export default function PlayPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<"invite" | "join">("invite");
+  const [tab, setTab] = useState<"online" | "invite" | "join">("online");
   const [name, setName] = useDefaultName();
   const [tc, setTc] = useState("10+0");
   const [color, setColor] = useState<"w" | "random" | "b">("random");
@@ -22,6 +22,7 @@ export default function PlayPage() {
   const [error, setError] = useState<string | null>(null);
   const create = useMutation(api.online.create);
   const join = useMutation(api.online.join);
+  const seek = useMutation(api.online.seek);
   const avatar = useOnlineAvatar();
 
   const onCreate = async () => {
@@ -32,6 +33,20 @@ export default function PlayPage() {
     try {
       const { code } = await withAvatarFallback((a) => create({ token: playerToken(), name, avatar: a, color, initialMs: control.initialMs, incrementMs: control.incrementMs }), avatar);
       void navigateWithTransition(router, `/play/${code}`);
+    } catch (e) {
+      setError(errorText(e));
+      setBusy(false);
+    }
+  };
+
+  const onSeek = async () => {
+    setBusy(true);
+    setError(null);
+    saveName(name);
+    const control = ONLINE_TIME_CONTROLS.find((t) => t.id === tc)!;
+    try {
+      const { code } = await withAvatarFallback((a) => seek({ token: playerToken(), name, avatar: a, initialMs: control.initialMs, incrementMs: control.incrementMs }), avatar);
+      void navigateWithTransition(router, `/play/${code}?seek=1`);
     } catch (e) {
       setError(errorText(e));
       setBusy(false);
@@ -53,13 +68,37 @@ export default function PlayPage() {
 
   return (
     <main className="mx-auto min-h-dvh max-w-xl pb-10">
-      <PageHeader title="Play a friend" />
+      <PageHeader title="Play online" />
       <div className="grid gap-5 px-4">
         <NeedsInternet what="Online games" />
-        <p className="text-sm text-muted">Play someone on another phone or computer. Share a link, a QR code or a 6-digit PIN. No account needed.</p>
-        <Segmented label="Mode" value={tab} onChange={(t) => { setTab(t); setError(null); }} options={[["invite", "Invite someone"], ["join", "Join with PIN"]]} />
+        <p className="text-sm text-muted">Play a random opponent, or invite a friend with a link, QR code or 6-digit PIN. No account needed.</p>
+        <Segmented label="Mode" value={tab} onChange={(t) => { setTab(t); setError(null); }} options={[["online", "Play online"], ["invite", "Invite a friend"], ["join", "Join with PIN"]]} />
 
-        {tab === "invite" ? (
+        {tab === "online" ? (
+          <>
+            <NameField value={name} onChange={setName} />
+            <div className="grid gap-1 text-sm">
+              <span className="px-1 text-muted">Clock</span>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Clock">
+                {ONLINE_TIME_CONTROLS.filter((t) => t.id !== "none").map((t) => (
+                  <button
+                    key={t.id}
+                    role="radio"
+                    aria-checked={tc === t.id}
+                    onClick={() => setTc(t.id)}
+                    className={`min-h-14 rounded-2xl px-2 text-base font-semibold tabular-nums ${tc === t.id ? "bg-accent text-accent-text" : "bg-surface shadow-[var(--shadow)]"}`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button data-play-online onClick={() => void onSeek()} disabled={busy || tc === "none"} className="min-h-16 rounded-2xl bg-[#81b64c] text-xl font-bold text-white shadow-[0_5px_0_#5d8a33] transition-transform active:translate-y-[3px] active:shadow-[0_2px_0_#5d8a33] disabled:opacity-60" style={{ viewTransitionName: PLAY_STAGE }}>
+              {busy ? "Starting…" : "Play"}
+            </button>
+            <p className="text-xs text-muted">You&apos;ll be paired with the next player looking for the same clock. Colours are random.</p>
+          </>
+        ) : tab === "invite" ? (
           <>
             <NameField value={name} onChange={setName} />
             <div className="grid gap-1 text-sm">

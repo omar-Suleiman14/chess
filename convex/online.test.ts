@@ -177,3 +177,37 @@ describe("online rooms", () => {
     expect(await view(t, code, HOST)).toMatchObject({ status: "finished", result: "1-0", resultReason: "timeout", clockB: 0 });
   });
 });
+
+describe("play online matchmaking", () => {
+  const blitz = { initialMs: 180_000, incrementMs: 2_000 };
+
+  it("pairs two searches at the same clock into one active room", async () => {
+    const t = setup();
+    const first = await t.mutation(api.online.seek, { token: HOST, name: "Omar", ...blitz });
+    expect(first.matched).toBe(false);
+    // A different clock is a different pool.
+    const other = await t.mutation(api.online.seek, { token: STRANGER, name: "Nour", initialMs: 600_000, incrementMs: 0 });
+    expect(other.matched).toBe(false);
+    const second = await t.mutation(api.online.seek, { token: GUEST, name: "Sara", ...blitz });
+    expect(second).toEqual({ code: first.code, matched: true });
+    const room = await view(t, first.code, GUEST);
+    expect(room?.status).toBe("active");
+    expect(await t.mutation(api.online.keepSeeking, { token: HOST, code: first.code })).toBe(false);
+  });
+
+  it("skips stale searches and cancels the room when you stop", async () => {
+    vi.useFakeTimers();
+    try {
+      const t = setup();
+      const stale = await t.mutation(api.online.seek, { token: HOST, name: "Omar", ...blitz });
+      vi.advanceTimersByTime(60_000);
+      const fresh = await t.mutation(api.online.seek, { token: GUEST, name: "Sara", ...blitz });
+      expect(fresh.matched).toBe(false);
+      expect(fresh.code).not.toBe(stale.code);
+      await t.mutation(api.online.stopSeeking, { token: GUEST });
+      expect((await view(t, fresh.code, GUEST))?.status).toBe("cancelled");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

@@ -18,6 +18,15 @@ Full Power uses unrestricted Stockfish 19 Lite with the selected thinking time. 
 
 Only a current, legal, sufficiently searched suggestion unlocks the later steps. Moving, undoing, restarting, or changing turns clears help. Hints are unavailable while Sherine thinks or the game is over. [Fair-play details](RATINGS.md)
 
+## Play online
+
+1. Open **Play online**, choose a clock, and tap **Play**.
+2. You're paired with the next player searching for the same clock; colours are random. Tap **Cancel** to stop searching.
+
+## Start positions and odds
+
+In **New game**, pick a start position: Standard, Queens only, Knights only, Pawns only, Pawns & queens, Random back rank (Chess960-style, no castling), or Queen/Rook/Knight odds (Sherine starts without that piece). These are normal chess from a different setup, so hints, review and Time Machine all work. Any non-standard start is unrated.
+
 ## Play a friend
 
 1. Open **Play a friend** from the menu. Create an invite and share its PIN or link.

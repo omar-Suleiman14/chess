@@ -382,6 +382,18 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_owner", ["owner"]),
 
+  /** Players looking for a random opponent; each owns a waiting room. */
+  onlineSeeks: defineTable({
+    token: v.string(),
+    pool: v.string(),
+    code: v.string(),
+    roomId: v.id("onlineRooms"),
+    lastSeenAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_pool_and_lastSeenAt", ["pool", "lastSeenAt"])
+    .index("by_token", ["token"]),
+
   onlineRooms: defineTable({
     code: v.string(),
     status: v.union(v.literal("waiting"), v.literal("active"), v.literal("finished"), v.literal("cancelled")),
