@@ -16,7 +16,7 @@ const NAMES: Record<string, string> = { k: "king", q: "queen", r: "rook", b: "bi
 
 /**
  * Build any position: pick a piece (or the eraser) and tap or drag across
- * squares. Right-click or long-press a square to clear it.
+ * squares. Tap a square holding that piece, or right-click, to clear it.
  */
 export function PositionEditor({ initialFen = DEFAULT_POSITION, onDone, onCancel, doneLabel = "Use this position" }: {
   initialFen?: string;
