@@ -247,7 +247,7 @@ export function GameResult({
         >
           <span aria-hidden="true">×</span>
         </button>
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl bg-surface-2 p-4">
+        <div data-result-tone={draw ? "draw" : won ? "win" : "loss"} className={`grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl p-4 ring-1 ring-inset ${draw ? "bg-surface-2 ring-line" : won ? "bg-[#81b64c]/15 ring-[#81b64c]/40" : "bg-[#e05f4e]/10 ring-[#e05f4e]/30"}`}>
           {(["w", "b"] as const).map((color, index) => (
             <div key={color} className="contents">
               {index === 1 && (
@@ -329,7 +329,11 @@ export function GameResult({
               rematchState,
             )
           }
-          className="min-h-14 w-full rounded-2xl bg-accent px-5 py-3 text-base font-bold text-accent-text disabled:opacity-60"
+          data-result-rematch
+          className={reviewUrl && !onReview
+            // Game Review is the main action; rematch is a clear secondary.
+            ? "min-h-12 w-full rounded-2xl border border-line bg-surface-2 px-5 py-2.5 text-base font-semibold text-ink disabled:opacity-60"
+            : "min-h-14 w-full rounded-2xl bg-[#81b64c] px-5 py-3 text-lg font-bold text-white shadow-[0_4px_0_#5d8a33] transition-transform active:translate-y-[2px] active:shadow-[0_2px_0_#5d8a33] disabled:opacity-60"}
         >
           {primary}
         </button>

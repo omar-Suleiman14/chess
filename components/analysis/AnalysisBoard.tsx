@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Board, type LastMove } from "@/components/chess/Board";
 import { EvalBar } from "@/components/chess/EvalBar";
+import { PositionEditor } from "@/components/chess/PositionEditor";
 import { PageHeader } from "@/components/shell/AppShell";
 import { SearchCancelled } from "@/lib/chess/engine/controller";
 import { formatScore, type WhiteScore } from "@/lib/chess/engine/uci";
@@ -55,6 +56,7 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
   const [lines, setLines] = useState<{ fen: string; list: Line[] }>({ fen: "", list: [] });
   const [fenInput, setFenInput] = useState("");
   const [fenError, setFenError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   // Every position along the line, so stepping back and forth is instant.
   const path = useMemo(() => {
@@ -129,14 +131,18 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [cursor, go, path.length]);
 
+  const applyPosition = (next: string) => {
+    setFenError(null);
+    setRoot(next);
+    setMoves([]);
+    setCursor(0);
+    setOrientation(sideToMove(next));
+  };
+
   const loadFen = () => {
     const checked = checkFen(fenInput);
     if (!checked.ok) { setFenError(checked.error); return; }
-    setFenError(null);
-    setRoot(checked.fen);
-    setMoves([]);
-    setCursor(0);
-    setOrientation(sideToMove(checked.fen));
+    applyPosition(checked.fen);
   };
 
   const reset = () => { setRoot(DEFAULT_POSITION); setMoves([]); setCursor(0); setOrientation("w"); };
@@ -256,9 +262,16 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
               <button onClick={() => void navigator.clipboard?.writeText(fen)} className="min-h-10 flex-1 rounded-xl bg-surface-2 font-semibold">Copy FEN</button>
               <button onClick={reset} className="min-h-10 flex-1 rounded-xl bg-surface-2 font-semibold">Starting position</button>
             </div>
+            <button data-edit-position onClick={() => setEditing(true)} className="min-h-11 rounded-xl bg-accent font-semibold text-accent-text">Set up position…</button>
           </section>
         </aside>
       </div>
+      {editing && (
+        <div className="fixed inset-0 z-[110] overflow-y-auto bg-bg p-3 pt-[max(12px,env(safe-area-inset-top))]" role="dialog" aria-label="Set up a position">
+          <h2 className="mb-3 px-1 text-2xl font-bold">Set up a position</h2>
+          <PositionEditor initialFen={fen} doneLabel="Analyse this position" onCancel={() => setEditing(false)} onDone={(next) => { applyPosition(next); setEditing(false); }} />
+        </div>
+      )}
     </main>
   );
 }

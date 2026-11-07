@@ -38,6 +38,7 @@ import {
   legalUcis,
   positionStatus,
   sideToMove,
+  type Color,
   type Square,
 } from "@/lib/chess/rules";
 import { getEngine, supportsEngine } from "@/lib/client/engine";
@@ -321,6 +322,8 @@ export default function ReplayPage({
     const index = path.findIndex((n) => n.ply === move.ply);
     return index >= 0 ? [{ ...move, ply: index + 1 }] : [];
   }), [reviewed, path]);
+  const [flipped, setFlipped] = useState(false);
+
   // Finished positions need no engine: mate and draws have known scores.
   const reviewScores = useMemo(() => [tree.nodes.root, ...path].map((n) => {
     if (scores[n.key]) return scores[n.key].score;
@@ -551,6 +554,10 @@ export default function ReplayPage({
       </p>
     );
 
+  // The player's side sits at the bottom unless the board is flipped.
+  const bottomColor: Color = flipped ? (game.meta.humanColor === "w" ? "b" : "w") : game.meta.humanColor;
+  const topColor: Color = bottomColor === "w" ? "b" : "w";
+
   const alternatives = node
     ? childrenOf(tree, node.key).filter((c) => c.key !== path[cursor]?.key)
     : [];
@@ -581,6 +588,11 @@ export default function ReplayPage({
             )
           )
             return;
+          if (event.key === "f" || event.key === "F") {
+            event.preventDefault();
+            setFlipped((f) => !f);
+            return;
+          }
           const next =
             event.key === "ArrowLeft"
               ? cursor - 1
@@ -600,16 +612,12 @@ export default function ReplayPage({
         <div className="mx-auto w-full max-w-[min(96vw,calc(100dvh-245px),900px)]">
           <div className="mb-2 flex min-h-10 items-center justify-between gap-2 text-sm">
             <span className="min-w-0 break-words font-semibold">
-              {playerNames[game.meta.humanColor === "w" ? "b" : "w"]}
+              {playerNames[topColor]}
             </span>
             <CapturedPieces
-              pieces={
-                captures.captured[game.meta.humanColor === "w" ? "b" : "w"]
-              }
-              color={game.meta.humanColor}
-              advantage={
-                captures.advantage[game.meta.humanColor === "w" ? "b" : "w"]
-              }
+              pieces={captures.captured[topColor]}
+              color={bottomColor}
+              advantage={captures.advantage[topColor]}
             />
           </div>
           <Board
@@ -621,7 +629,8 @@ export default function ReplayPage({
                 : undefined
             }
             fen={fen}
-            orientation={game.meta.humanColor}
+            orientation={bottomColor}
+            onFlip={() => setFlipped((f) => !f)}
             movable={null}
             onMove={() => false}
             lastMove={lastMove}
@@ -638,17 +647,17 @@ export default function ReplayPage({
           />
           <div className="mt-2 flex min-h-10 items-center justify-between gap-2 text-sm">
             <span className="min-w-0 break-words font-semibold">
-              {playerNames[game.meta.humanColor]}
+              {playerNames[bottomColor]}
             </span>
             <CapturedPieces
-              pieces={captures.captured[game.meta.humanColor]}
-              color={game.meta.humanColor === "w" ? "b" : "w"}
-              advantage={captures.advantage[game.meta.humanColor]}
+              pieces={captures.captured[bottomColor]}
+              color={topColor}
+              advantage={captures.advantage[bottomColor]}
             />
           </div>
           <nav
             aria-label="Position navigation"
-            className="mt-2 grid grid-cols-4 gap-2"
+            className="mt-2 grid grid-cols-5 gap-2"
             dir="ltr"
           >
             {[
@@ -687,6 +696,14 @@ export default function ReplayPage({
                 {action.label}
               </Button>
             ))}
+            <Button
+              onClick={() => setFlipped((f) => !f)}
+              aria-label="Flip board"
+              aria-pressed={flipped}
+              className="min-h-12 rounded-xl bg-surface px-2 text-sm font-semibold"
+            >
+              ⇅
+            </Button>
           </nav>
           {!hintDismissed && (
             <div className="mt-2 flex items-center gap-2 text-xs text-muted">

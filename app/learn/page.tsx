@@ -8,6 +8,10 @@ import { PageHeader } from "@/components/shell/AppShell";
 import { CURRICULUM, searchTopics, TOPIC_LESSONS } from "@/lib/chess/lessons/curriculum";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { MiniBoard } from "@/components/chess/MiniBoard";
+import { FatmaSprite } from "@/components/fatma/FatmaSprite";
+import { ListIcon, PathMap, StickyAction } from "@/components/ui/PathMap";
+import { CoachLine } from "@/components/ui/CoachLine";
+import { useSettings } from "@/lib/client/settings";
 
 export default function LearnPage() {
   const { isAuthenticated } = useConvexAuth();
@@ -24,22 +28,36 @@ export default function LearnPage() {
     return [...map.entries()];
   }, []);
   const nextLesson = CURRICULUM.find((l) => !done.has(l.id)) ?? CURRICULUM[0];
+  const allDone = done.size >= CURRICULUM.length;
+  const { reducedMotion } = useSettings();
 
   return (
-    <main className="mx-auto min-h-dvh max-w-3xl pb-12">
+    <main className="mx-auto min-h-dvh max-w-3xl pb-32">
       <PageHeader title="Learn" />
-      <div className="grid gap-6 px-4">
-        <p className="text-sm leading-6 text-muted">Learn chess with short, interactive lessons: start with how the pieces move, then practise rules, checkmate, tactics, endgames, and openings. Make moves on the board, use hints, and learn at your own pace. No account is needed for the curated lessons.</p>
-        <Link href="/search" className="text-sm underline">Search all lessons and help</Link>
-        <Link href={`/learn/${nextLesson.id}`} className="flex items-center gap-4 rounded-3xl bg-accent p-4 text-accent-text transition-transform active:scale-[.99]">
-          <MiniBoard fen={nextLesson.steps[0].fen} size={88} />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm opacity-70">{done.size === 0 ? "Start here" : "Continue"} · {done.size}/{CURRICULUM.length} lessons</span>
-            <span className="block text-2xl font-bold leading-tight">{nextLesson.title}</span>
-            <span className="mt-1 block text-sm opacity-80">{nextLesson.summary}</span>
-            <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-white/20"><span className="block h-full rounded-full bg-[#81b64c]" style={{ width: `${(done.size / CURRICULUM.length) * 100}%` }} /></span>
-          </span>
-        </Link>
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 px-4">
+        <CoachLine reducedMotion={reducedMotion} text={allDone ? "Excellent work! You've finished every lesson. Keep sharp with puzzles." : done.size === 0 ? "Welcome! Let's start with how the pieces move. Tap the glowing tile or Start learning." : `Nice progress. Next up: ${nextLesson.title}.`} />
+
+        <section aria-labelledby="path-title" className="grid gap-1">
+          <PathMap
+            label="Lesson path"
+            reducedMotion={reducedMotion}
+            nodes={CURRICULUM.map((l, i) => ({
+              key: l.id,
+              face: i + 1,
+              title: l.title,
+              href: `/learn/${l.id}`,
+              state: done.has(l.id) ? "done" : l.id === nextLesson.id && !allDone ? "current" : "todo",
+            }))}
+            marker={<span className="block overflow-hidden rounded-xl bg-surface p-0.5 shadow-[var(--shadow)]"><FatmaSprite expression="idle" size={34} reducedMotion={reducedMotion} /></span>}
+          />
+          <h2 id="path-title" className="px-1 text-3xl font-black tracking-tight">{nextLesson.section ?? "Lessons"}</h2>
+          <div className="flex items-center gap-3 px-1">
+            <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label="Lessons completed" aria-valuemin={0} aria-valuemax={CURRICULUM.length} aria-valuenow={done.size}>
+              <div className="h-full rounded-full bg-[#81b64c] transition-[width] duration-700" style={{ width: `${(done.size / CURRICULUM.length) * 100}%` }} />
+            </div>
+            <span className="text-sm font-semibold tabular-nums text-muted">{done.size}/{CURRICULUM.length}</span>
+          </div>
+        </section>
 
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -64,8 +82,8 @@ export default function LearnPage() {
           </Link>
         )}
 
-        <section aria-labelledby="path" className="grid gap-5">
-          <h2 id="path" className="px-1 text-sm font-medium uppercase tracking-wide text-muted">Path</h2>
+        <section id="all-lessons" aria-labelledby="path" className="grid scroll-mt-20 gap-5" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 1600px" }}>
+          <h2 id="path" className="px-1 text-sm font-medium uppercase tracking-wide text-muted">All lessons</h2>
           {sections.map(([title, lessons]) => {
             const finished = lessons.filter((l) => done.has(l.id)).length;
             return (
@@ -96,6 +114,8 @@ export default function LearnPage() {
             );
           })}
         </section>
+
+        <p className="text-sm leading-6 text-muted">Learn chess with short, interactive lessons: start with how the pieces move, then practise rules, checkmate, tactics, endgames, and openings. Make moves on the board, use hints, and learn at your own pace. No account is needed for the curated lessons. <Link href="/search" className="underline">Search all lessons and help</Link>.</p>
 
         <section aria-labelledby="topics">
           <h2 id="topics" className="mb-2 px-1 text-sm font-medium uppercase tracking-wide text-muted">Learn anything</h2>
@@ -140,6 +160,7 @@ export default function LearnPage() {
         )}
       </div>
       <SiteFooter />
+      <StickyAction href={`/learn/${nextLesson.id}`} label={allDone ? "Review lessons" : done.size === 0 ? "Start learning" : "Next lesson"} secondary={{ href: "#all-lessons", label: "All lessons", icon: ListIcon }} />
     </main>
   );
 }

@@ -28,6 +28,7 @@ export function LessonPlayer({ lesson, onComplete }: { lesson: Lesson; onComplet
   const [totals, setTotals] = useState({ hints: 0, mistakes: 0 });
   const [lastMove, setLastMove] = useState<LastMove>(null);
   const [stepDone, setStepDone] = useState(false);
+  const [flipped, setFlipped] = useState(false);
   const [finished, setFinished] = useState(false);
   const step = lesson.steps[stepIndex];
   const learner = sideToMove(step.fen);
@@ -130,7 +131,8 @@ export function LessonPlayer({ lesson, onComplete }: { lesson: Lesson; onComplet
       <div className="mx-auto w-full max-w-[min(100%,calc(100dvh-220px),720px)]">
         <Board
           fen={fen}
-          orientation={learner}
+          orientation={flipped ? (learner === "w" ? "b" : "w") : learner}
+          onFlip={() => setFlipped((f) => !f)}
           movable={stepDone || finished ? null : learner}
           onMove={onMove}
           lastMove={lastMove}
