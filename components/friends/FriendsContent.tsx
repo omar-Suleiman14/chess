@@ -4,7 +4,7 @@ import { SignInButton } from "@clerk/nextjs";
 import { useConvexAuth, useMutation } from "convex/react";
 import { useQuery } from "convex-helpers/react/cache/hooks";
 import Link from "@/components/navigation/PrefetchLink";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { SkeletonRows } from "@/components/ui/LoadingSpinner";
 import { useSocialTime } from "@/lib/client/socialCache";
 import { CardProfileLink } from "@/components/profile/CardProfileLink";
 import { useCardScope, useLocalCardQuery } from "@/lib/client/localCardCache";
@@ -18,6 +18,7 @@ import { Avatar } from "@/components/profile/ChessCard";
 import { PageHeader } from "@/components/shell/AppShell";
 import { useOrigin } from "@/lib/client/useOrigin";
 import { PlayerSearch } from "./PlayerSearch";
+import { toast } from "@/lib/client/toast";
 import { Fallible } from "@/components/ui/Fallible";
 import { NotificationsCard } from "./NotificationsCard";
 
@@ -126,7 +127,7 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
       <div className={embedded ? "grid gap-3" : "grid gap-4 px-4"}>
         {!embedded && addForm}
         {!embedded && <Fallible><NotificationsCard /></Fallible>}
-        {(data === undefined || (!embedded && view === "cards" && cards === undefined)) && <LoadingSpinner label="Loading friends" />}
+        {(data === undefined || (!embedded && view === "cards" && cards === undefined)) && <SkeletonRows label="Loading your friends" />}
 
         {data && data.challenges.length > 0 && (
           <Section flat={embedded} title="Challenges for you">
@@ -143,8 +144,8 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
           <Section flat={embedded} title="Friend requests">
             {data.incoming.map((p) => (
               <PersonRow key={p.alias} person={p}>
-                <button disabled={busy} onClick={() => void act(() => respond({ alias: p.alias, accept: true }))} className={`${pill} bg-accent text-accent-text`}>Accept</button>
-                <button disabled={busy} onClick={() => void act(() => respond({ alias: p.alias, accept: false }))} className={`${pill} bg-surface-2`}>Decline</button>
+                <button disabled={busy} onClick={() => void act(() => respond({ alias: p.alias, accept: true }).then(() => toast(`You and @${p.alias} are now friends`)))} className={`${pill} bg-accent text-accent-text`}>Accept</button>
+                <button disabled={busy} onClick={() => void act(() => respond({ alias: p.alias, accept: false }).then(() => toast(`Declined @${p.alias}`, "info")))} className={`${pill} bg-surface-2`}>Decline</button>
               </PersonRow>
             ))}
           </Section>
@@ -180,7 +181,7 @@ export function FriendsContent({ embedded = false }: { embedded?: boolean }) {
           <Section flat={embedded} title="Sent requests">
             {data.outgoing.map((p) => (
               <PersonRow key={p.alias} person={p}>
-                <button disabled={busy} onClick={() => void act(() => remove({ alias: p.alias }))} className={`${pill} bg-surface-2`}>Cancel</button>
+                <button disabled={busy} onClick={() => void act(() => remove({ alias: p.alias }).then(() => toast(`Request to @${p.alias} cancelled`, "info")))} className={`${pill} bg-surface-2`}>Cancel</button>
               </PersonRow>
             ))}
           </Section>

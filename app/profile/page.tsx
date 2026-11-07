@@ -78,7 +78,7 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
     try {
       await update(patch);
     } catch (e) {
-      setError((e as { data?: { message?: string } }).data?.message ?? "Could not save.");
+      setError((e as { data?: { message?: string } }).data?.message ?? (navigator.onLine ? "Your change wasn't saved: the server didn't answer. Try again in a moment." : "You're offline, so your change wasn't saved. Reconnect and try again."));
     }
   };
 
@@ -132,7 +132,7 @@ function SignedInProfile({ fatma, reducedMotion }: { fatma: ReturnType<typeof us
                   New avatar
                 </button>
               </div>
-              <SwitchRow label="Public card" hint={`Anyone with the link can see /u/${profile.alias}`} checked={profile.visibility === "public"} onChange={(v) => void save({ visibility: v ? "public" : "private" })} />
+              <SwitchRow label="Public card" hint={`On: your card is listed on Players and at /u/${profile.alias}. Off: only friends see it. Your username stays searchable so friends can add you.`} checked={profile.visibility === "public"} onChange={(v) => void save({ visibility: v ? "public" : "private" })} />
               <SwitchRow label="Show stats on card" checked={profile.showRatings} onChange={(v) => void save({ showRatings: v })} />
               {profile.visibility === "public" && (
                 <button

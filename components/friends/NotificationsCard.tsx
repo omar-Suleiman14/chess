@@ -1,6 +1,7 @@
 "use client";
 
 import { usePushNotifications } from "@/lib/client/push";
+import { NavIcon } from "@/components/shell/NavIcon";
 
 /** Opt in to challenge and friend-request notifications on this device. */
 export function NotificationsCard() {
@@ -15,7 +16,7 @@ export function NotificationsCard() {
   };
   return (
     <section className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-[var(--shadow)]" aria-label="Notifications">
-      <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-surface-2 text-xl">🔔</span>
+      <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-surface-2 text-ink"><NavIcon name="bell" className="h-[22px] w-[22px]" /></span>
       <p className="min-w-0 flex-1 text-sm">
         <span className="block font-semibold">Challenge notifications</span>
         <span className="block text-muted">{error ?? text[state]}</span>

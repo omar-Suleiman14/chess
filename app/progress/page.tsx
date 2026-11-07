@@ -4,6 +4,8 @@ import { SignInButton } from "@clerk/nextjs";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/components/shell/AppShell";
+import { SkeletonRows } from "@/components/ui/LoadingSpinner";
+import { LegalNote } from "@/components/ui/LegalNote";
 import Link from "@/components/navigation/PrefetchLink";
 import { usePuzzleStats } from "@/lib/client/puzzleStats";
 
@@ -21,11 +23,12 @@ export default function ProgressPage() {
           <SignInButton mode="modal">
             <button className="mt-3 rounded-full bg-accent px-4 py-2 text-accent-text">Sign in</button>
           </SignInButton>
+          <LegalNote action="signing in" className="mt-2 text-start" />
         </div>
       </main>
     );
   }
-  if (!summary) return <p className="p-6 text-muted" role="status">Loading…</p>;
+  if (!summary) return <main className="mx-auto max-w-xl px-4 pt-20"><SkeletonRows label="Loading your ratings and progress" /></main>;
 
   const pool = (name: string) => (name === "climb" ? "The Climb" : name.startsWith("timed:") ? `Timed ${name.slice(6).replace("+", " + ")}` : name);
   const record = (r: { games: number; wins: number; draws: number; losses: number }) => `${r.wins}W · ${r.draws}D · ${r.losses}L`;
@@ -37,7 +40,7 @@ export default function ProgressPage() {
         <section className="rounded-2xl bg-surface p-4 shadow-[var(--shadow)]" aria-labelledby="ratings">
           <h2 id="ratings" className="font-semibold">Ratings</h2>
           {summary.ratings.length === 0 ? (
-            <p className="mt-1 text-sm text-muted">No rated games yet. Rated games come from The Climb and Timed without undo, hints or the eval bar.</p>
+            <div className="mt-1 grid gap-2 text-sm text-muted"><p>No rated games yet. Rated games come from The Climb and Timed without undo, hints or the eval bar.</p><span className="flex flex-wrap gap-2"><Link href="/climb" className="rounded-full bg-accent px-4 py-2 font-semibold text-accent-text">Start The Climb</Link><Link href="/timed" className="rounded-full bg-surface-2 px-4 py-2 font-semibold text-ink">Play a timed game</Link></span></div>
           ) : (
             <ul className="mt-2 grid gap-2">
               {summary.ratings.map((r) => (

@@ -11,6 +11,7 @@ import { errorText, NameField, useDefaultName } from "@/components/online/Online
 import { ONLINE_TIME_CONTROLS, playerToken, saveName, useOnlineAvatar, withAvatarFallback } from "@/lib/client/online";
 import { navigateWithTransition, PLAY_STAGE } from "@/lib/client/viewTransition";
 import { useBackendFeatures } from "@/lib/client/backendFeatures";
+import { LegalNote } from "@/components/ui/LegalNote";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -98,7 +99,7 @@ export default function PlayPage() {
               </div>
             </div>
             <button data-play-online onClick={() => void onSeek()} disabled={busy || tc === "none"} className="min-h-16 rounded-2xl bg-[#81b64c] text-xl font-bold text-white shadow-[0_5px_0_#5d8a33] transition-transform active:translate-y-[3px] active:shadow-[0_2px_0_#5d8a33] disabled:opacity-60" style={{ viewTransitionName: PLAY_STAGE }}>
-              {busy ? "Starting…" : "Play"}
+              {busy ? "Looking for an opponent…" : "Find an opponent"}
             </button>
             <p className="text-xs text-muted">You&apos;ll be paired with the next player looking for the same clock. Colours are random.</p>
           </>
@@ -149,6 +150,7 @@ export default function PlayPage() {
             <p className="text-xs text-muted">Got a QR code or link instead? Just open it with your camera or browser.</p>
           </>
         )}
+        <LegalNote action="playing online" />
         {error && <p role="alert" className="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
       </div>
     </main>

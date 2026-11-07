@@ -175,7 +175,7 @@ export function LessonPlayer({ lesson, onComplete }: { lesson: Lesson; onComplet
           )}
           {stepDone && !finished && (
             <button onClick={() => resetStep(stepIndex + 1)} className="min-h-12 flex-1 rounded-xl bg-[#81b64c] text-lg font-bold text-white shadow-[0_4px_0_#5d8a33] active:translate-y-[2px] active:shadow-[0_2px_0_#5d8a33]">
-              Next
+              Next step
             </button>
           )}
           {finished && (

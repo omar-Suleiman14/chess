@@ -37,7 +37,7 @@ export function OnlineRoom({ code }: { code: string }) {
   if (room === undefined) {
     return (
       <main className="grid min-h-dvh place-items-center text-sm text-muted" aria-busy="true">
-        Connecting…
+        Connecting to game {code}…
       </main>
     );
   }

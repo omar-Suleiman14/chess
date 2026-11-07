@@ -4,7 +4,7 @@
  * disagree.
  */
 export type NavItem = { href: string; label: string; hint?: string; icon?: NavIcon };
-export type NavIcon = "play" | "bots" | "learn" | "review" | "friends" | "profile" | "settings" | "clock" | "link" | "chart" | "search" | "info" | "more" | "puzzle";
+export type NavIcon = "play" | "bots" | "learn" | "review" | "friends" | "profile" | "settings" | "clock" | "link" | "chart" | "search" | "info" | "more" | "puzzle" | "bell" | "analysis" | "players";
 
 /** The four main destinations (plus More on phones). */
 export const PRIMARY: NavItem[] = [
@@ -20,7 +20,7 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     title: "Social",
     items: [
       { href: "/friends", label: "Friends", hint: "Challenges · requests", icon: "friends" },
-      { href: "/u", label: "Players", hint: "Find people", icon: "search" },
+      { href: "/u", label: "Players", hint: "Find people", icon: "players" },
       { href: "/profile", label: "Profile & Sherine", icon: "profile" },
     ],
   },
@@ -30,7 +30,7 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
       { href: "/puzzles", label: "Puzzles", hint: "Rated · Puzzle Rush · Daily", icon: "puzzle" },
       { href: "/timed", label: "Timed games", hint: "Clock presets", icon: "clock" },
       { href: "/play", label: "Play online", hint: "Random opponent · friends", icon: "link" },
-      { href: "/analysis", label: "Analysis board", hint: "Stockfish lines · FEN", icon: "search" },
+      { href: "/analysis", label: "Analysis board", hint: "Stockfish lines · FEN", icon: "analysis" },
     ],
   },
   {
@@ -60,9 +60,9 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
 export const SIDEBAR_SECONDARY: NavItem[] = [
   { href: "/timed", label: "Timed", icon: "clock" },
   { href: "/play", label: "Play online", icon: "link" },
-  { href: "/analysis", label: "Analysis", icon: "chart" },
+  { href: "/analysis", label: "Analysis", icon: "analysis" },
   { href: "/friends", label: "Friends", icon: "friends" },
-  { href: "/u", label: "Players", icon: "search" },
+  { href: "/u", label: "Players", icon: "players" },
   { href: "/progress", label: "Progress", icon: "chart" },
 ];
 

@@ -5,6 +5,7 @@ import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "@/convex/_generated/api";
 import { useBackendFeatures } from "./backendFeatures";
+import { toast } from "./toast";
 
 export type PushState = "unsupported" | "unavailable" | "signed-out" | "denied" | "off" | "on" | "working";
 
@@ -61,14 +62,15 @@ export function usePushNotifications() {
     setError(null);
     try {
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") return;
+      if (permission !== "granted") { setError(permission === "denied" ? "Notifications are blocked for this site. Allow them in your browser's site settings, then tap Turn on again." : "Notifications weren't allowed. Tap Turn on again and choose Allow."); return; }
       const registration = await navigator.serviceWorker.ready;
       const sub = (await registration.pushManager.getSubscription()) ?? (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }));
       const json = sub.toJSON();
       await save({ endpoint: sub.endpoint, p256dh: json.keys?.p256dh ?? "", auth: json.keys?.auth ?? "" });
       setEndpoint(sub.endpoint);
+      toast("Challenge notifications are on");
     } catch {
-      setError("Couldn't turn on notifications in this browser.");
+      setError("This browser couldn't register for notifications. Try again, or use Chrome, Edge, Firefox, or Safari added to your Home Screen.");
     } finally {
       setBusy(false);
     }
@@ -83,6 +85,7 @@ export function usePushNotifications() {
         await sub.unsubscribe();
       }
       setEndpoint(null);
+      toast("Notifications turned off", "info");
     } finally {
       setBusy(false);
     }

@@ -432,3 +432,5 @@ button {
 @keyframes coach-in { from { opacity: .001; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .coach-bubble { animation: coach-in 260ms ease-out both; }
 @media (prefers-reduced-motion: reduce) { .path-tile, .coach-bubble { animation: none; } }
+.toaster { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 76px); }
+@media (max-width: 1023px) { body:has([data-tabbar="on"]) .toaster { bottom: calc(56px + env(safe-area-inset-bottom) + 84px); } }

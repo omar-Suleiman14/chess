@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "@/components/navigation/PrefetchLink";
 import { useLocalCardQuery } from "@/lib/client/localCardCache";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useMemo } from "react";
@@ -36,11 +37,11 @@ export default function PlayersPage() {
           <Fallible><PlayerSearch /></Fallible>
         </div>
         {cards === undefined ? (
-          <LoadingSpinner label="Loading players" className="py-28" />
+          <LoadingSpinner label="Loading public player cards" className="py-28" />
         ) : (
           <CardStack cards={deck} label="Player cards" />
         )}
-        {cards && cards.length === 0 && <p className="mt-4 text-sm text-muted">No public players yet. Turn on “Public card” in Profile to join.</p>}
+        {cards && cards.length === 0 && <p className="mt-4 text-sm text-muted">No public cards yet. Search by username above, or <Link href="/profile" className="underline">make your card public in Profile</Link>.</p>}
       </div>
     </main>
   );

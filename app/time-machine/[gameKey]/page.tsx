@@ -550,7 +550,7 @@ export default function ReplayPage({
   if (!game)
     return (
       <p className="p-6 text-muted" role="status">
-        Loading game…
+        Opening your game and its moves…
       </p>
     );
 

@@ -126,6 +126,7 @@ export default function LearnPage() {
             aria-label="Search openings and tactics"
             className="mb-2 min-h-12 w-full rounded-2xl bg-surface px-4 shadow-[var(--shadow)]"
           />
+          {query && <button onClick={() => setQuery("")} className="mb-2 rounded-full bg-surface-2 px-3 py-1.5 text-sm font-semibold">✕ Clear search</button>}
           <ul className="overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]">
             {results.map((l) => (
               <li key={l.id} className="border-b border-line last:border-b-0">

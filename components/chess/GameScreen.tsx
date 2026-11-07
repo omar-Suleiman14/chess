@@ -20,7 +20,9 @@ import { useSettings } from "@/lib/client/settings";
 import { installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
 import { haptic, type HapticEvent } from "@/lib/client/haptics";
 import { VARIANTS, variantFen, type VariantId } from "@/lib/chess/variants";
-import { PositionEditor } from "./PositionEditor";
+import dynamic from "next/dynamic";
+// The editor is only needed after "Custom…" / "Set up position…": load it then, not with the board.
+const PositionEditor = dynamic(() => import("./PositionEditor").then((m) => m.PositionEditor), { ssr: false, loading: () => <p className="p-6 text-sm text-muted" role="status">Opening the position editor…</p> });
 import { createPortal } from "react-dom";
 import { useSync } from "@/lib/client/sync";
 import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from "@/lib/client/useChessGame";
@@ -828,7 +830,7 @@ function NewGameDialog({
         document.body,
       )}
       <button onClick={start} disabled={variant === "custom" && !customFen} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text disabled:opacity-40">
-        Start
+        Start game
       </button>
       <Link href="/play" className="grid min-h-12 w-full place-items-center rounded-2xl bg-surface-2 text-sm font-medium">
         Play online or with a friend instead
