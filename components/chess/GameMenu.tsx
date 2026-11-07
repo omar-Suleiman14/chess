@@ -44,7 +44,7 @@ function Item({ icon, label, onClick, danger = false, disabled = false }: { icon
   );
 }
 
-const GO_TO: Array<[TabId, string]> = [["bots", "Bots"], ["learn", "Learn"], ["review", "Review"], ["more", "More"]];
+const GO_TO: Array<[TabId, string]> = [["puzzles", "Puzzles"], ["learn", "Learn"], ["bots", "Bots"], ["more", "More"]];
 
 /**
  * Chess.com-style Options menu: a compact card that springs up from the
@@ -100,7 +100,7 @@ export function GameMenu({ anchor, onClose, actions }: { anchor: DOMRect; onClos
         <div className="mt-1 grid grid-cols-4 gap-1 border-t border-line px-0.5 pt-1.5" role="group" aria-label="Go to">
           {GO_TO.map(([id, label]) => (
             <button key={id} role="menuitem" onClick={run(() => goToTab(id))} className="press-overlay grid min-h-14 place-items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold text-muted">
-              <NavIcon name={id} className="h-[22px] w-[22px]" />
+              <NavIcon name={id === "puzzles" ? "puzzle" : id} className="h-[22px] w-[22px]" />
               {label}
             </button>
           ))}

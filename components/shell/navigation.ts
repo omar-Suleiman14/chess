@@ -27,7 +27,7 @@ export const MORE_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
   {
     title: "Play",
     items: [
-      { href: "/puzzles", label: "Puzzles", hint: "Rated · Puzzle Rush · Daily", icon: "puzzle" },
+      { href: "/time-machine", label: "Review games", hint: "Time Machine · Game Review", icon: "review" },
       { href: "/timed", label: "Timed games", hint: "Clock presets", icon: "clock" },
       { href: "/play", label: "Play online", hint: "Random opponent · friends", icon: "link" },
       { href: "/analysis", label: "Analysis board", hint: "Stockfish lines · FEN", icon: "analysis" },

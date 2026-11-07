@@ -18,6 +18,10 @@ Full Power uses unrestricted Stockfish 19 Lite with the selected thinking time. 
 
 Only a current, legal, sufficiently searched suggestion unlocks the later steps. Moving, undoing, restarting, or changing turns clears help. Hints are unavailable while Sherine thinks or the game is over. [Fair-play details](RATINGS.md)
 
+## Bots
+
+Open the **Bots** tab, tap a level to see Sherine's mood, rating and whether it's unlocked, then tap the green **Play** button. Beat a level to unlock the next. While your opponent is thinking you can already pick up your next piece; it stays selected when they move.
+
 ## Play online
 
 1. Open **Play online**, choose a clock, and tap **Play**.

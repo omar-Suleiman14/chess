@@ -71,7 +71,7 @@ let visits = 0;
 
 /**
  * One navigation system, mobile first:
- * - Phones: five bottom tabs (Play, Bots, Learn, Review, More). More is a real
+ * - Phones: five bottom tabs (Play, Puzzles, Learn, Bots, More). More is a real
  *   page listing everything else. Game screens swap the tabs for their own bar.
  * - Desktop: a left sidebar with the same destinations (chess.com style).
  */
