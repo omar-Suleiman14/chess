@@ -81,6 +81,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [gameFocus, setGameFocus] = useState(false);
   const tabsVisible = showsTabs(pathname) && !gameFocus;
+  // Mirrored on <html> so fixed bars (pinned actions, toasts) can sit above the tab bar without a costly :has() rule.
+  useEffect(() => { document.documentElement.dataset.tabbar = tabsVisible ? "on" : "off"; }, [tabsVisible]);
   const activeTab: TabId = tabFor(pathname);
 
   useEffect(() => { visits++; }, [pathname]);
