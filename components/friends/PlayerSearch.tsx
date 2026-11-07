@@ -19,6 +19,8 @@ export function PlayerSearch({ myAlias, autoFocus = false }: { myAlias?: string;
   const query = useDeferredValue(q.trim());
   const canSearch = useBackendFeatures()?.search === true;
   const results = useQuery(api.friends.search, query && canSearch ? { q: query } : "skip");
+  const alias = query.replace(/^@/, "").toLowerCase();
+  const exact = useQuery(api.friends.relation, query && !canSearch && isAuthenticated ? { alias } : "skip");
   const request = useMutation(api.friends.request);
   const respond = useMutation(api.friends.respond);
   const [busy, setBusy] = useState<string | null>(null);
@@ -52,11 +54,22 @@ export function PlayerSearch({ myAlias, autoFocus = false }: { myAlias?: string;
       </label>
       <p className="px-1 text-xs text-muted">Usernames only. Friends get a request they can accept or decline.</p>
       {message && <p role="status" className={`px-1 text-sm ${message.ok ? "text-ok" : "text-danger"}`}>{message.text}</p>}
-      {query && !canSearch && isAuthenticated && (
-        // Older server: no search yet, but adding by exact username still works.
-        <button onClick={() => void act(query.replace(/^@/, "").toLowerCase(), () => request({ alias: query.replace(/^@/, "").toLowerCase() }), `Request sent to @${query.replace(/^@/, "").toLowerCase()}.`)} className="min-h-12 rounded-2xl bg-accent font-semibold text-accent-text">
-          Add @{query.replace(/^@/, "").toLowerCase()} as a friend
-        </button>
+      {query && !canSearch && isAuthenticated && exact && (
+        // Older server: no search yet, so look up this exact username and its relation to you.
+        <div className="grid gap-2 rounded-2xl bg-surface p-3 text-sm shadow-[var(--shadow)]" data-exact-relation={exact.state}>
+          {exact.state === "missing" && <p className="text-muted">No player called @{alias}. Check the spelling, or <Link href="/play" className="underline">invite them with a link</Link>.</p>}
+          {exact.state === "self" && <p className="text-muted">@{alias} is you.</p>}
+          {exact.state === "friends" && (
+            <div className="flex items-center justify-between gap-2"><span>You and <b>@{alias}</b> are already friends.</span><button onClick={() => setChallenging(alias)} className={`${pill} bg-accent text-accent-text`}>Challenge</button></div>
+          )}
+          {exact.state === "outgoing" && <p>You already sent <b>@{alias}</b> a request. They can accept it from Friends.</p>}
+          {exact.state === "incoming" && (
+            <div className="flex items-center justify-between gap-2"><span><b>@{alias}</b> wants to be friends.</span><button disabled={busy === alias} onClick={() => void act(alias, () => respond({ alias, accept: true }), `You and @${alias} are now friends.`)} className={`${pill} bg-accent text-accent-text`}>Accept</button></div>
+          )}
+          {exact.state === "none" && (
+            <button disabled={busy === alias} onClick={() => void act(alias, () => request({ alias }), `Request sent to @${alias}.`)} className="min-h-12 rounded-2xl bg-accent font-semibold text-accent-text">Add @{alias} as a friend</button>
+          )}
+        </div>
       )}
       {query && canSearch && (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]" aria-label="Search results">
