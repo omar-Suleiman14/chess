@@ -28,7 +28,7 @@ export default function PracticePage() {
   const item = queue[Math.min(index, queue.length - 1)];
 
   if (!isAuthenticated) return <Shell><p>Sign in to get practice from your own games.</p></Shell>;
-  if (!data) return <Shell><p role="status" className="text-muted">Loading…</p></Shell>;
+  if (!data) return <Shell><p role="status" className="text-muted">Finding positions from your games…</p></Shell>;
   if (!item) {
     return (
       <Shell>

@@ -8,6 +8,7 @@ import { Dialog, Segmented } from "@/components/chess/GameScreen";
 import { ONLINE_TIME_CONTROLS, playerToken, savedName, useOnlineAvatar, withAvatarFallback } from "@/lib/client/online";
 import { navigateWithTransition } from "@/lib/client/viewTransition";
 import { errorText } from "./OnlineShared";
+import { toast } from "@/lib/client/toast";
 
 /** Pick a clock and colour, open a room, and drop its PIN in the friend's inbox. */
 export function ChallengeDialog({ alias, myName, onClose }: { alias: string; myName: string; onClose: () => void }) {
@@ -27,6 +28,7 @@ export function ChallengeDialog({ alias, myName, onClose }: { alias: string; myN
     try {
       const { code } = await withAvatarFallback((a) => create({ token: playerToken(), name: savedName() || myName, avatar: a, color, initialMs: control.initialMs, incrementMs: control.incrementMs }), avatar);
       await challenge({ alias, code });
+      toast(`Challenge sent to @${alias}`);
       void navigateWithTransition(router, `/play/${code}?invited=${encodeURIComponent(alias)}`);
     } catch (e) {
       setError(errorText(e));
@@ -53,8 +55,9 @@ export function ChallengeDialog({ alias, myName, onClose }: { alias: string; myN
         </div>
       </div>
       <Segmented label="You play" value={color} onChange={setColor} options={[["w", "White"], ["random", "Random"], ["b", "Black"]]} />
+      <p className="px-1 text-xs text-muted">@{alias} gets a banner in the app (and a notification if they turned them on). The game starts as soon as they join; the invite lasts 24 hours.</p>
       <button onClick={() => void send()} disabled={busy} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text disabled:opacity-60">
-        {busy ? "Sending…" : "Send challenge"}
+        {busy ? `Sending to @${alias}…` : `Send challenge to @${alias}`}
       </button>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </Dialog>

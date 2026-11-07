@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Board, type LastMove } from "@/components/chess/Board";
 import { EvalBar } from "@/components/chess/EvalBar";
+import { toast } from "@/lib/client/toast";
+import dynamic from "next/dynamic";
+// The editor is only needed after "Custom…" / "Set up position…": load it then, not with the board.
+const PositionEditor = dynamic(() => import("@/components/chess/PositionEditor").then((m) => m.PositionEditor), { ssr: false, loading: () => <p className="p-6 text-sm text-muted" role="status">Opening the position editor…</p> });
 import { PageHeader } from "@/components/shell/AppShell";
 import { SearchCancelled } from "@/lib/chess/engine/controller";
 import { formatScore, type WhiteScore } from "@/lib/chess/engine/uci";
@@ -55,6 +59,7 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
   const [lines, setLines] = useState<{ fen: string; list: Line[] }>({ fen: "", list: [] });
   const [fenInput, setFenInput] = useState("");
   const [fenError, setFenError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   // Every position along the line, so stepping back and forth is instant.
   const path = useMemo(() => {
@@ -129,14 +134,19 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [cursor, go, path.length]);
 
+  const applyPosition = (next: string) => {
+    setFenError(null);
+    setRoot(next);
+    setMoves([]);
+    setCursor(0);
+    setOrientation(sideToMove(next));
+  };
+
   const loadFen = () => {
     const checked = checkFen(fenInput);
     if (!checked.ok) { setFenError(checked.error); return; }
-    setFenError(null);
-    setRoot(checked.fen);
-    setMoves([]);
-    setCursor(0);
-    setOrientation(sideToMove(checked.fen));
+    applyPosition(checked.fen);
+    toast("Position loaded");
   };
 
   const reset = () => { setRoot(DEFAULT_POSITION); setMoves([]); setCursor(0); setOrientation("w"); };
@@ -211,7 +221,7 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
                     <li key={line.multipv}>
                       <button onClick={() => play(line.pv[0])} className="flex w-full items-start gap-2 rounded-lg px-1.5 py-1.5 text-start text-sm hover:bg-surface-2">
                         <span data-engine-score className={`min-w-14 rounded-md px-1.5 py-0.5 text-center font-bold tabular-nums ${white ? "bg-white text-black ring-1 ring-line" : "bg-[#262522] text-white"}`}>{formatScore(line.score)}</span>
-                        <span className="min-w-0 truncate">{pvSan(fen, line.pv)}</span>
+                        <span className="min-w-0 break-words">{pvSan(fen, line.pv)}</span>
                       </button>
                     </li>
                   );
@@ -249,16 +259,23 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
             <label className="text-sm font-semibold" htmlFor="fen">FEN</label>
             <div className="flex gap-2">
               <input id="fen" value={fenInput} onChange={(e) => setFenInput(e.target.value)} placeholder={fen} className="min-h-11 min-w-0 flex-1 rounded-xl bg-surface-2 px-3 font-mono text-xs" />
-              <button onClick={loadFen} className="min-h-11 rounded-xl bg-accent px-3 font-semibold text-accent-text">Load</button>
+              <button onClick={loadFen} className="min-h-11 rounded-xl bg-accent px-3 font-semibold text-accent-text">Load FEN</button>
             </div>
             {fenError && <p role="alert" className="text-sm text-danger">{fenError}</p>}
             <div className="flex gap-2 text-sm">
-              <button onClick={() => void navigator.clipboard?.writeText(fen)} className="min-h-10 flex-1 rounded-xl bg-surface-2 font-semibold">Copy FEN</button>
+              <button onClick={() => void navigator.clipboard?.writeText(fen).then(() => toast("Position copied (FEN)"), () => toast("Couldn't copy. Select the FEN in the box and copy it manually.", "error"))} className="min-h-10 flex-1 rounded-xl bg-surface-2 font-semibold">Copy FEN</button>
               <button onClick={reset} className="min-h-10 flex-1 rounded-xl bg-surface-2 font-semibold">Starting position</button>
             </div>
+            <button data-edit-position onClick={() => setEditing(true)} className="min-h-11 rounded-xl bg-accent font-semibold text-accent-text">Set up position…</button>
           </section>
         </aside>
       </div>
+      {editing && (
+        <div className="fixed inset-0 z-[110] overflow-y-auto bg-bg p-3 pt-[max(12px,env(safe-area-inset-top))]" role="dialog" aria-label="Set up a position">
+          <h2 className="mb-3 px-1 text-2xl font-bold">Set up a position</h2>
+          <PositionEditor initialFen={fen} doneLabel="Analyse this position" onCancel={() => setEditing(false)} onDone={(next) => { applyPosition(next); setEditing(false); toast("Position set up"); }} />
+        </div>
+      )}
     </main>
   );
 }

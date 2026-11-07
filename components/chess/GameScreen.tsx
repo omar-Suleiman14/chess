@@ -20,6 +20,10 @@ import { useSettings } from "@/lib/client/settings";
 import { installAudioUnlock, playSound, resultSound, unlockAudio } from "@/lib/client/sound";
 import { haptic, type HapticEvent } from "@/lib/client/haptics";
 import { VARIANTS, variantFen, type VariantId } from "@/lib/chess/variants";
+import dynamic from "next/dynamic";
+// The editor is only needed after "Custom…" / "Set up position…": load it then, not with the board.
+const PositionEditor = dynamic(() => import("./PositionEditor").then((m) => m.PositionEditor), { ssr: false, loading: () => <p className="p-6 text-sm text-muted" role="status">Opening the position editor…</p> });
+import { createPortal } from "react-dom";
 import { useSync } from "@/lib/client/sync";
 import { monotonicNow, useChessGame, type MoveEvent, type NewGameOptions } from "@/lib/client/useChessGame";
 import { ENGINE_BUILD, EVAL_SETTINGS_HASH, useDisplayedEvaluation, useEvaluation, type Evaluation } from "@/lib/client/useEvaluation";
@@ -762,7 +766,9 @@ function NewGameDialog({
   onClose: () => void;
 }) {
   const [color, setColor] = useState<"w" | "b" | "random">(defaults.humanColor);
-  const [variant, setVariant] = useState<VariantId>("standard");
+  const [variant, setVariant] = useState<VariantId | "custom">("standard");
+  const [customFen, setCustomFen] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const start = () => {
     const humanColor: Color = color === "random" ? (Math.random() < 0.5 ? "w" : "b") : color;
     const custom = variant !== "standard";
@@ -771,8 +777,8 @@ function NewGameDialog({
       humanColor,
       parentGameKey: undefined,
       parentNodeKey: undefined,
-      originFen: custom ? variantFen(variant, humanColor) : undefined,
-      label: custom ? VARIANTS.find((v) => v.id === variant)?.label : defaults.label,
+      originFen: variant === "custom" ? customFen ?? undefined : custom ? variantFen(variant, humanColor) : undefined,
+      label: variant === "custom" ? "Custom position" : custom ? VARIANTS.find((v) => v.id === variant)?.label : defaults.label,
     });
   };
   return (
@@ -797,11 +803,34 @@ function NewGameDialog({
               {v.label}
             </button>
           ))}
+          <button
+            role="radio"
+            aria-checked={variant === "custom"}
+            onClick={() => { haptic("select"); setVariant("custom"); setEditing(true); }}
+            className={`col-span-3 min-h-11 rounded-xl px-1.5 text-xs font-semibold ${variant === "custom" ? "bg-accent text-accent-text" : "bg-surface-2"}`}
+          >
+            {customFen ? "Custom position ✓" : "Custom… build your own"}
+          </button>
         </div>
-        <p className="mt-1.5 px-1 text-xs text-muted">{VARIANTS.find((v) => v.id === variant)?.detail}{variant !== "standard" ? " Unrated." : ""}</p>
+        <p className="mt-1.5 px-1 text-xs text-muted">
+          {variant === "custom" ? (customFen ? <>Your own setup. <button className="underline" onClick={() => setEditing(true)}>Edit</button></> : "Place any pieces you like.") : VARIANTS.find((v) => v.id === variant)?.detail}
+          {variant !== "standard" ? " Unrated." : ""}
+        </p>
       </div>
-      <button onClick={start} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text">
-        Start
+      {editing && createPortal(
+        <div className="fixed inset-0 z-[110] overflow-y-auto bg-bg p-3 pt-[max(12px,env(safe-area-inset-top))]" role="dialog" aria-label="Set up a position">
+          <h2 className="mb-3 px-1 text-2xl font-bold">Set up a position</h2>
+          <PositionEditor
+            initialFen={customFen ?? undefined}
+            doneLabel="Use this position"
+            onCancel={() => { setEditing(false); if (!customFen) setVariant("standard"); }}
+            onDone={(fen) => { setCustomFen(fen); setEditing(false); }}
+          />
+        </div>,
+        document.body,
+      )}
+      <button onClick={start} disabled={variant === "custom" && !customFen} className="mt-1 w-full rounded-2xl bg-accent py-3 font-medium text-accent-text disabled:opacity-40">
+        Start game
       </button>
       <Link href="/play" className="grid min-h-12 w-full place-items-center rounded-2xl bg-surface-2 text-sm font-medium">
         Play online or with a friend instead

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "@/components/navigation/PrefetchLink";
 import { useLocalCardQuery } from "@/lib/client/localCardCache";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useMemo } from "react";
@@ -10,6 +11,7 @@ import { FATMA_CARD } from "@/components/profile/ChessCard";
 import { PageHeader } from "@/components/shell/AppShell";
 import { useOrigin } from "@/lib/client/useOrigin";
 import { PlayerSearch } from "@/components/friends/PlayerSearch";
+import { Fallible } from "@/components/ui/Fallible";
 
 /** Every player who made their card public, with Sherine among them. */
 export default function PlayersPage() {
@@ -32,14 +34,14 @@ export default function PlayersPage() {
           <p className="mt-3 text-[15px] leading-relaxed text-muted">Search anyone by username, or browse public cards below. Swipe or drag to browse; tap a card to open it.</p>
         </header>
         <div className="mx-auto mt-5 w-full max-w-xl text-start">
-          <PlayerSearch />
+          <Fallible><PlayerSearch /></Fallible>
         </div>
         {cards === undefined ? (
-          <LoadingSpinner label="Loading players" className="py-28" />
+          <LoadingSpinner label="Loading public player cards" className="py-28" />
         ) : (
           <CardStack cards={deck} label="Player cards" />
         )}
-        {cards && cards.length === 0 && <p className="mt-4 text-sm text-muted">No public players yet. Turn on “Public card” in Profile to join.</p>}
+        {cards && cards.length === 0 && <p className="mt-4 text-sm text-muted">No public cards yet. Search by username above, or <Link href="/profile" className="underline">make your card public in Profile</Link>.</p>}
       </div>
     </main>
   );

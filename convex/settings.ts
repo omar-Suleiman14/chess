@@ -8,8 +8,13 @@ import { findBoardTheme } from "../lib/experience/boardThemes";
 /** What this backend can store. Clients only send newer fields once it says so. */
 export const capabilities = query({
   args: {},
-  returns: v.object({ experienceVersion: v.literal(1), boardTheme: v.optional(v.literal(true)) }),
-  handler: async () => ({ experienceVersion: 1 as const, boardTheme: true as const }),
+  returns: v.object({
+    experienceVersion: v.literal(1),
+    boardTheme: v.optional(v.literal(true)),
+    // Newer server functions; clients skip any feature an older deployment lacks.
+    features: v.optional(v.object({ puzzles: v.boolean(), push: v.boolean(), search: v.boolean(), matchmaking: v.boolean() })),
+  }),
+  handler: async () => ({ experienceVersion: 1 as const, boardTheme: true as const, features: { puzzles: true, push: true, search: true, matchmaking: true } }),
 });
 
 /** The signed-in player's saved preferences, or null (signed out, or never saved). */

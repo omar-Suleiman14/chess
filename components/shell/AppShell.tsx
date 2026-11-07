@@ -16,6 +16,8 @@ import { SocialPrefetch } from "@/lib/client/socialCache";
 import { Button } from "@/components/ui/Button";
 import { Sidebar } from "./Sidebar";
 import { NavIcon } from "./NavIcon";
+import { Toaster } from "@/components/ui/Toaster";
+import { LegalNote } from "@/components/ui/LegalNote";
 import { useInboxCount } from "@/lib/client/useInbox";
 
 type ShellCtx = {
@@ -79,6 +81,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [gameFocus, setGameFocus] = useState(false);
   const tabsVisible = showsTabs(pathname) && !gameFocus;
+  // Mirrored on <html> so fixed bars (pinned actions, toasts) can sit above the tab bar without a costly :has() rule.
+  useEffect(() => { document.documentElement.dataset.tabbar = tabsVisible ? "on" : "off"; }, [tabsVisible]);
   const activeTab: TabId = tabFor(pathname);
 
   useEffect(() => { visits++; }, [pathname]);
@@ -129,6 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </div>
       <ChallengeBanner />
+      <Toaster />
       <TabBar visible={tabsVisible} active={activeTab} reducedMotion={reducedMotion} hrefFor={hrefFor} onSelect={selectTab} />
     </Ctx.Provider>
   );
@@ -142,6 +147,7 @@ export function AccountCard({ compact = false }: { compact?: boolean }) {
     ? status.pending > 0 ? `${status.pending} change${status.pending === 1 ? "" : "s"} waiting to sync` : status.online ? "Synced" : "Offline · saved on this device"
     : "Games are saved on this device.";
   return (
+    <>
     <div className={`flex items-center justify-between gap-3 ${compact ? "" : "rounded-2xl bg-surface px-4 py-3 shadow-[var(--shadow)]"}`}>
       <span className={`min-w-0 text-sm text-muted ${compact ? "max-xl:sr-only" : ""}`}>{text}</span>
       {!isLoading && (isAuthenticated ? <UserButton /> : (
@@ -150,6 +156,8 @@ export function AccountCard({ compact = false }: { compact?: boolean }) {
         </SignInButton>
       ))}
     </div>
+    {!compact && !isLoading && !isAuthenticated && <LegalNote action="signing in" className="mt-1.5 text-start" />}
+    </>
   );
 }
 
@@ -175,7 +183,7 @@ export function PageHeader({ title, back = true }: { title: string; back?: boole
   return (
     <header className="safe-top sticky top-0 z-30 flex min-h-[60px] items-center gap-2 bg-bg/95 px-4 pb-2 lg:pt-6">
       {back && <BackButton />}
-      <h1 className="min-w-0 flex-1 truncate text-[28px] font-bold leading-tight tracking-[-0.02em] sm:text-3xl">{title}</h1>
+      <h1 className="min-w-0 flex-1 break-words text-[28px] font-bold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere] sm:text-3xl">{title}</h1>
       <HeaderShortcuts />
     </header>
   );

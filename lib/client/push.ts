@@ -4,6 +4,8 @@
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { api } from "@/convex/_generated/api";
+import { useBackendFeatures } from "./backendFeatures";
+import { toast } from "./toast";
 
 export type PushState = "unsupported" | "unavailable" | "signed-out" | "denied" | "off" | "on" | "working";
 
@@ -27,14 +29,15 @@ async function currentSubscription(): Promise<PushSubscription | null> {
 
 export function usePushNotifications() {
   const { isAuthenticated } = useConvexAuth();
-  const publicKey = useQuery(api.push.publicKey, {});
+  const pushOnServer = useBackendFeatures()?.push === true;
+  const publicKey = useQuery(api.push.publicKey, pushOnServer ? {} : "skip");
   const [endpoint, setEndpoint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Feature checks differ between server and browser; decide after hydration.
   const isSupported = useSyncExternalStore(() => () => {}, supported, () => false);
   const hydrated = useSyncExternalStore(() => () => {}, () => true, () => false);
-  const status = useQuery(api.push.status, isAuthenticated ? { endpoint } : "skip");
+  const status = useQuery(api.push.status, isAuthenticated && pushOnServer ? { endpoint } : "skip");
   const save = useMutation(api.push.subscribe);
   const remove = useMutation(api.push.unsubscribe);
 
@@ -45,7 +48,7 @@ export function usePushNotifications() {
   }, []);
 
   let state: PushState;
-  if (!hydrated) state = "unavailable";
+  if (!hydrated || !pushOnServer) state = "unavailable";
   else if (!isSupported) state = "unsupported";
   else if (publicKey === null) state = "unavailable";
   else if (!isAuthenticated) state = "signed-out";
@@ -59,14 +62,15 @@ export function usePushNotifications() {
     setError(null);
     try {
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") return;
+      if (permission !== "granted") { setError(permission === "denied" ? "Notifications are blocked for this site. Allow them in your browser's site settings, then tap Turn on again." : "Notifications weren't allowed. Tap Turn on again and choose Allow."); return; }
       const registration = await navigator.serviceWorker.ready;
       const sub = (await registration.pushManager.getSubscription()) ?? (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }));
       const json = sub.toJSON();
       await save({ endpoint: sub.endpoint, p256dh: json.keys?.p256dh ?? "", auth: json.keys?.auth ?? "" });
       setEndpoint(sub.endpoint);
+      toast("Challenge notifications are on");
     } catch {
-      setError("Couldn't turn on notifications in this browser.");
+      setError("This browser couldn't register for notifications. Try again, or use Chrome, Edge, Firefox, or Safari added to your Home Screen.");
     } finally {
       setBusy(false);
     }
@@ -81,6 +85,7 @@ export function usePushNotifications() {
         await sub.unsubscribe();
       }
       setEndpoint(null);
+      toast("Notifications turned off", "info");
     } finally {
       setBusy(false);
     }

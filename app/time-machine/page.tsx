@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/client/toast";
 import { useConvexAuth, useMutation, usePaginatedQuery } from "convex/react";
 import Link from "@/components/navigation/PrefetchLink";
 import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter";
@@ -48,6 +49,7 @@ export default function TimeMachinePage() {
         } });
         if (!saved) throw new Error("Could not save this game on your device. Check browser storage.");
       }
+      toast("Game imported");
       router.push(`/time-machine/${gameKey}`);
     } catch (error) {
       const data = (error as { data?: { message?: string } }).data;
@@ -67,7 +69,7 @@ export default function TimeMachinePage() {
             <li key={g.gameKey} className="border-b border-line last:border-b-0">
               <Link href={`/time-machine/${g.gameKey}`} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{g.label ?? `${MODE[g.mode]} vs ${findOpponent(g.opponentId)?.name ?? "Sherine"}`}</span>
+                  <span className="block break-words font-medium">{g.label ?? `${MODE[g.mode]} vs ${findOpponent(g.opponentId)?.name ?? "Sherine"}`}</span>
                   <span className="text-xs text-muted">
                     {new Date(g.startedAt).toLocaleDateString()} · {Math.ceil(g.moveCount / 2)} moves{g.parentGameKey ? " · branch" : ""}
                   </span>
@@ -87,7 +89,7 @@ export default function TimeMachinePage() {
               </Link>
             </li>
           ))}
-          {remote.results.length === 0 && localOnly.length === 0 && <li className="px-4 py-4 text-sm text-muted">No games yet. Play one first.</li>}
+          {remote.results.length === 0 && localOnly.length === 0 && <li className="grid gap-2 px-4 py-4 text-sm text-muted">No games yet. Finished and saved games appear here to replay and review.<span className="flex flex-wrap gap-2"><Link href="/" className="rounded-full bg-accent px-4 py-2 font-semibold text-accent-text">Play Sherine</Link><Link href="/play" className="rounded-full bg-surface-2 px-4 py-2 font-semibold text-ink">Play online</Link></span></li>}
         </ul>
         {remote.status === "CanLoadMore" && (
           <button onClick={() => remote.loadMore(25)} className="min-h-12 rounded-2xl bg-surface shadow-[var(--shadow)]">

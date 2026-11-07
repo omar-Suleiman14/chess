@@ -132,7 +132,7 @@ export function GameReviewPanel({ scores, reviewed, sans, cursor, onSelect, anal
         <div className="grid grid-cols-2 gap-2 text-center">
           {(["w", "b"] as const).map((c) => (
             <div key={c} className={`rounded-xl p-2.5 ${c === "w" ? "bg-white text-[#262522] ring-1 ring-line" : "bg-[#262522] text-white"}`}>
-              <p className="truncate text-xs opacity-70">{names[c]}{c === human ? " · you" : ""}</p>
+              <p className="break-words text-xs opacity-70">{names[c]}{c === human ? " · you" : ""}</p>
               <p data-accuracy={c} className="text-2xl font-black tabular-nums">{accuracy[c] === null ? "–" : accuracy[c]!.toFixed(1)}</p>
               <p className="text-[11px] opacity-70">Accuracy</p>
             </div>

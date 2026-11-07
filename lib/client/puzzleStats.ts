@@ -6,6 +6,7 @@
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useCallback, useSyncExternalStore } from "react";
 import { api } from "@/convex/_generated/api";
+import { useBackendFeatures } from "./backendFeatures";
 import { findPuzzle, INITIAL_PUZZLE_RATING, ratePuzzle, type RushMode } from "@/lib/chess/puzzles";
 
 export type PuzzleStats = {
@@ -109,7 +110,10 @@ const RUSH_KEY: Record<RushMode, "rush3" | "rush5" | "survival"> = { "3min": "ru
 
 export function usePuzzleStats() {
   const local = useSyncExternalStore(subscribe, read, () => EMPTY_STATS);
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated: signedIn } = useConvexAuth();
+  // Until the server has puzzle sync, signed-in players keep puzzle stats on this device too.
+  const puzzlesOnServer = useBackendFeatures()?.puzzles === true;
+  const isAuthenticated = signedIn && puzzlesOnServer;
   const remote = useQuery(api.puzzles.mine, isAuthenticated ? {} : "skip");
   const recent = useQuery(api.puzzles.recent, isAuthenticated ? {} : "skip");
   const recordAttempt = useMutation(api.puzzles.recordAttempt);

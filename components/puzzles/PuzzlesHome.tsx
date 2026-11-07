@@ -6,6 +6,9 @@ import { PageHeader } from "@/components/shell/AppShell";
 import { dailyPuzzle, puzzlesFor, PUZZLES, RUSH_MODES, THEMES } from "@/lib/chess/puzzles";
 import { rushBest, usePuzzleStats } from "@/lib/client/puzzleStats";
 import { RatingSparkline } from "./RatingSparkline";
+import { ListIcon, PathMap, StickyAction, type PathNode } from "@/components/ui/PathMap";
+import { CoachLine } from "@/components/ui/CoachLine";
+import { useSettings } from "@/lib/client/settings";
 
 const subscribeNever = () => () => {};
 
@@ -15,12 +18,26 @@ export function PuzzlesHome() {
   const today = useSyncExternalStore(subscribeNever, () => new Date().toDateString(), () => null);
   const daily = dailyPuzzle(today ? new Date(today) : new Date(0));
   const solvedPct = stats.attempts ? Math.round((stats.solved / stats.attempts) * 100) : null;
+  const { reducedMotion } = useSettings();
+  // Recent attempts (a rating rise means solved), where you are now, and what's next.
+  const recent = stats.history.slice(-4).map((rating, i, list) => {
+    const before = i === 0 ? stats.history[stats.history.length - list.length - 1] ?? 1200 : list[i - 1];
+    return rating >= before ? "done" : "missed";
+  });
+  const first = stats.attempts - recent.length + 1;
+  const pathNodes: PathNode[] = [
+    ...Array.from({ length: 3 }, (_, i) => ({ key: `n${stats.attempts + 4 - i}`, face: stats.attempts + 4 - i, state: "todo" as const, title: `Puzzle ${stats.attempts + 4 - i}` })),
+    { key: "now", face: stats.attempts + 1, state: "current" as const, title: "Next puzzle", href: "/puzzles/rated" },
+    ...recent.map((state, i) => ({ key: `r${first + i}`, face: first + i, state: state as "done" | "missed", title: `Puzzle ${first + i}` })).reverse(),
+  ];
   const themes = THEMES.map((t) => ({ ...t, count: puzzlesFor(t.id).length })).filter((t) => t.count > 0);
 
   return (
-    <main id="main-content" className="mx-auto min-h-dvh max-w-3xl pb-12">
+    <main id="main-content" className="mx-auto min-h-dvh max-w-3xl pb-32">
       <PageHeader title="Puzzles" back={false} />
-      <div className="grid gap-5 px-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 px-4">
+        <CoachLine reducedMotion={reducedMotion} text={stats.attempts === 0 ? "They say chess is mostly tactics. Good news: that's what puzzles are for. Let's solve your first one!" : stats.streak >= 3 ? `${stats.streak} in a row! Keep the streak going.` : "Ready for the next one? Each puzzle is picked for your rating."} />
+        <PathMap label="Your puzzle path" reducedMotion={reducedMotion} nodes={pathNodes} marker={<span className="block rounded-xl bg-surface px-2 py-1 text-xs font-bold shadow-[var(--shadow)]">You</span>} />
         <section aria-label="Your puzzle rating" className="grid gap-4 rounded-3xl bg-surface p-5 shadow-[var(--shadow)] sm:grid-cols-[1fr_auto] sm:items-center">
           <div>
             <p className="text-sm text-muted">Puzzle rating{synced ? "" : " · this device"}</p>
@@ -32,15 +49,7 @@ export function PuzzlesHome() {
           <RatingSparkline points={stats.history} />
         </section>
 
-        <Link href="/puzzles/rated" className="group flex items-center justify-between gap-4 rounded-3xl bg-accent p-5 text-accent-text transition-transform active:scale-[.99]">
-          <span>
-            <span className="block text-2xl font-black">Solve puzzles</span>
-            <span className="block text-sm opacity-80">Rated tactics picked for your level</span>
-          </span>
-          <span aria-hidden="true" className="text-3xl transition-transform group-hover:translate-x-1">→</span>
-        </Link>
-
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div id="more-puzzles" className="grid scroll-mt-20 gap-3 sm:grid-cols-2">
           <Link href="/puzzles/rush" className="rounded-3xl bg-surface p-5 shadow-[var(--shadow)] transition-transform active:scale-[.99]">
             <span className="text-sm font-semibold uppercase tracking-wide text-[#e0a43a]">Puzzle Rush</span>
             <span className="mt-1 block text-xl font-bold">Beat the clock</span>
@@ -76,6 +85,7 @@ export function PuzzlesHome() {
           {PUZZLES.length.toLocaleString()} original puzzles, mined from Stockfish games and checked so every move you play is the only winning one. Any checkmate counts. Using a hint or the solution counts as a miss for your rating; each puzzle is rated once.
         </p>
       </div>
+      <StickyAction href="/puzzles/rated" label="Solve puzzles" secondary={{ href: "#more-puzzles", label: "Puzzle Rush, daily puzzle and themes", icon: ListIcon }} />
     </main>
   );
 }

@@ -259,6 +259,7 @@ export function PuzzlePlayer({ puzzle, mode, onResult, onNext, delta = null, rat
           </p>
         )}
 
+        {mode === "rated" && (phase === "solving" || phase === "opponent") && <p className="text-xs text-muted">Using a hint or the solution counts as a miss for your rating.</p>}
         {mode !== "rush" && (
           <div className="grid grid-cols-2 gap-2">
             {phase === "failed" && <button onClick={retry} className="min-h-12 rounded-xl bg-surface-2 font-semibold">Retry</button>}
@@ -268,7 +269,7 @@ export function PuzzlePlayer({ puzzle, mode, onResult, onNext, delta = null, rat
               </button>
             )}
             {phase !== "solved" && phase !== "revealing" && (
-              <button onClick={showSolution} className="min-h-12 rounded-xl bg-surface-2 font-semibold">Solution</button>
+              <button onClick={showSolution} className="min-h-12 rounded-xl bg-surface-2 font-semibold">Show solution</button>
             )}
             {(phase === "solved" || done || phase === "failed") && onNext && (
               <button onClick={onNext} className={`min-h-12 rounded-xl font-bold ${phase === "solved" ? "col-span-2 bg-accent text-accent-text" : "bg-accent text-accent-text"}`}>

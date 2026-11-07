@@ -7,6 +7,8 @@ import { api } from "@/convex/_generated/api";
 import { Avatar } from "@/components/profile/ChessCard";
 import { ChallengeDialog } from "@/components/online/ChallengeDialog";
 import { errorText } from "@/components/online/OnlineShared";
+import { useBackendFeatures } from "@/lib/client/backendFeatures";
+import { toast } from "@/lib/client/toast";
 
 const pill = "grid min-h-9 place-items-center rounded-full px-3.5 text-sm font-semibold";
 
@@ -15,7 +17,8 @@ export function PlayerSearch({ myAlias, autoFocus = false }: { myAlias?: string;
   const { isAuthenticated } = useConvexAuth();
   const [q, setQ] = useState("");
   const query = useDeferredValue(q.trim());
-  const results = useQuery(api.friends.search, query ? { q: query } : "skip");
+  const canSearch = useBackendFeatures()?.search === true;
+  const results = useQuery(api.friends.search, query && canSearch ? { q: query } : "skip");
   const request = useMutation(api.friends.request);
   const respond = useMutation(api.friends.respond);
   const [busy, setBusy] = useState<string | null>(null);
@@ -25,7 +28,7 @@ export function PlayerSearch({ myAlias, autoFocus = false }: { myAlias?: string;
   const act = async (alias: string, action: () => Promise<unknown>, done: string) => {
     setBusy(alias);
     setMessage(null);
-    try { await action(); setMessage({ ok: true, text: done }); }
+    try { await action(); setMessage({ ok: true, text: done }); toast(done); }
     catch (error) { setMessage({ ok: false, text: errorText(error) }); }
     finally { setBusy(null); }
   };
@@ -43,14 +46,22 @@ export function PlayerSearch({ myAlias, autoFocus = false }: { myAlias?: string;
           autoCapitalize="none"
           autoCorrect="off"
           autoFocus={autoFocus}
-          className="min-h-12 w-full rounded-2xl bg-surface pl-11 pr-4 shadow-[var(--shadow)] outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="min-h-12 w-full rounded-2xl bg-surface pl-11 pr-12 shadow-[var(--shadow)] outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-search-cancel-button]:hidden"
         />
+        {q && <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-surface-2 text-sm font-bold text-muted">✕</button>}
       </label>
+      <p className="px-1 text-xs text-muted">Usernames only. Friends get a request they can accept or decline.</p>
       {message && <p role="status" className={`px-1 text-sm ${message.ok ? "text-ok" : "text-danger"}`}>{message.text}</p>}
-      {query && (
+      {query && !canSearch && isAuthenticated && (
+        // Older server: no search yet, but adding by exact username still works.
+        <button onClick={() => void act(query.replace(/^@/, "").toLowerCase(), () => request({ alias: query.replace(/^@/, "").toLowerCase() }), `Request sent to @${query.replace(/^@/, "").toLowerCase()}.`)} className="min-h-12 rounded-2xl bg-accent font-semibold text-accent-text">
+          Add @{query.replace(/^@/, "").toLowerCase()} as a friend
+        </button>
+      )}
+      {query && canSearch && (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface shadow-[var(--shadow)]" aria-label="Search results">
           {results === undefined && <li className="px-4 py-3 text-sm text-muted">Searching…</li>}
-          {results && results.length === 0 && <li className="px-4 py-3 text-sm text-muted">No player called “{query.replace(/^@/, "")}”.</li>}
+          {results && results.length === 0 && <li className="grid gap-2 px-4 py-3 text-sm text-muted">No player called “{query.replace(/^@/, "")}”. Check the spelling, or invite them with a link.<span className="flex gap-2"><button type="button" onClick={() => setQ("")} className="rounded-full bg-surface-2 px-3 py-1.5 font-semibold text-ink">Clear search</button><Link href="/play" className="rounded-full bg-accent px-3 py-1.5 font-semibold text-accent-text">Invite with a link</Link></span></li>}
           {results?.map((p) => (
             <li key={p.alias} className="flex items-center gap-3 px-3 py-2.5">
               <Link href={`/u/${p.alias}`} className="flex min-w-0 flex-1 items-center gap-3">
