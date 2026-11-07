@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { FatmaSprite } from "@/components/fatma/FatmaSprite";
-import { MiniBoard } from "@/components/chess/MiniBoard";
+import { Board, type LastMove } from "@/components/chess/Board";
+import { useSettings } from "@/lib/client/settings";
 import { Avatar } from "@/components/profile/ChessCard";
 import { StickyAction } from "@/components/ui/PathMap";
 import type { WhiteScore } from "@/lib/chess/engine/uci";
@@ -23,7 +24,8 @@ const TIPS = [
 ];
 
 /** While Stockfish reviews the game: the start position, a coach tip and a big progress bar. */
-export function ReviewLoading({ percent, fen, reducedMotion, onClose }: { percent: number; fen: string; reducedMotion: boolean; onClose: () => void }) {
+export function ReviewLoading({ percent, fen, lastMove, orientation, reducedMotion, onClose }: { percent: number; fen: string; lastMove: LastMove; orientation: Color; reducedMotion: boolean; onClose: () => void }) {
+  const { settings } = useSettings();
   const [tip, setTip] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTip((t) => (t + 1) % TIPS.length), 3200);
@@ -36,7 +38,10 @@ export function ReviewLoading({ percent, fen, reducedMotion, onClose }: { percen
         <span className="block h-16 w-16 shrink-0 overflow-hidden"><FatmaSprite expression="thinking" size={64} reducedMotion={reducedMotion} /></span>
         <p key={tip} className="coach-bubble mb-3 flex-1 rounded-2xl rounded-bl-sm bg-surface px-4 py-3 text-[15px] font-medium leading-snug shadow-[var(--shadow)]">{TIPS[tip]}</p>
       </div>
-      <div className="mx-auto w-full max-w-[min(100%,calc(100dvh-380px))]"><MiniBoard fen={fen} size={360} className="!h-auto !w-full aspect-square" /></div>
+      {/* The game replays here in step with the engine: each move appears as it's graded. */}
+      <div className="pointer-events-none mx-auto w-full max-w-[min(100%,calc(100dvh-380px))]" data-review-replay>
+        <Board fen={fen} orientation={orientation} movable={null} onMove={() => false} lastMove={lastMove} coordinates={settings.coordinates} reducedMotion={reducedMotion} label="Game replaying while Stockfish reviews it" />
+      </div>
       <div className="relative h-14 overflow-hidden rounded-2xl bg-surface-2" role="progressbar" aria-label="Reviewing your game" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
         <div className="absolute inset-y-0 left-0 bg-[#81b64c] transition-[width] duration-300" style={{ width: `${percent}%` }} />
         <span className="relative grid h-full place-items-center text-2xl font-black tabular-nums">{percent}%</span>
@@ -49,8 +54,8 @@ export function ReviewLoading({ percent, fen, reducedMotion, onClose }: { percen
 function ReviewHeader({ onClose, right }: { onClose: () => void; right?: React.ReactNode }) {
   return (
     <header className="safe-top sticky top-0 z-20 grid grid-cols-[44px_1fr_44px] items-center bg-bg/95 py-2 backdrop-blur">
-      <button onClick={onClose} aria-label="Close Game Review" className="grid h-11 w-11 place-items-center rounded-full text-2xl text-muted">✕</button>
-      <h1 className="text-center text-2xl font-black">Game Review</h1>
+      <button onClick={onClose} aria-label="Close Time Machine review" className="grid h-11 w-11 place-items-center rounded-full text-2xl text-muted">✕</button>
+      <h1 className="text-center text-2xl font-black">Time Machine</h1>
       <span className="justify-self-end">{right}</span>
     </header>
   );

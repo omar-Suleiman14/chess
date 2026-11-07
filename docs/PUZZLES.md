@@ -33,11 +33,11 @@ Everyone gets the same puzzle each UTC day. It isn't rated.
 
 Open **Analysis** from the sidebar or **More**. Move both sides freely; Stockfish shows its top three lines, an evaluation bar and an arrow for its best move. Tap a line to play its first move. Use ←/→, Home/End to step through moves, **F** to flip, and **FEN** to load a position. After a puzzle, **Analyse this position** opens it here.
 
-## Game Review
+## Time Machine review
 
-After a game, tap **Game Review** on the result screen (or **Start Review** in Time Machine).
+After a game, tap **Review in Time Machine** on the result screen (or **Start review** in Time Machine).
 
-1. **Analysing:** Sherine shares a tip while a progress bar shows Stockfish grading every move on your device.
+1. **Analysing:** the game replays on the board in step with Stockfish as it grades every move on your device, while Sherine shares a tip and a progress bar fills.
 2. **Summary:** her verdict, the evaluation graph (tap it to jump), both players, accuracy, how many moves earned each label (Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunder), an estimated game rating, and a verdict per phase (opening, middlegame, endgame).
 3. **Start Review:** step through the game with **Next**. Sherine names each move's label and the better move, the board shows the label badge and an arrow, and the engine's top choices sit above the board. **Summary** returns to step 2.
 

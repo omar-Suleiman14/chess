@@ -9,7 +9,6 @@ import { useAppRouter as useRouter } from "@/components/navigation/useAppRouter"
 import { readAnalysis, writeAnalysis } from "@/lib/client/analysisCache";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
-import { GameReviewPanel } from "@/components/chess/GameReviewPanel";
 import { ReviewLoading, ReviewSummary, type ReviewPlayer } from "@/components/review/ReviewScreens";
 import { QualityIcon } from "@/components/review/QualityIcon";
 import { FatmaSprite } from "@/components/fatma/FatmaSprite";
@@ -105,6 +104,8 @@ export default function ReplayPage({
   const [analysing, setAnalysing] = useState<{
     done: number;
     total: number;
+    /** Position (0 = start) the engine is grading now, so the board can follow along. */
+    at?: number;
   } | null>(null);
   const [continueFrom, setContinueFrom] = useState<TreeNode | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -359,8 +360,10 @@ export default function ReplayPage({
     );
     setMessage(null);
     setAnalysing({ done: 0, total: nodes.length });
+    const line = [tree.nodes.root, ...path];
     for (const [i, n] of nodes.entries()) {
       if (run !== analysisRun.current) return;
+      setAnalysing({ done: i, total: nodes.length, at: Math.max(0, line.indexOf(n)) });
       if (positionStatus(n.fen).over) {
         setAnalysing({ done: i + 1, total: nodes.length });
         continue;
@@ -585,7 +588,19 @@ export default function ReplayPage({
   if (reviewMode === "summary") {
     const percent = analysing && analysing.total ? Math.round((analysing.done / analysing.total) * 100) : 100;
     if (analysing || (reviewedByIndex.length === 0 && path.length > 0)) {
-      return <ReviewLoading percent={analysing ? percent : 0} fen={tree.originFen} reducedMotion={reducedMotion} onClose={() => setReviewMode("off")} />;
+      const at = Math.min(analysing?.at ?? 0, path.length);
+      const shownNode = at === 0 ? tree.nodes.root : path[at - 1];
+      const lastPlayed = at > 0 ? applyUci([tree.nodes.root, ...path][at - 1].fen, path[at - 1].uci) : null;
+      return (
+        <ReviewLoading
+          percent={analysing ? percent : 0}
+          fen={shownNode.fen}
+          lastMove={lastPlayed ? { from: lastPlayed.from, to: lastPlayed.to, key: `review-${at}` } : null}
+          orientation={game.meta.humanColor}
+          reducedMotion={reducedMotion}
+          onClose={() => setReviewMode("off")}
+        />
+      );
     }
     const fens = [tree.nodes.root.fen, ...path.map((n) => n.fen)];
     const accuracy = gameAccuracy(reviewScores, sideToMove(tree.originFen));
@@ -618,7 +633,7 @@ export default function ReplayPage({
 
   return (
     <main className={`mx-auto min-h-dvh max-w-[1600px] px-3 ${reviewMode === "moves" ? "pb-32 lg:pb-8" : "pb-8"}`}>
-      <PageHeader title={reviewMode === "moves" ? "Game Review" : "Time Machine"} />
+      <PageHeader title="Time Machine" />
       <Link
         href="/time-machine"
         className="mb-3 inline-flex min-h-11 items-center text-sm underline"
@@ -890,23 +905,19 @@ export default function ReplayPage({
               </p>
             )}
           </div>
-          <GameReviewPanel
-            scores={reviewScores}
-            reviewed={reviewedByIndex}
-            sans={path.map((n) => n.san)}
-            cursor={cursor}
-            onSelect={selectPosition}
-            analysing={analysing}
-            canAnalyse={supportsEngine() && path.length > 0}
-            onStart={() => { setReviewMode("summary"); void analyse(); }}
-            onStop={() => {
-              cancelAnalysis();
-              setAnalysing(null);
-            }}
-            names={playerNames}
-            human={game.meta.humanColor}
-            reducedMotion={reducedMotion}
-          />
+          {reviewMode !== "moves" && (
+            <button
+              data-start-review
+              disabled={!supportsEngine() || path.length === 0}
+              onClick={() => { setReviewMode("summary"); void analyse(); }}
+              className="min-h-14 rounded-2xl bg-[#81b64c] text-lg font-black text-white shadow-[0_5px_0_#5d8a33] transition-transform active:translate-y-[3px] active:shadow-[0_2px_0_#5d8a33] disabled:opacity-40"
+            >
+              {path.length === 0 ? "Make a move to review" : reviewedByIndex.length >= path.length ? "Open review" : "Start review"}
+            </button>
+          )}
+          {reviewMode === "moves" && (
+            <button onClick={() => setReviewMode("summary")} className="min-h-12 rounded-2xl bg-surface-2 font-bold">Back to summary</button>
+          )}
           {mistakes.length > 0 && !analysing && (
             <button
               onClick={() => {

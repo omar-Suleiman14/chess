@@ -3,7 +3,7 @@
 1. Open **Time Machine** and choose a game. To import one, expand **Import PGN**, paste its text, and select **Import**.
 2. Select a White or Black move in the move table. The header identifies the move and whose turn comes next.
 3. Use **First**, **Back**, **Next**, and **Last** below the board. Focus the explorer itself to use Left, Right, Home, and End.
-4. Open **Analyze game** when you want engine insights. Move selection remains available during analysis. **Stop analysis** cancels it.
+4. Tap **Start review** for engine insights. The game replays on the board while Stockfish grades each move, then the review summary opens (see [Puzzles and analysis](PUZZLES.md#time-machine-review)). Close it with ✕ at any time.
 5. After analysis, use **Next key moment** or expand **Insights & analysis details**. Missing evidence remains **Not analyzed**.
 
 Time Machine has no autoplay, play/pause, or speed control. Arrow keys inside a button, input, board widget, or open dialog keep that widget's behavior.
