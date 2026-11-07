@@ -166,7 +166,7 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
   const navButton = "grid min-h-11 place-items-center rounded-xl bg-surface-2 text-lg font-bold disabled:opacity-35";
 
   return (
-    <main id="main-content" className="mx-auto min-h-dvh max-w-6xl px-3 pb-8">
+    <main id="main-content" className="mx-auto min-h-dvh max-w-6xl px-3 pb-32 sm:pb-8">
       <PageHeader title="Analysis" />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="flex w-full gap-2">
@@ -176,6 +176,21 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
             </div>
           )}
           <div className="mx-auto w-full max-w-[min(100%,calc(100dvh-200px),720px)]">
+            {engineOn && (
+              <div className="mb-2 grid gap-1.5 sm:hidden" data-engine-header>
+                <EvalBar horizontal score={best?.score ?? null} orientation={orientation} depth={best?.depth} reducedMotion={reducedMotion} stale={!best} />
+                {shown.slice(0, 2).map((line) => {
+                  const white = line.score.mate !== undefined ? line.score.mate > 0 : (line.score.cp ?? 0) >= 0;
+                  return (
+                    <button key={line.multipv} onClick={() => play(line.pv[0])} className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-start text-sm [scrollbar-width:none]">
+                      <span className={`min-w-14 shrink-0 rounded-md px-1.5 py-0.5 text-center font-bold tabular-nums ${white ? "bg-white text-black ring-1 ring-line" : "bg-[#262522] text-white"}`}>{formatScore(line.score)}</span>
+                      <span>{pvSan(fen, line.pv, 12)}</span>
+                    </button>
+                  );
+                })}
+                {shown.length === 0 && !resultText && <p className="text-sm text-muted">Stockfish is analysing this position…</p>}
+              </div>
+            )}
             <Board
               fen={fen}
               orientation={orientation}
@@ -190,16 +205,12 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
               onFlip={() => setOrientation((o) => (o === "w" ? "b" : "w"))}
               label="Analysis board. Both sides can move."
             />
-            {engineOn && (
-              <div className="mt-2 sm:hidden">
-                <EvalBar horizontal score={best?.score ?? null} orientation={orientation} depth={best?.depth} reducedMotion={reducedMotion} stale={!best} />
-              </div>
-            )}
+            <p className="mt-2 text-center text-sm font-semibold text-muted" aria-live="polite">{cursor === 0 ? "Starting position" : `${Math.ceil(cursor / 2)}${cursor % 2 ? "." : "…"} ${current.san}`}{resultText ? ` · ${resultText}` : ""}</p>
           </div>
         </div>
 
         <aside className="grid gap-3">
-          <section className="rounded-2xl bg-surface p-3 shadow-[var(--shadow)]" aria-label="Engine lines">
+          <section className="hidden rounded-2xl bg-surface p-3 shadow-[var(--shadow)] sm:block" aria-label="Engine lines">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-semibold">Stockfish{best?.depth ? <span className="font-normal text-muted"> · depth {best.depth}</span> : null}</span>
               <button role="switch" aria-checked={engineOn} onClick={() => setEngineOn((on) => !on)} className={`relative h-7 w-12 rounded-full transition-colors ${engineOn ? "bg-[#81b64c]" : "bg-surface-2"}`}>
@@ -270,6 +281,14 @@ export function AnalysisBoard({ initialFen }: { initialFen: string | null }) {
           </section>
         </aside>
       </div>
+      <nav aria-label="Analysis controls" className="sticky-action pointer-events-none fixed inset-x-0 z-40 px-3 sm:hidden">
+        <div className="pointer-events-auto mx-auto grid max-w-xl grid-cols-4 gap-2 rounded-[22px] bg-bg/90 p-2 backdrop-blur-md">
+          <button onClick={() => setEditing(true)} className="grid min-h-14 place-items-center rounded-2xl bg-surface-2 text-xs font-bold">Set up</button>
+          <button onClick={() => setOrientation((o) => (o === "w" ? "b" : "w"))} className="grid min-h-14 place-items-center rounded-2xl bg-surface-2 text-xs font-bold">⇅ Flip</button>
+          <button onClick={() => go(cursor - 1)} disabled={cursor === 0} aria-label="Previous move" className="grid min-h-14 place-items-center rounded-2xl bg-surface-2 text-2xl font-black disabled:opacity-40">‹</button>
+          <button onClick={() => go(cursor + 1)} disabled={cursor >= path.length - 1} aria-label="Next move" className="grid min-h-14 place-items-center rounded-2xl bg-[#81b64c] text-2xl font-black text-white shadow-[0_5px_0_#5d8a33] disabled:opacity-50">›</button>
+        </div>
+      </nav>
       {editing && (
         <div className="fixed inset-0 z-[110] overflow-y-auto bg-bg p-3 pt-[max(12px,env(safe-area-inset-top))]" role="dialog" aria-label="Set up a position">
           <h2 className="mb-3 px-1 text-2xl font-bold">Set up a position</h2>

@@ -97,7 +97,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [pathname]);
   const hrefFor = useCallback((tab: Tab) => {
-    if (tab.id === tabFor(pathname)) return tab.href;
+    // More is a menu: it always opens the menu, never the last page visited from it.
+    if (tab.id === "more" || tab.id === tabFor(pathname)) return tab.href;
     return readTabMemory()[tab.id] ?? tab.href;
   }, [pathname]);
 

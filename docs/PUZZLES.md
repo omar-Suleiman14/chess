@@ -35,7 +35,13 @@ Open **Analysis** from the sidebar or **More**. Move both sides freely; Stockfis
 
 ## Game Review
 
-After a game, tap **Game Review** on the result screen (or **Start Review** in Time Machine). Sherine grades every move while the evaluation graph draws itself, then shows each side's accuracy, the move labels (Best, Excellent, Inaccuracy, Mistake, Blunder, Great, Brilliant…), a badge on the moved piece and an arrow for the better move. Tap the graph to jump to any moment.
+After a game, tap **Game Review** on the result screen (or **Start Review** in Time Machine).
+
+1. **Analysing:** Sherine shares a tip while a progress bar shows Stockfish grading every move on your device.
+2. **Summary:** her verdict, the evaluation graph (tap it to jump), both players, accuracy, how many moves earned each label (Brilliant, Great, Best, Excellent, Good, Book, Inaccuracy, Mistake, Miss, Blunder), an estimated game rating, and a verdict per phase (opening, middlegame, endgame).
+3. **Start Review:** step through the game with **Next**. Sherine names each move's label and the better move, the board shows the label badge and an arrow, and the engine's top choices sit above the board. **Summary** returns to step 2.
+
+The game rating is a rough estimate from accuracy, not a rating change.
 
 ## Board annotations
 
